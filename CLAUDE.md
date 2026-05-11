@@ -23,6 +23,10 @@ npm run db:studio          # Prisma Studio GUI
 # Type checking
 npm run typecheck          # runs tsc --noEmit across workspaces
 
+# Mailpit (local SMTP for dev — requires Docker)
+docker compose up -d mailpit   # SMTP on :1025, UI on http://localhost:8025
+docker compose down            # stop
+
 # Generate sample Excel for testing import
 npx tsx data-samples/generate-sample.ts
 ```
@@ -35,15 +39,17 @@ npx tsx data-samples/generate-sample.ts
 - **Runtime**: Express 5, TypeScript (ESM via tsx), Node ≥ 20
 - **ORM**: Prisma with SQLite (dev) — schema at `backend/prisma/schema.prisma`
 - **8 entities**: Contratto_EOL, Cliente, Decisione_Cliente, Pagamento, Comunicazione, Richiesta_Contatto, Audit_Event, Utente_NSM
-- **Routes**: mounted at `/api/backoffice` — import preview + confirm endpoints
+- **Routes**: `/api/backoffice` (import, pratiche, invio comunicazioni), `/api/clienti` (opt-out)
 - **Auth**: `x-user-id` header middleware checking Utente_NSM (roles: BACKOFFICE_INTERNO, ADMIN)
-- **Services**: `reconciliation.service.ts` (Excel parsing + DB matching), `pricing.service.ts` (canone calculations + gift card)
+- **Services**: `reconciliation.service.ts` (Excel parsing + DB matching), `pricing.service.ts` (canone calculations + gift card), `email.service.ts` (comunicazione iniziale via SMTP)
+- **Providers**: `providers/notification/email.provider.ts` — SMTP via nodemailer (Mailpit in dev)
+- **Email templates**: `templates/email/` — Handlebars HTML templates with inline CSS
 - **Excel parsing**: SheetJS (xlsx) with `{ cellDates: true }` — Italian DD/MM/YYYY dates handled by custom `parseDate()`
 
 ### Frontend (`@nsm-eol/frontend`)
 - **Stack**: React 19, Vite 8, Tailwind CSS v4 (via `@tailwindcss/vite` plugin), TypeScript
 - **UI**: lucide-react icons, sonner toasts, no component library (vanilla Tailwind)
-- **Routing**: react-router-dom — currently one page at `/backoffice/import`
+- **Routing**: react-router-dom — `/backoffice/import` (ImportLista), `/backoffice/pratiche` (ListaPratiche), `/pratica/:token` (client placeholder)
 - **API proxy**: Vite proxies `/api` → `http://localhost:3001`
 
 ### Config (`config/`)
@@ -58,6 +64,8 @@ JSON-driven business rules read at startup by backend services:
 - **Reconciliation**: match Excel rows to existing DB contracts via `contratto_grenke_id`. Unmatched = OUTLIER_DA_GESTIRE with fuzzy suggestions by P.IVA / ragione_sociale.
 - **Pricing**: monte_canoni = canone × mesi; grenke = 5%; riacquisto = 8%; margine = 3%; gift card = floor to nearest standard cut.
 - **Outlier actions**: SCARTA (discard with motivazione), CREA (new client), ASSOCIA (link to existing client).
+- **Comunicazione iniziale**: email + PEC to each client with JWT link to area cliente, 4 options, deadline warning. GDPR-compliant subject line required.
+- **Opt-out**: `GET /api/clienti/opt-out?token=...` sets `opt_out_comunicazioni` flag, blocks future automated communications.
 - **Test user ID**: `00000000-0000-0000-0000-000000000001` (backoffice user for x-user-id header).
 
 ## Gotchas
@@ -66,6 +74,8 @@ JSON-driven business rules read at startup by backend services:
 - **SQLite JSON**: `beni_json`, `allegati_json`, `dati_json` are stored as String columns (SQLite has no native JSON type).
 - **Italian dates**: JS `new Date("17/06/2023")` is invalid. Always use the custom DD/MM/YYYY regex parser.
 - **Prisma dangerous actions under Claude Code**: requires `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="si"` env var for `migrate reset`.
+- **Backend port**: use `BACKEND_PORT` env var (not `PORT`) — `PORT` can conflict with Vite when started via concurrently. Dotenv loads from `backend/.env` using explicit path.
+- **Email service env vars**: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `JWT_SECRET`, `JWT_EXPIRES_OFFSET_DAYS`, `FRONTEND_URL` — all in `backend/.env`.
 
 ## Mission Progress
 

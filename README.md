@@ -43,10 +43,10 @@ Vedi `docs/integration-guide.md` per le indicazioni di integrazione.
 
 - Node.js ≥ 20 LTS
 - npm ≥ 10
-- Docker (per Mailpit, opzionale, da Missione 3)
+- Docker (per Mailpit)
 - Git
 
-### Setup iniziale (dopo Missione 1)
+### Setup iniziale
 
 ```bash
 # Installa dipendenze in root e workspace
@@ -56,14 +56,17 @@ npm install
 npm run db:setup
 npm run db:seed
 
+# Avvia Mailpit (server SMTP locale per dev)
+docker compose up -d mailpit
+
 # Avvia backend + frontend in parallelo
 npm run dev
 ```
 
 Backend: <http://localhost:3001>
 Frontend: <http://localhost:5173>
+Mailpit UI: <http://localhost:8025> (SMTP su porta 1025)
 Prisma Studio: `npx prisma studio --schema=backend/prisma/schema.prisma`
-Mailpit (da Missione 3): <http://localhost:8025>
 
 ---
 
@@ -194,9 +197,9 @@ npm run db:studio            # Apre Prisma Studio
 npm run build                # Build backend + frontend per produzione
 npm run typecheck            # Type check globale
 
-# Mailpit (da Missione 3)
-docker-compose up -d mailpit # Avvia server SMTP locale
-docker-compose down          # Ferma
+# Mailpit (server SMTP locale)
+docker compose up -d mailpit # Avvia — UI su http://localhost:8025
+docker compose down          # Ferma
 ```
 
 ---

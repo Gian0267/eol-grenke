@@ -196,10 +196,13 @@ export default function ImportLista() {
       <header className="bg-[#1a3a52] text-white px-6 py-4 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">NSM Backoffice</h1>
-            <p className="text-sm text-white/70">Noleggio Su Misura — Gestione EOL Grenke</p>
+            <h1 className="text-xl font-bold">Noleggio Su Misura — Backoffice</h1>
+            <p className="text-sm text-slate-300">Gestione pratiche EOL Grenke</p>
           </div>
-          <span className="text-sm bg-white/10 px-3 py-1 rounded-full">Importazione Lista</span>
+          <nav className="flex gap-4 text-sm">
+            <a href="/backoffice/import" className="text-white font-semibold border-b-2 border-white pb-0.5">Importazione</a>
+            <a href="/backoffice/pratiche" className="text-slate-300 hover:text-white transition-colors">Pratiche</a>
+          </nav>
         </div>
       </header>
 

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicazione fine contratto</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">Noleggio Su Misura</h1>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:13px;">Smartcom Solutions Srl</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+
+              <!-- Greeting -->
+              <p style="margin:0 0 16px;color:#1a3a52;font-size:15px;line-height:1.6;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                come gi&agrave; anticipato da Grenke Italia (nostro partner finanziario),
+                il Suo contratto di locazione operativa
+                n. <strong>{{numero_contratto_grenke}}</strong> / <strong>{{numero_contratto_nsm}}</strong>
+                giunger&agrave; a scadenza il <strong>{{data_scadenza}}</strong>.
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                In qualit&agrave; di partner autorizzato Grenke per la gestione della
+                fase di fine contratto, Le scriviamo per presentarLe le opzioni disponibili.
+              </p>
+
+              <!-- Beni -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#f0f4f8;padding:16px 20px;border-radius:6px;border-left:4px solid #1a3a52;">
+                    <p style="margin:0 0 4px;color:#1a3a52;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Beni oggetto del contratto</p>
+                    <p style="margin:0;color:#374151;font-size:15px;">{{beni}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Opzioni -->
+              <p style="margin:0 0 16px;color:#1a3a52;font-size:17px;font-weight:700;">Le Sue opzioni:</p>
+
+              <!-- Opzione 1 — Rinnovo (verde) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+                <tr>
+                  <td style="background-color:#f0fdf4;padding:16px 20px;border-radius:6px;border-left:4px solid #16a34a;">
+                    <p style="margin:0 0 6px;color:#16a34a;font-size:14px;font-weight:700;">&#x1F7E2; OPZIONE 1 &mdash; RINNOVA E RICEVI UN PREMIO FEDELT&Agrave;</p>
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
+                      Stipuli un nuovo contratto FLEX su device aggiornato e riceve una
+                      <strong>GIFT CARD SMARTCOM SOLUTIONS DA {{valore_gift_card}}&euro;</strong>
+                      alla firma del nuovo contratto, spendibile sul catalogo Smartcom Distribution.
+                    </p>
+                    <p style="margin:8px 0 0;color:#16a34a;font-size:13px;font-weight:700;">&#x2B50; SCELTA CONSIGLIATA</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Opzione 2 — Riacquisto (blu) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+                <tr>
+                  <td style="background-color:#eff6ff;padding:16px 20px;border-radius:6px;border-left:4px solid #2563eb;">
+                    <p style="margin:0 0 6px;color:#2563eb;font-size:14px;font-weight:700;">&#x1F535; OPZIONE 2 &mdash; ACQUISTA IL BENE ATTUALE</p>
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
+                      Prezzo: <strong>&euro;{{pricing_riacquisto}} + IVA</strong><br>
+                      Pagamento online sicuro tramite bonifico istantaneo o carta.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Opzione 3 — Contatto (giallo) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+                <tr>
+                  <td style="background-color:#fefce8;padding:16px 20px;border-radius:6px;border-left:4px solid #ca8a04;">
+                    <p style="margin:0 0 6px;color:#ca8a04;font-size:14px;font-weight:700;">&#x1F7E1; OPZIONE 3 &mdash; RICHIEDI UN CONTATTO PERSONALIZZATO</p>
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
+                      Un nostro consulente La contatter&agrave; per valutare insieme la soluzione migliore.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Opzione 4 — Restituzione (rosso) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#fef2f2;padding:16px 20px;border-radius:6px;border-left:4px solid #dc2626;">
+                    <p style="margin:0 0 6px;color:#dc2626;font-size:14px;font-weight:700;">&#x1F534; OPZIONE 4 &mdash; RESTITUISCI IL BENE</p>
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
+                      Riconsegna il bene secondo le istruzioni che Le forniremo.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{{link_area_cliente}}}" target="_blank" style="display:inline-block;background-color:#1a3a52;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:6px;font-size:16px;font-weight:700;letter-spacing:0.3px;">SCEGLI LA TUA OPZIONE</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Deadline warning -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#fff7ed;padding:16px 20px;border-radius:6px;border:1px solid #fed7aa;">
+                    <p style="margin:0 0 8px;color:#c2410c;font-size:14px;font-weight:700;">&#x23F0; Termine per la scelta: {{deadline_decisione}}</p>
+                    <p style="margin:0;color:#9a3412;font-size:13px;line-height:1.5;">
+                      <strong>&#x26A0;&#xFE0F; IMPORTANTE:</strong> in assenza di scelta entro la deadline, il contratto
+                      proseguir&agrave; in proroga con canoni invariati per 6 mesi, dopo i quali
+                      non sar&agrave; pi&ugrave; possibile esercitare le opzioni qui presentate.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Closing -->
+              <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
+                Cordiali saluti,<br>
+                <strong>Il Team Noleggio Su Misura</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0 0 4px;color:#64748b;font-size:13px;text-align:center;">
+                Smartcom Solutions Srl &mdash; Via Tunisia 5, Collegno (TO) &mdash; P.IVA 12711040019
+              </p>
+              <p style="margin:0 0 12px;color:#64748b;font-size:13px;text-align:center;">
+                Tel: 011 4557949 &nbsp;|&nbsp; <a href="mailto:info@noleggiosumisura.it" style="color:#2563eb;text-decoration:none;">info@noleggiosumisura.it</a>
+              </p>
+              <p style="margin:0;text-align:center;">
+                <a href="{{{link_opt_out}}}" style="color:#94a3b8;font-size:11px;text-decoration:underline;">Non desidero pi&ugrave; ricevere comunicazioni</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

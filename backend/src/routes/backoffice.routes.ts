@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
+import { inviaComunicazioneIniziale } from '../services/email.service.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -188,6 +189,76 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
     });
   } catch (err) {
     console.error('[import/confirm] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// GET /api/backoffice/pratiche — lista pratiche EOL
+router.get('/pratiche', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const pratiche = await prisma.contratto_EOL.findMany({
+      include: { cliente: { select: { ragione_sociale: true, piva: true, email: true } } },
+      orderBy: { data_importazione: 'desc' },
+    });
+    res.json(pratiche);
+  } catch (err) {
+    console.error('[pratiche] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche/:id/invia-comunicazione — invio singolo
+router.post('/pratiche/:id/invia-comunicazione', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await inviaComunicazioneIniziale(req.params.id as string);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (err) {
+    console.error('[invia-comunicazione] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche/invia-comunicazione-batch — invio a tutte le LISTA_RICEVUTA
+router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where: { stato: 'LISTA_RICEVUTA' },
+      select: { id: true },
+    });
+
+    let inviati = 0;
+    let errori = 0;
+    let saltati = 0;
+    const dettagli: Array<{ contrattoId: string; esito: string; errori?: string[] }> = [];
+
+    for (const p of pratiche) {
+      const result = await inviaComunicazioneIniziale(p.id);
+      if (result.success) {
+        inviati++;
+        dettagli.push({ contrattoId: p.id, esito: 'INVIATO' });
+      } else if (result.errori.some(e => e.includes('opt-out') || e.includes('Stato non valido'))) {
+        saltati++;
+        dettagli.push({ contrattoId: p.id, esito: 'SALTATO', errori: result.errori });
+      } else {
+        errori++;
+        dettagli.push({ contrattoId: p.id, esito: 'ERRORE', errori: result.errori });
+      }
+    }
+
+    res.json({
+      message: `Batch completato: ${inviati} inviati, ${saltati} saltati, ${errori} errori`,
+      totale: pratiche.length,
+      inviati,
+      saltati,
+      errori,
+      dettagli,
+    });
+  } catch (err) {
+    console.error('[invia-comunicazione-batch] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });
