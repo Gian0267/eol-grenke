@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "_description": "Regole di assegnazione delle pratiche EOL e dei task di escalation telefonica. Vedi SPECS.md sezione 5.3 e 6.5.2.",
+  "regole_assegnazione_contatto": {
+    "priorita_1": {
+      "condizione": "agente_originario.attivo == true",
+      "assegna_a": "agente_originario"
+    },
+    "priorita_2": {
+      "condizione": "monte_canoni >= soglia_alto_valore",
+      "assegna_a": "capo_area_di_agente_originario"
+    },
+    "priorita_3": {
+      "condizione": "default",
+      "assegna_a": "team_fine_noleggio_BACKOFFICE_INTERNO"
+    }
+  },
+  "soglia_alto_valore_eur": 5000,
+  "regole_escalation_telefonica": {
+    "t_50": "agente_assegnato",
+    "t_40": "agente_assegnato",
+    "t_35_alto_valore": "capo_area_di_agente_assegnato",
+    "t_35_basso_valore": "agente_assegnato"
+  },
+  "sla_richiamata_ore_lavorative": 24
+}

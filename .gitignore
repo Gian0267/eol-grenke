@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Database
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Environment
+.env
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Storage (generated files)
+backend/storage/pdfs/
+backend/storage/grenke-exports/
+
+# Vite
+frontend/.vite/
+
+# Claude
+.claude/

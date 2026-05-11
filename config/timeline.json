@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "_description": "Timeline operativa del flusso EOL, espressa in giorni rispetto alla scadenza del contratto Grenke (T0). Vedi SPECS.md sezione 3.",
+  "giorni_pre_scadenza": {
+    "comunicazione_iniziale": 145,
+    "sollecito_email_1": 90,
+    "sollecito_email_2": 60,
+    "escalation_telefonica_1": 50,
+    "sollecito_email_3": 45,
+    "escalation_telefonica_2": 40,
+    "sollecito_email_4": 35,
+    "escalation_telefonica_3": 35,
+    "deadline_decisione": 30,
+    "consolidamento_lista_riacquisti": 20
+  },
+  "giorni_post_scadenza": {
+    "termine_consegna_bene": 10,
+    "trasferimento_proprieta": 11,
+    "pagamento_grenke": 30
+  }
+}

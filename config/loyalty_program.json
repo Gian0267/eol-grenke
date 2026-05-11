@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "_description": "Regole del programma di fedeltà: gift card Smartcom Solutions emessa al rinnovo del contratto FLEX. Vedi SPECS.md sezione 5.2.",
+  "gift_card": {
+    "abilitato": true,
+    "calcolo_dinamico": true,
+    "a_carico_di": "Smartcom Solutions",
+    "spendibile_su": "Smartcom Distribution",
+    "tagli_standard_eur": [25, 50, 75, 100, 125, 150, 200, 250, 300],
+    "metodo_arrotondamento": "per_difetto",
+    "validita_mesi": 12,
+    "trigger_emissione": "alla_firma_nuovo_contratto_flex",
+    "messaggio_marketing": "Rinnova il tuo contratto FLEX e ricevi una gift card Smartcom Solutions di {{valore}}€ spendibile sul catalogo Smartcom Distribution.",
+    "_note": "La gift card NON viene erogata al momento della scelta dell'opzione rinnovo, ma solo alla firma effettiva del nuovo contratto FLEX (per evitare frodi)."
+  }
+}

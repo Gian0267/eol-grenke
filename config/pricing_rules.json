@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "_description": "Regole di calcolo del pricing per riacquisto e rapporto con Grenke. Vedi SPECS.md sezione 5.1.",
+  "pricing_grenke_percentuale": 0.05,
+  "pricing_riacquisto_percentuale": 0.08,
+  "margine_lordo_percentuale": 0.03,
+  "iva_percentuale": 0.22,
+  "valuta": "EUR"
+}

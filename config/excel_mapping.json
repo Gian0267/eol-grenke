@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "_description": "Mapping delle colonne del file Excel Grenke ai campi del DB NSM. Vedi SPECS.md sezione 6.1 e 9.5.",
+  "formato_grenke_standard": {
+    "Numero Contratto Grenke": "contratto_grenke_id",
+    "Data Stipula": "data_stipula",
+    "Data Scadenza": "data_scadenza",
+    "Ragione Sociale": "cliente.ragione_sociale",
+    "P.IVA": "cliente.piva",
+    "Codice Fiscale": "cliente.codice_fiscale",
+    "Email": "cliente.email",
+    "PEC": "cliente.pec",
+    "Telefono": "cliente.telefono",
+    "Indirizzo Sede": "cliente.indirizzo_sede",
+    "CAP": "cliente.cap",
+    "Citta": "cliente.citta",
+    "Provincia": "cliente.provincia",
+    "Canone Mensile": "canone_mensile",
+    "Numero Mesi": "numero_mesi",
+    "Descrizione Beni": "beni_descrizione",
+    "Valore Originario": "valore_originario",
+    "Origine": "origine"
+  },
+  "campi_obbligatori": [
+    "contratto_grenke_id",
+    "data_scadenza",
+    "cliente.ragione_sociale",
+    "cliente.piva",
+    "cliente.email",
+    "canone_mensile",
+    "numero_mesi"
+  ],
+  "_note": "Il formato esatto del file Excel deve essere concordato con Grenke (vedi Tornata 1 punto B.2 nelle lettere di negoziazione)."
+}

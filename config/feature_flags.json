@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "_description": "Feature flags per abilitare/disabilitare moduli del template. Tutti default true per il prototipo.",
+  "abilita_fea_riacquisto": true,
+  "abilita_fes_restituzione": true,
+  "abilita_pagamento_fabrick": true,
+  "abilita_pagamento_stripe": true,
+  "abilita_solleciti_email_automatici": true,
+  "abilita_escalation_telefonica": true,
+  "abilita_widget_chiamami": true,
+  "abilita_step_pre_pagamento": true,
+  "abilita_gift_card": true,
+  "abilita_riconciliazione_automatica": true,
+  "abilita_audit_chain": true,
+  "abilita_opt_out_comunicazioni": true,
+  "modalita_test": true,
+  "_note_modalita_test": "Quando modalita_test = true: OTP '123456' sempre accettato, pagamenti hanno probabilità 90% di successo, dati sensibili mascherati nei log."
+}

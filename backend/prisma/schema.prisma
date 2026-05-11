@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Contratto_EOL {
+  id                    String               @id @default(uuid())
+  contratto_nsm_id      String               @unique
+  contratto_grenke_id   String
+  cliente_id            String
+  cliente               Cliente              @relation(fields: [cliente_id], references: [id])
+  data_stipula          DateTime
+  data_scadenza         DateTime
+  canone_mensile        Decimal
+  numero_mesi           Int
+  monte_canoni          Decimal
+  valore_originario     Decimal?
+  beni_json             String               // SQLite doesn't support JSON type natively, using String
+  pricing_riacquisto    Decimal
+  pricing_grenke        Decimal
+  margine_lordo         Decimal
+  valore_gift_card      Decimal
+  stato                 String
+  origine               String
+  agente_originario_id  String?
+  agente_originario     Utente_NSM?          @relation("AgenteOriginario", fields: [agente_originario_id], references: [id])
+  agente_assegnato_id   String?
+  agente_assegnato      Utente_NSM?          @relation("AgenteAssegnato", fields: [agente_assegnato_id], references: [id])
+  data_importazione     DateTime
+  token_accesso_cliente String?
+  stato_riconciliazione String
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+
+  decisioni             Decisione_Cliente[]
+  pagamenti             Pagamento[]
+  comunicazioni         Comunicazione[]
+  richieste_contatto    Richiesta_Contatto[]
+  audit_events          Audit_Event[]
+}
+
+model Cliente {
+  id                    String          @id @default(uuid())
+  ragione_sociale       String
+  piva                  String          @unique
+  codice_fiscale        String?
+  email                 String
+  pec                   String?
+  telefono              String?
+  referente_nome        String?
+  referente_email       String?
+  referente_telefono    String?
+  indirizzo_sede        String?
+  cap                   String?
+  citta                 String?
+  provincia             String?
+  opt_out_comunicazioni Boolean         @default(false)
+  created_at            DateTime        @default(now())
+  updated_at            DateTime        @updatedAt
+
+  contratti             Contratto_EOL[]
+}
+
+model Decisione_Cliente {
+  id                String        @id @default(uuid())
+  contratto_eol_id  String
+  contratto_eol     Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  opzione_scelta    String
+  data_decisione    DateTime      @default(now())
+  ip_address        String?
+  user_agent        String?
+  otp_verificato    Boolean       @default(false)
+  otp_metodo        String?
+  pdf_conferma_path String?
+  hash_pdf          String?
+  note_cliente      String?
+  created_at        DateTime      @default(now())
+}
+
+model Pagamento {
+  id                      String        @id @default(uuid())
+  contratto_eol_id        String
+  contratto_eol           Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  importo_netto           Decimal
+  importo_iva             Decimal
+  importo_totale          Decimal
+  metodo                  String
+  stato                   String
+  riferimento_transazione String?
+  data_iniziato           DateTime      @default(now())
+  data_completato         DateTime?
+  fattura_numero          String?
+  fattura_path            String?
+  natura_giuridica        String
+}
+
+model Comunicazione {
+  id               String        @id @default(uuid())
+  contratto_eol_id String
+  contratto_eol    Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  tipo             String
+  canale           String
+  destinatario     String
+  oggetto          String?
+  corpo_html       String?
+  esito_chiamata   String?
+  allegati_json    String?       // Stored as String since SQLite doesn't have native JSON
+  data_invio       DateTime      @default(now())
+  data_consegna    DateTime?
+  data_apertura    DateTime?
+  esito_invio      String
+  operatore_id     String?
+  operatore        Utente_NSM?   @relation(fields: [operatore_id], references: [id])
+  created_at       DateTime      @default(now())
+}
+
+model Richiesta_Contatto {
+  id                  String        @id @default(uuid())
+  contratto_eol_id    String
+  contratto_eol       Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  origine             String
+  nome_referente      String?
+  telefono            String?
+  giorno_preferito    String?
+  fascia_oraria       String?
+  modalita_preferita  String?
+  note                String?
+  agente_assegnato_id String?
+  agente_assegnato    Utente_NSM?   @relation(fields: [agente_assegnato_id], references: [id])
+  stato               String
+  data_richiamato     DateTime?
+  esito               String?
+  pratica_sbloccata   Boolean       @default(false)
+  created_at          DateTime      @default(now())
+}
+
+model Audit_Event {
+  id               String        @id @default(uuid())
+  contratto_eol_id String
+  contratto_eol    Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  timestamp        DateTime      @default(now())
+  attore_tipo      String
+  attore_id        String
+  azione           String
+  dati_json        String        // Stored as String since SQLite doesn't have native JSON
+  hash_precedente  String
+  hash_corrente    String
+}
+
+model Utente_NSM {
+  id         String   @id @default(uuid())
+  nome       String
+  cognome    String
+  email      String   @unique
+  password   String   // Added for backoffice login (Mission 7)
+  ruolo      String
+  attivo     Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  // Relations
+  contratti_originati Contratto_EOL[]      @relation("AgenteOriginario")
+  contratti_assegnati Contratto_EOL[]      @relation("AgenteAssegnato")
+  chiamate_effettuate Comunicazione[]
+  richieste_assegnate Richiesta_Contatto[]
+}
