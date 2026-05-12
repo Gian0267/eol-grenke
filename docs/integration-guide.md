@@ -21,10 +21,11 @@ Questa guida è destinata al **team di sviluppo Smartcom** che integrerà il tem
 4. [Autenticazione produttiva](#4-autenticazione-produttiva)
 5. [Integrazione con piattaforma NSM esistente](#5-integrazione-con-piattaforma-nsm)
 6. [Trasmissione lista riacquisti a Grenke](#6-trasmissione-lista-riacquisti)
-7. [Conservazione a norma dei documenti](#7-conservazione-a-norma)
-8. [Deploy su AWS](#8-deploy-su-aws)
-9. [Monitoring e alerting](#9-monitoring-e-alerting)
-10. [Checklist go-live](#10-checklist-go-live)
+7. [Fatturazione elettronica (SDI)](#7-fatturazione-elettronica-sdi)
+8. [Conservazione a norma dei documenti](#8-conservazione-a-norma)
+9. [Deploy su AWS](#9-deploy-su-aws)
+10. [Monitoring e alerting](#10-monitoring-e-alerting)
+11. [Checklist go-live](#11-checklist-go-live)
 
 ---
 
@@ -128,7 +129,67 @@ A T-20 Smartcom deve trasmettere a Grenke il file Excel con la lista contratti p
 
 ---
 
-## 7. Conservazione a norma
+## 7. Fatturazione elettronica (SDI)
+
+Il template **non genera fatture fiscali**. Il PDF prodotto alla conferma del pagamento e' una **ricevuta di conferma pagamento** con disclaimer esplicito. La fattura elettronica deve essere emessa dall'ERP aziendale tramite SDI.
+
+### 7.1 Architettura dell'integrazione
+
+Quando `handlePaymentCallback` conferma un pagamento con esito positivo (stato `COMPLETATO`), il sistema deve notificare l'ERP per l'emissione automatica della fattura SDI. Il flusso e':
+
+1. Il template aggiorna lo stato del pagamento a `COMPLETATO` e genera la ricevuta di conferma
+2. Un **evento** viene pubblicato (webhook, coda messaggi, o chiamata API diretta) verso l'ERP
+3. L'ERP genera la fattura elettronica in formato XML FatturaPA
+4. L'ERP trasmette la fattura al Sistema di Interscambio (SDI)
+5. L'ERP riceve la notifica di esito da SDI e (opzionalmente) aggiorna il template via callback
+
+### 7.2 Punto di integrazione nel codice
+
+Il punto di aggancio si trova in `backend/src/services/payment.service.ts`, funzione `handlePaymentCallback`, subito dopo la chiamata a `generaRicevutaPagamento`:
+
+```typescript
+// Dopo la generazione della ricevuta, notificare l'ERP
+// await erpService.emettiFatturaSDI({
+//   contratto_nsm_id: pagamento.contratto_eol.contratto_nsm_id,
+//   contratto_grenke_id: pagamento.contratto_eol.contratto_grenke_id,
+//   cliente_piva: pagamento.contratto_eol.cliente.piva,
+//   cliente_ragione_sociale: pagamento.contratto_eol.cliente.ragione_sociale,
+//   importo_netto: pagamento.importo_netto,
+//   importo_iva: pagamento.importo_iva,
+//   importo_totale: pagamento.importo_totale,
+//   natura: 'ACCONTO',
+//   riferimento_pagamento: pagamento.riferimento_transazione,
+//   data_pagamento: pagamento.data_completato,
+// });
+```
+
+### 7.3 Dati necessari per la fattura SDI
+
+| Campo FatturaPA | Sorgente nel template |
+|---|---|
+| CedentePrestatore | Dati Smartcom (fissi in configurazione) |
+| CessionarioCommittente | `cliente.ragione_sociale`, `cliente.piva`, `cliente.indirizzo_sede` |
+| ImportoTotaleDocumento | `pagamento.importo_totale` |
+| ImponibileImporto | `pagamento.importo_netto` |
+| Imposta | `pagamento.importo_iva` |
+| AliquotaIVA | 22.00 |
+| Natura | Art. 6 DPR 633/72 (acconto) |
+| DatiBeniServizi | Beni da `contratto.beni_json` |
+| CausalePagamento | Riacquisto beni contratto {contratto_nsm_id} |
+
+### 7.4 Opzioni di integrazione
+
+- **API diretta ERP**: chiamata REST/SOAP sincrona dopo il pagamento. Semplice ma accoppiata.
+- **Coda messaggi (SQS/RabbitMQ)**: il template pubblica un evento `PAGAMENTO_COMPLETATO`, l'ERP lo consuma. Disaccoppiata e resiliente.
+- **Webhook**: il template chiama un endpoint configurabile dell'ERP. Buon compromesso.
+
+### 7.5 Fattura di saldo
+
+La fattura di saldo (al trasferimento di proprieta, T+11 dalla scadenza Grenke) e' interamente gestita dall'ERP. Il template non interviene. L'ERP dovra monitorare le date di scadenza dei contratti con stato `RIACQUISTO_PAGATO` e generare autonomamente la fattura di saldo alla data corretta.
+
+---
+
+## 8. Conservazione a norma
 
 I documenti firmati (verbali di restituzione, conferme di riacquisto, fatture) devono essere conservati per **10 anni minimo** in modalità **conservazione a norma** (DPCM 3/12/2013).
 
@@ -141,19 +202,19 @@ I documenti firmati (verbali di restituzione, conferme di riacquisto, fatture) d
 
 ---
 
-## 8. Deploy su AWS
+## 9. Deploy su AWS
 
 [DA POPOLARE — opzioni: ECS/Fargate, Elastic Beanstalk, Lambda+API Gateway]
 
 ---
 
-## 9. Monitoring e alerting
+## 10. Monitoring e alerting
 
 [DA POPOLARE — CloudWatch, Sentry per error tracking, dashboard KPI in tempo reale]
 
 ---
 
-## 10. Checklist go-live
+## 11. Checklist go-live
 
 - [ ] Tutti i provider mock sostituiti con quelli reali
 - [ ] Database migrato a PostgreSQL su RDS
@@ -162,6 +223,7 @@ I documenti firmati (verbali di restituzione, conferme di riacquisto, fatture) d
 - [ ] Monitoring e alerting attivi
 - [ ] Test di carico superati (es. 1000 pratiche EOL gestite in parallelo)
 - [ ] Audit log integrità verificata
+- [ ] Integrazione fatturazione elettronica SDI con ERP aziendale
 - [ ] Conservazione a norma attiva
 - [ ] DPO interno informato e procedura GDPR validata
 - [ ] Documentazione utente per il team operativo NSM

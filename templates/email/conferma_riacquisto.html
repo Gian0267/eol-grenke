@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="color:#ffffff;font-size:20px;font-weight:bold;">NSM</span>
+                    <span style="color:#ffffffaa;font-size:14px;margin-left:8px;">Noleggio Su Misura</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding:32px;">
+              <h1 style="color:#16a34a;font-size:22px;margin:0 0 16px 0;">Pagamento completato con successo</h1>
+
+              <p style="color:#333333;font-size:14px;line-height:1.6;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+
+              <p style="color:#333333;font-size:14px;line-height:1.6;">
+                il pagamento per il riacquisto dei beni relativi al contratto
+                <strong>{{numero_contratto_nsm}}</strong> (Rif. Grenke: {{numero_contratto_grenke}})
+                e' stato completato con successo.
+              </p>
+
+              <!-- Riepilogo -->
+              <table width="100%" cellpadding="12" cellspacing="0" style="background-color:#f0fdf4;border-radius:8px;margin:20px 0;">
+                <tr>
+                  <td style="font-size:14px;color:#333;">
+                    <strong>Riepilogo pagamento:</strong><br><br>
+                    Importo netto: <strong>EUR {{importo_netto}}</strong><br>
+                    IVA 22%: EUR {{importo_iva}}<br>
+                    <strong>Totale pagato: EUR {{importo_totale}}</strong><br><br>
+                    Metodo: {{metodo_pagamento}}<br>
+                    Ricevuta n.: {{fattura_numero}}
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color:#333333;font-size:14px;line-height:1.6;">
+                In allegato trovi la ricevuta di conferma pagamento in formato PDF.
+              </p>
+
+              <!-- Prossimi passi -->
+              <table width="100%" cellpadding="16" cellspacing="0" style="background-color:#eff6ff;border-radius:8px;margin:20px 0;">
+                <tr>
+                  <td style="font-size:13px;color:#1e40af;">
+                    <strong>Prossimi passi:</strong><br><br>
+                    La fattura elettronica le sara recapitata tramite il Sistema di Interscambio (SDI)
+                    entro i termini previsti dalla normativa vigente.<br><br>
+                    Il trasferimento di proprieta' del bene avverra' automaticamente alla data T+11
+                    dalla scadenza del contratto Grenke ({{data_scadenza}}).
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color:#666666;font-size:13px;line-height:1.6;margin-top:24px;">
+                Per qualsiasi informazione, contattaci al numero 011 4557949 o scrivi a info@noleggiosumisura.it.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;">
+              <p style="color:#9ca3af;font-size:11px;margin:0;text-align:center;">
+                Noleggio Su Misura &mdash; Smartcom Solutions Srl &mdash; Via Tunisia 5, 10093 Collegno (TO)
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -90,6 +90,7 @@ model Pagamento {
   importo_totale          Decimal
   metodo                  String
   stato                   String
+  session_id              String?              @unique
   riferimento_transazione String?
   data_iniziato           DateTime      @default(now())
   data_completato         DateTime?
@@ -159,6 +160,15 @@ model OtpCode {
   scadenza     DateTime
   usato        Boolean  @default(false)
   created_at   DateTime @default(now())
+}
+
+model Counter {
+  id    String @id @default(uuid())
+  year  Int
+  type  String
+  value Int    @default(0)
+
+  @@unique([year, type])
 }
 
 model Utente_NSM {

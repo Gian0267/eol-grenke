@@ -13,6 +13,11 @@ import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
 import { generateOtp, verifyOtp } from '../services/otp.service.js';
 import { generaVerbaleRestituzione } from '../services/pdf.service.js';
 import { MockFeaProvider } from '../providers/signature/fea.provider.js';
+import {
+  initiatePayment,
+  verifyPayment as verifyPaymentService,
+  handlePaymentCallback,
+} from '../services/payment.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -463,6 +468,332 @@ router.get(
       res.send(pdf);
     } catch (err) {
       console.error('[GET /api/cliente/decisione/pdf] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// ===== RIACQUISTO ROUTES =====
+
+// POST /api/cliente/decisione/riacquisto/inizia
+const iniziaRiacquistoSchema = z.object({
+  choice: z.enum(['contattatemi', 'procedi']),
+  nome: z.string().optional(),
+  telefono: z.string().optional(),
+  giorno_preferito: z.string().optional(),
+  fascia_oraria: z.enum(['MATTINA', 'POMERIGGIO', 'INDIFFERENTE']).optional(),
+});
+
+router.post(
+  '/decisione/riacquisto/inizia',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = iniziaRiacquistoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true, agente_originario: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      if (!statiValidi.includes(contratto.stato)) {
+        res.status(400).json({ errore: `Stato pratica non valido per riacquisto: ${contratto.stato}` });
+        return;
+      }
+
+      const { choice } = parsed.data;
+
+      if (choice === 'contattatemi') {
+        const { nome, telefono, giorno_preferito, fascia_oraria } = parsed.data;
+        if (!nome || !telefono) {
+          res.status(400).json({ errore: 'Nome e telefono obbligatori per richiesta contatto' });
+          return;
+        }
+
+        // Assignment rules
+        let agenteAssegnatoId: string | null = null;
+        const soglia = assignmentRules.soglia_alto_valore_eur as number;
+
+        if (contratto.agente_originario && contratto.agente_originario.attivo) {
+          agenteAssegnatoId = contratto.agente_originario.id;
+        } else if (Number(contratto.monte_canoni) >= soglia) {
+          const capoArea = await prisma.utente_NSM.findFirst({
+            where: { ruolo: 'ADMIN', attivo: true },
+          });
+          if (capoArea) agenteAssegnatoId = capoArea.id;
+        }
+        if (!agenteAssegnatoId) {
+          const team = await prisma.utente_NSM.findFirst({
+            where: { ruolo: 'BACKOFFICE_INTERNO', attivo: true },
+          });
+          if (team) agenteAssegnatoId = team.id;
+        }
+
+        await prisma.richiesta_Contatto.create({
+          data: {
+            contratto_eol_id: contratto.id,
+            origine: 'STEP_PRE_PAGAMENTO',
+            nome_referente: nome,
+            telefono,
+            giorno_preferito: giorno_preferito || '',
+            fascia_oraria: fascia_oraria || 'INDIFFERENTE',
+            agente_assegnato_id: agenteAssegnatoId,
+            stato: 'DA_GESTIRE',
+          },
+        });
+
+        await prisma.contratto_EOL.update({
+          where: { id: contratto.id },
+          data: { stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA' },
+        });
+
+        // Notifica agente
+        if (agenteAssegnatoId) {
+          const agente = await prisma.utente_NSM.findUnique({ where: { id: agenteAssegnatoId } });
+          if (agente) {
+            const html = notificaTemplate({
+              ragione_sociale: contratto.cliente.ragione_sociale,
+              contratto_nsm: contratto.contratto_nsm_id,
+              nome_referente: nome,
+              telefono,
+              giorno_preferito: giorno_preferito || 'Non specificato',
+              fascia_oraria: fascia_oraria || 'INDIFFERENTE',
+              monte_canoni: formatEur(Number(contratto.monte_canoni)),
+              motivo_assegnazione: 'step_pre_pagamento',
+            });
+            await emailProvider.send(
+              agente.email,
+              `Richiesta contatto pre-pagamento: ${contratto.cliente.ragione_sociale}`,
+              html,
+            );
+          }
+        }
+
+        res.json({
+          success: true,
+          choice: 'contattatemi',
+          messaggio: 'Ti contatteremo a breve. Riceverai un\'email per riprendere il pagamento.',
+        });
+      } else {
+        // choice === 'procedi'
+        if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
+          await prisma.contratto_EOL.update({
+            where: { id: contratto.id },
+            data: { stato: 'IN_ATTESA_DECISIONE' },
+          });
+        }
+
+        const ivaPerc = pricingRules.iva_percentuale as number;
+        const { iva, totale } = calcolaIva(contratto.pricing_riacquisto, ivaPerc);
+
+        res.json({
+          success: true,
+          choice: 'procedi',
+          pricing: {
+            netto: Number(contratto.pricing_riacquisto),
+            iva,
+            totale,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/riacquisto/inizia] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/riacquisto/conferma-tc
+const confermaTcSchema = z.object({
+  codice: z.string().length(6),
+  metodo: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/riacquisto/conferma-tc',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = confermaTcSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const { codice, metodo } = parsed.data;
+      const destinatario = metodo === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      const otpResult = await verifyOtp(metodo, destinatario, codice);
+      if (!otpResult.valid) {
+        res.status(400).json({ errore: otpResult.errore });
+        return;
+      }
+
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      const decisione = await prisma.decisione_Cliente.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          opzione_scelta: 'RIACQUISTO',
+          otp_verificato: true,
+          otp_metodo: metodo,
+          ip_address: ip,
+          user_agent: userAgent,
+        },
+      });
+
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
+      });
+
+      res.json({ success: true, decisione_id: decisione.id });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/riacquisto/conferma-tc] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/riacquisto/richiedi-otp
+const richiediOtpRiacquistoSchema = z.object({
+  metodo: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/riacquisto/richiedi-otp',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = richiediOtpRiacquistoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Metodo OTP non valido' });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const { metodo } = parsed.data;
+      const destinatario = metodo === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      await generateOtp(metodo, destinatario);
+
+      res.json({
+        success: true,
+        messaggio: `Codice OTP inviato via ${metodo}`,
+        destinatario_mascherato: destinatario.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/riacquisto/richiedi-otp] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/riacquisto/scegli-metodo
+const scegliMetodoSchema = z.object({
+  metodo: z.enum(['FABRICK', 'STRIPE']),
+});
+
+router.post(
+  '/decisione/riacquisto/scegli-metodo',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = scegliMetodoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Metodo di pagamento non valido' });
+        return;
+      }
+
+      const { metodo } = parsed.data;
+      const result = await initiatePayment(req.contrattoEolId!, metodo);
+
+      res.json({
+        success: true,
+        session_id: result.session_id,
+        importi: result.importi,
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/riacquisto/scegli-metodo] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// GET /api/cliente/pagamento/:session_id/status
+router.get(
+  '/pagamento/:session_id/status',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const session_id = req.params.session_id as string;
+      const result = await verifyPaymentService(session_id);
+      res.json(result);
+    } catch (err) {
+      console.error('[GET /api/cliente/pagamento/:session_id/status] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// GET /api/cliente/pagamento/:pagamento_id/ricevuta — download ricevuta di conferma pagamento PDF
+router.get(
+  '/pagamento/:pagamento_id/ricevuta',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const pagamentoId = req.params.pagamento_id as string;
+      const pagamento = await prisma.pagamento.findFirst({
+        where: {
+          id: pagamentoId,
+          contratto_eol_id: req.contrattoEolId,
+        },
+      });
+
+      if (!pagamento?.fattura_path) {
+        res.status(404).json({ errore: 'Ricevuta non trovata' });
+        return;
+      }
+
+      const { readFileSync } = await import('fs');
+      const pdf = readFileSync(pagamento.fattura_path);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="ricevuta_${pagamento.fattura_numero || 'pagamento'}.pdf"`);
+      res.send(pdf);
+    } catch (err) {
+      console.error('[GET /api/cliente/pagamento/:pagamento_id/ricevuta] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },

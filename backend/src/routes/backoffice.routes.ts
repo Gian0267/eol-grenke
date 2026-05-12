@@ -9,6 +9,15 @@ import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.
 import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
+import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import Handlebars from 'handlebars';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const templateDir = resolve(__dirname, '../../../templates/email');
+const boEmailProvider = new SmtpEmailProvider();
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -273,6 +282,104 @@ router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequ
     });
   } catch (err) {
     console.error('[invia-comunicazione-batch] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// GET /api/backoffice/riacquisti-in-attesa — pratiche in attesa chiamata
+router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where: { stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA' },
+      include: {
+        cliente: { select: { ragione_sociale: true, piva: true, email: true, telefono: true } },
+        richieste_contatto: {
+          where: { origine: 'STEP_PRE_PAGAMENTO' },
+          orderBy: { created_at: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updated_at: 'desc' },
+    });
+    res.json(pratiche);
+  } catch (err) {
+    console.error('[riacquisti-in-attesa] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche/:id/sblocca-pagamento
+router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const pratica = await prisma.contratto_EOL.findUnique({
+      where: { id },
+      include: { cliente: true },
+    });
+
+    if (!pratica) {
+      res.status(404).json({ error: 'Pratica non trovata' });
+      return;
+    }
+
+    if (pratica.stato !== 'RIACQUISTO_IN_ATTESA_CHIAMATA') {
+      res.status(400).json({ error: `Stato non valido per sblocco: ${pratica.stato}` });
+      return;
+    }
+
+    await prisma.contratto_EOL.update({
+      where: { id: pratica.id },
+      data: { stato: 'IN_ATTESA_DECISIONE' },
+    });
+
+    // Aggiorna la richiesta contatto come sbloccata
+    const richiesta = await prisma.richiesta_Contatto.findFirst({
+      where: {
+        contratto_eol_id: pratica.id,
+        origine: 'STEP_PRE_PAGAMENTO',
+        pratica_sbloccata: false,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+    if (richiesta) {
+      await prisma.richiesta_Contatto.update({
+        where: { id: richiesta.id },
+        data: { pratica_sbloccata: true, stato: 'RICHIAMATO', data_richiamato: new Date() },
+      });
+    }
+
+    // Invia email al cliente con link per riprendere
+    if (pratica.token_accesso_cliente) {
+      let sbloccoTemplate: HandlebarsTemplateDelegate;
+      try {
+        sbloccoTemplate = Handlebars.compile(
+          readFileSync(resolve(templateDir, 'sblocco_pagamento.html'), 'utf-8'),
+        );
+      } catch {
+        // Fallback semplice se template non ancora creato
+        sbloccoTemplate = Handlebars.compile(
+          '<p>Gentile {{ragione_sociale}}, il pagamento per il riacquisto del bene e\' ora sbloccato.</p>' +
+          '<p><a href="{{link}}">Clicca qui per riprendere il pagamento</a></p>',
+        );
+      }
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const cliente = pratica.cliente!;
+      const html = sbloccoTemplate({
+        ragione_sociale: cliente.ragione_sociale,
+        link: `${frontendUrl}/pratica/${pratica.token_accesso_cliente}/riacquisto`,
+      });
+
+      await boEmailProvider.send(
+        cliente.email,
+        `Pagamento sbloccato — Contratto ${pratica.contratto_nsm_id}`,
+        html,
+      );
+    }
+
+    res.json({ success: true, messaggio: 'Pagamento sbloccato e cliente notificato' });
+  } catch (err) {
+    console.error('[sblocca-pagamento] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });
