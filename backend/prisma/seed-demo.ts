@@ -9,6 +9,7 @@
 
 import dotenv from 'dotenv';
 import { resolve, dirname } from 'path';
+import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -276,7 +277,12 @@ async function main() {
     links.push(`**${s.idx}. ${s.ragione_sociale}** (${s.grenkeId}) — ${s.descrizione}\n`);
   }
 
+  // Scrivi DEMO_LINKS.md nella root del progetto
+  const demoLinksPath = resolve(__dirname, '../../DEMO_LINKS.md');
+  writeFileSync(demoLinksPath, links.join('\n') + '\n', 'utf-8');
+
   console.log('\n=== DEMO SEED COMPLETATO ===\n');
+  console.log(`File generato: ${demoLinksPath}\n`);
   console.log(links.join('\n'));
 }
 

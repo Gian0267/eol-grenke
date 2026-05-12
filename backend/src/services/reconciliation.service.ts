@@ -134,8 +134,8 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
     }
 
     const parsed = parseResult.data;
-    const pricing = calcolaPricing(parsed.canone_mensile, parsed.numero_mesi);
-    const valore_gift_card = calcolaValoreGiftCard(pricing.margine_lordo);
+    const pricing = await calcolaPricing(parsed.canone_mensile, parsed.numero_mesi);
+    const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     const match = grenkeIdMap.get(parsed.contratto_grenke_id);
 

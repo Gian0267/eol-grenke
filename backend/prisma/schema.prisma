@@ -146,14 +146,14 @@ model Richiesta_Contatto {
 }
 
 model Audit_Event {
-  id               String        @id @default(uuid())
-  contratto_eol_id String
-  contratto_eol    Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
-  timestamp        DateTime      @default(now())
+  id               String         @id @default(uuid())
+  contratto_eol_id String?
+  contratto_eol    Contratto_EOL? @relation(fields: [contratto_eol_id], references: [id])
+  timestamp        DateTime       @default(now())
   attore_tipo      String
   attore_id        String
   azione           String
-  dati_json        String        // Stored as String since SQLite doesn't have native JSON
+  dati_json        String
   hash_precedente  String
   hash_corrente    String
 }
@@ -182,17 +182,34 @@ model Utente_NSM {
   nome       String
   cognome    String
   email      String   @unique
-  password   String   // Added for backoffice login (Mission 7)
+  password   String
   ruolo      String
   attivo     Boolean  @default(true)
   created_at DateTime @default(now())
 
   // Relations
-  contratti_originati Contratto_EOL[]      @relation("AgenteOriginario")
-  contratti_assegnati Contratto_EOL[]      @relation("AgenteAssegnato")
-  chiamate_effettuate Comunicazione[]
-  richieste_assegnate Richiesta_Contatto[]
-  task_assegnati      Task_Escalation[]
+  contratti_originati  Contratto_EOL[]      @relation("AgenteOriginario")
+  contratti_assegnati  Contratto_EOL[]      @relation("AgenteAssegnato")
+  chiamate_effettuate  Comunicazione[]
+  richieste_assegnate  Richiesta_Contatto[]
+  task_assegnati       Task_Escalation[]
+  impostazioni_modificate Impostazione[]
+}
+
+model Impostazione {
+  id             String    @id @default(uuid())
+  chiave         String    @unique
+  valore         String
+  tipo           String
+  categoria      String
+  label          String
+  descrizione    String
+  valore_default String
+  updated_at     DateTime  @updatedAt
+  updated_by_id  String?
+  updated_by     Utente_NSM? @relation(fields: [updated_by_id], references: [id])
+
+  @@index([categoria])
 }
 
 model Task_Escalation {

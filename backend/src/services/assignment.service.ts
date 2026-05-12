@@ -1,14 +1,5 @@
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const configDir = resolve(__dirname, '../../../config');
-const assignmentRules = JSON.parse(
-  readFileSync(resolve(configDir, 'assignment_rules.json'), 'utf-8'),
-);
+import * as configService from './config.service.js';
 
 export interface AssignmentResult {
   agenteAssegnatoId: string | null;
@@ -27,9 +18,8 @@ export async function assegnaPratica(
     return { agenteAssegnatoId: null, motivoAssegnazione: 'contratto_non_trovato' };
   }
 
-  const soglia = assignmentRules.soglia_alto_valore_eur as number;
+  const soglia = await configService.getNumero('pricing.soglia_alto_valore', 5000);
 
-  // Priorità 1: agente originario attivo
   if (contratto.agente_originario && contratto.agente_originario.attivo) {
     return {
       agenteAssegnatoId: contratto.agente_originario.id,
@@ -37,7 +27,6 @@ export async function assegnaPratica(
     };
   }
 
-  // Priorità 2: monte_canoni >= soglia → Capo Area
   if (Number(contratto.monte_canoni) >= soglia) {
     const capoArea = await prisma.utente_NSM.findFirst({
       where: { ruolo: 'CAPO_AREA', attivo: true },
@@ -50,7 +39,6 @@ export async function assegnaPratica(
     }
   }
 
-  // Priorità 3: fallback BACKOFFICE_INTERNO
   const teamBackoffice = await prisma.utente_NSM.findFirst({
     where: { ruolo: 'BACKOFFICE_INTERNO', attivo: true },
   });

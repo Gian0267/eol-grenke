@@ -22,10 +22,10 @@ import {
 import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf.service.js';
 import { assegnaPratica } from '../services/assignment.service.js';
 import { registraEvento } from '../services/audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-import { prisma } from '../lib/db.js';
 const emailProvider = new SmtpEmailProvider();
 
 const otpLimiter = rateLimit({
@@ -118,6 +118,10 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
       beni = JSON.parse(contratto.beni_json);
     } catch {}
 
+    // Leggi feature flag gift card dal config service
+    const configService = await import('../services/config.service.js');
+    const abilitaGiftCard = await configService.getBooleano('flags.abilita_gift_card', true);
+
     res.json({
       cliente: {
         ragione_sociale: contratto.cliente.ragione_sociale,
@@ -137,6 +141,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         pricing_riacquisto_iva: iva,
         pricing_riacquisto_totale: totale,
         valore_gift_card: Number(contratto.valore_gift_card),
+        abilita_gift_card: abilitaGiftCard,
       },
       deadline_decisione: deadlineDecisione.toISOString(),
     });
@@ -1219,5 +1224,53 @@ router.post(
     }
   },
 );
+
+// GET /api/cliente/config-testi — testi dinamici per area cliente
+router.get('/config-testi', verifyClienteToken, async (_req: ClienteAuthenticatedRequest, res: Response) => {
+  try {
+    const { getCategoria } = await import('../services/impostazioni.service.js');
+    const areaCliente = await getCategoria('AREA_CLIENTE');
+    const flags = await getCategoria('FEATURE_FLAGS');
+
+    const testi: Record<string, string> = {};
+    for (const imp of areaCliente) {
+      testi[imp.chiave] = imp.valore;
+    }
+
+    const featureFlags: Record<string, boolean> = {};
+    for (const imp of flags) {
+      featureFlags[imp.chiave] = imp.valore === 'true';
+    }
+
+    res.json({ testi, featureFlags });
+  } catch (err) {
+    console.error('[GET /api/cliente/config-testi] Errore:', err);
+    res.status(500).json({ errore: 'Errore interno' });
+  }
+});
+
+// GET /api/cliente/configurazione — config pubblica per area cliente (titoli, descrizioni, flags)
+router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthenticatedRequest, res: Response) => {
+  try {
+    const configService = await import('../services/config.service.js');
+
+    res.json({
+      abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
+      titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Rinnova il contratto'),
+      desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX alle stesse condizioni e ricevi un premio fedeltà.'),
+      titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Acquista il bene'),
+      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Riscatta i beni in locazione al prezzo di riacquisto concordato.'),
+      titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
+      desc_opzione_contatto: await configService.getTesto('cliente.desc_opzione_contatto', 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.'),
+      titolo_opzione_restituzione: await configService.getTesto('cliente.titolo_opzione_restituzione', 'Restituisci i beni'),
+      desc_opzione_restituzione: await configService.getTesto('cliente.desc_opzione_restituzione', 'Concludi il contratto e restituisci i beni alla società di leasing.'),
+      testo_widget_chiamami: await configService.getTesto('cliente.testo_widget_chiamami', 'Hai bisogno di parlare con noi prima di decidere?'),
+      testo_avviso_proroga: await configService.getTesto('cliente.testo_avviso_proroga', 'In assenza di scelta entro la deadline, il contratto proseguirà in proroga con canoni invariati per 6 mesi.'),
+    });
+  } catch (err) {
+    console.error('[GET /api/cliente/configurazione] Errore:', err);
+    res.status(500).json({ errore: 'Errore interno' });
+  }
+});
 
 export default router;

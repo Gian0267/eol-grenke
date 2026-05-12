@@ -155,8 +155,8 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
           continue;
         }
 
-        const pricing = calcolaPricing(raw.canone_mensile, raw.numero_mesi);
-        const valore_gift_card = calcolaValoreGiftCard(pricing.margine_lordo);
+        const pricing = await calcolaPricing(raw.canone_mensile, raw.numero_mesi);
+        const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
         const nsmId = row.matchedContractNsmId || `NSM-EOL-${Date.now()}-${row.index}`;
 

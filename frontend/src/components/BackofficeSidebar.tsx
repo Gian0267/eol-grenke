@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
-  BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet,
+  BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings,
 } from 'lucide-react';
 
 interface Utente {
@@ -38,6 +38,7 @@ export default function BackofficeSidebar() {
   const ruolo = utente?.ruolo || '';
   const isAgenteOrCapo = ['AGENTE', 'JUNIOR_AGENT', 'CAPO_AREA', 'GROUP_MANAGER', 'AGENZIA'].includes(ruolo);
   const isInternoOrAdmin = ['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo);
+  const isAdmin = ruolo === 'ADMIN';
 
   const menuItems = [
     { to: '/backoffice/dashboard', label: 'Dashboard', icon: LayoutDashboard, visible: true },
@@ -49,6 +50,7 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/import', label: 'Importa lista', icon: Upload, visible: isInternoOrAdmin },
     { to: '/backoffice/outlier', label: 'Outlier', icon: AlertTriangle, visible: isInternoOrAdmin },
     { to: '/backoffice/reportistica', label: 'Reportistica', icon: BarChart3, visible: true },
+    { to: '/backoffice/impostazioni', label: 'Impostazioni', icon: Settings, visible: isAdmin },
   ];
 
   const sidebarContent = (

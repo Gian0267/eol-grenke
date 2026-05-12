@@ -7,7 +7,11 @@ const API_BASE = '';
 interface PraticaData {
   cliente: { ragione_sociale: string };
   contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[]; monte_canoni: number };
-  economica: { valore_gift_card: number };
+  economica: { valore_gift_card: number; abilita_gift_card?: boolean };
+}
+
+interface ConfigPubblica {
+  abilita_gift_card: boolean;
 }
 
 const TIPI_DEVICE = ['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro'] as const;
@@ -41,12 +45,26 @@ export default function FlussoRinnovo() {
 
   // Conferma
   const [valoreGiftCard, setValoreGiftCard] = useState(0);
+  const [giftCardAbilitata, setGiftCardAbilitata] = useState(true);
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/api/cliente/pratica`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('Errore caricamento')))
-      .then(data => { setPratica(data); setValoreGiftCard(data.economica.valore_gift_card); })
+    const headers = { Authorization: `Bearer ${token}` };
+
+    Promise.all([
+      fetch(`${API_BASE}/api/cliente/pratica`, { headers })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('Errore caricamento'))),
+      fetch(`${API_BASE}/api/cliente/configurazione`, { headers })
+        .then(r => r.ok ? r.json() as Promise<ConfigPubblica> : null)
+        .catch(() => null),
+    ])
+      .then(([praticaData, configData]) => {
+        setPratica(praticaData);
+        setValoreGiftCard(praticaData.economica.valore_gift_card);
+        // Priorità: config endpoint > campo in pratica > default true
+        const flagAbilitato = configData?.abilita_gift_card ?? praticaData.economica.abilita_gift_card ?? true;
+        setGiftCardAbilitata(flagAbilitato);
+      })
       .catch(err => setErrore(err.message))
       .finally(() => setLoading(false));
   }, [token]);
@@ -173,17 +191,19 @@ export default function FlussoRinnovo() {
         {/* STEP 1 — Pre-qualificazione */}
         {step === 1 && (
           <div className="space-y-6">
-            {/* Banner gift card */}
-            <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
-              <Gift className="w-10 h-10 text-[#16a34a] mx-auto mb-2" />
-              <p className="font-bold text-[#16a34a] text-lg">
-                Rinnova e ricevi una gift card Smartcom Solutions
-              </p>
-              <p className="text-[#16a34a] text-2xl font-bold mt-1">
-                da &euro; {formatEur(pratica.economica.valore_gift_card)}
-              </p>
-              <p className="text-sm text-green-700 mt-1">alla firma del nuovo contratto FLEX!</p>
-            </div>
+            {/* Banner gift card — visibile solo se flag abilitato */}
+            {giftCardAbilitata && pratica.economica.valore_gift_card > 0 && (
+              <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
+                <Gift className="w-10 h-10 text-[#16a34a] mx-auto mb-2" />
+                <p className="font-bold text-[#16a34a] text-lg">
+                  Rinnova e ricevi una gift card Smartcom Solutions
+                </p>
+                <p className="text-[#16a34a] text-2xl font-bold mt-1">
+                  da &euro; {formatEur(pratica.economica.valore_gift_card)}
+                </p>
+                <p className="text-sm text-green-700 mt-1">alla firma del nuovo contratto FLEX!</p>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl border p-6 space-y-5">
               <h2 className="font-semibold text-[#1a3a52] text-lg">Dicci le tue esigenze</h2>
@@ -399,17 +419,19 @@ export default function FlussoRinnovo() {
               </p>
             </div>
 
-            {/* Gift card reminder */}
-            <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
-              <Gift className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
-              <p className="font-bold text-[#16a34a]">
-                Alla firma del nuovo contratto riceverai una gift card Smartcom Solutions
-              </p>
-              <p className="text-[#16a34a] text-2xl font-bold mt-1">
-                da &euro; {formatEur(valoreGiftCard)}
-              </p>
-              <p className="text-xs text-green-700 mt-1">Spendibile sul catalogo Smartcom Distribution</p>
-            </div>
+            {/* Gift card reminder — visibile solo se flag abilitato */}
+            {giftCardAbilitata && valoreGiftCard > 0 && (
+              <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
+                <Gift className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
+                <p className="font-bold text-[#16a34a]">
+                  Alla firma del nuovo contratto riceverai una gift card Smartcom Solutions
+                </p>
+                <p className="text-[#16a34a] text-2xl font-bold mt-1">
+                  da &euro; {formatEur(valoreGiftCard)}
+                </p>
+                <p className="text-xs text-green-700 mt-1">Spendibile sul catalogo Smartcom Distribution</p>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl border p-6">
               <h3 className="font-semibold text-[#1a3a52] mb-3">Prossimi passi</h3>
@@ -424,7 +446,9 @@ export default function FlussoRinnovo() {
                 </li>
                 <li className="flex gap-3">
                   <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                  Alla firma riceverai la gift card Smartcom Solutions
+                  {giftCardAbilitata
+                    ? 'Alla firma riceverai la gift card Smartcom Solutions'
+                    : 'Alla firma del nuovo contratto sarai subito operativo'}
                 </li>
               </ol>
             </div>

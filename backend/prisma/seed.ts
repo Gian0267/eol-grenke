@@ -9,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { seedImpostazioni } from './seed-impostazioni.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -248,6 +249,10 @@ async function main() {
   console.log('✅ 23 Contratti FLEX_ATTIVO creati (preesistenti in piattaforma, per riconciliazione)');
   console.log('   GrenkeIDs: G-FLEX-24-006 ... G-FLEX-24-028');
   console.log('   Totale contratti con grenkeId matchabile: 28 (5 originali + 23 FLEX_ATTIVO)');
+
+  // ─── Impostazioni ───────────────────────────────────────────────────
+  await seedImpostazioni(prisma);
+
   console.log('\n🎉 Seed completato con successo!');
 }
 

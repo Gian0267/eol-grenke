@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
+import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const emailProvider = new SmtpEmailProvider();
@@ -16,23 +17,18 @@ const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = `http://localhost:${process.env.PORT || 3001}`;
 
-interface TimelineConfig {
-  version: string;
-  giorni_pre_scadenza: Record<string, number>;
-  giorni_post_scadenza: Record<string, number>;
-}
-
-function loadTimeline(): TimelineConfig {
-  const timelinePath = resolve(__dirname, '../../../config/timeline.json');
-  return JSON.parse(readFileSync(timelinePath, 'utf-8'));
-}
-
-function loadTemplate(name: string): HandlebarsTemplateDelegate {
+async function loadTemplateFromDb(chiaveEmail: string): Promise<HandlebarsTemplateDelegate> {
+  const html = await configService.getHtml(chiaveEmail);
+  if (html) return Handlebars.compile(html);
+  const name = chiaveEmail.replace('email.', '');
   const templatePath = resolve(__dirname, `../../../templates/email/${name}.html`);
   return Handlebars.compile(readFileSync(templatePath, 'utf-8'));
 }
 
-function loadScript(name: string): string {
+async function loadScriptFromDb(chiaveScript: string): Promise<string> {
+  const text = await configService.getTesto(chiaveScript);
+  if (text) return text;
+  const name = chiaveScript.replace('script.', 'script_escalation_');
   const scriptPath = resolve(__dirname, `../../../templates/script/${name}.md`);
   return readFileSync(scriptPath, 'utf-8');
 }
@@ -56,18 +52,21 @@ function diffDays(scadenza: Date, oggi: Date): number {
   return Math.round(diffMs / (24 * 60 * 60 * 1000));
 }
 
-const SOLLECITO_MAP: Record<number, { tipo: string; template: string; numero: number }> = {
-  90: { tipo: 'SOLLECITO_1', template: 'sollecito_1', numero: 1 },
-  60: { tipo: 'SOLLECITO_2', template: 'sollecito_2', numero: 2 },
-  45: { tipo: 'SOLLECITO_3', template: 'sollecito_3', numero: 3 },
-  35: { tipo: 'SOLLECITO_4', template: 'sollecito_4', numero: 4 },
-};
+interface SollecitoEntry { tipo: string; emailKey: string; timelineKey: string; numero: number }
+interface EscalationEntry { tipo: string; scriptKey: string; timelineKey: string }
 
-const ESCALATION_MAP: Record<number, { tipo: string; script: string }> = {
-  50: { tipo: 'T_50', script: 'script_escalation_t50' },
-  40: { tipo: 'T_40', script: 'script_escalation_t40' },
-  35: { tipo: 'T_35', script: 'script_escalation_t35' },
-};
+const SOLLECITO_DEFS: SollecitoEntry[] = [
+  { tipo: 'SOLLECITO_1', emailKey: 'email.sollecito_1', timelineKey: 'timeline.sollecito_email_1', numero: 1 },
+  { tipo: 'SOLLECITO_2', emailKey: 'email.sollecito_2', timelineKey: 'timeline.sollecito_email_2', numero: 2 },
+  { tipo: 'SOLLECITO_3', emailKey: 'email.sollecito_3', timelineKey: 'timeline.sollecito_email_3', numero: 3 },
+  { tipo: 'SOLLECITO_4', emailKey: 'email.sollecito_4', timelineKey: 'timeline.sollecito_email_4', numero: 4 },
+];
+
+const ESCALATION_DEFS: EscalationEntry[] = [
+  { tipo: 'T_50', scriptKey: 'script.t50', timelineKey: 'timeline.escalation_telefonica_1' },
+  { tipo: 'T_40', scriptKey: 'script.t40', timelineKey: 'timeline.escalation_telefonica_2' },
+  { tipo: 'T_35', scriptKey: 'script.t35', timelineKey: 'timeline.escalation_telefonica_3' },
+];
 
 export interface SchedulerReport {
   data_esecuzione: string;
@@ -95,18 +94,24 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     errori: [],
   };
 
-  const templates = new Map<string, HandlebarsTemplateDelegate>();
-  const scripts = new Map<string, string>();
+  const SOLLECITO_MAP = new Map<number, SollecitoEntry & { compiledTemplate: HandlebarsTemplateDelegate }>();
+  const ESCALATION_MAP = new Map<number, EscalationEntry & { scriptText: string }>();
   let notificaAgenteTemplate: HandlebarsTemplateDelegate;
+  let deadlineGiorni: number;
 
   try {
-    for (const [, cfg] of Object.entries(SOLLECITO_MAP)) {
-      templates.set(cfg.template, loadTemplate(cfg.template));
+    for (const def of SOLLECITO_DEFS) {
+      const giorni = await configService.getNumero(def.timelineKey);
+      const tpl = await loadTemplateFromDb(def.emailKey);
+      SOLLECITO_MAP.set(giorni, { ...def, compiledTemplate: tpl });
     }
-    notificaAgenteTemplate = loadTemplate('notifica_agente_escalation');
-    for (const [, cfg] of Object.entries(ESCALATION_MAP)) {
-      scripts.set(cfg.script, loadScript(cfg.script));
+    notificaAgenteTemplate = await loadTemplateFromDb('email.notifica_agente_escalation');
+    for (const def of ESCALATION_DEFS) {
+      const giorni = await configService.getNumero(def.timelineKey);
+      const scriptText = await loadScriptFromDb(def.scriptKey);
+      ESCALATION_MAP.set(giorni, { ...def, scriptText });
     }
+    deadlineGiorni = await configService.getNumero('timeline.deadline_decisione', 30);
   } catch (err) {
     const msg = `Errore caricamento template: ${err instanceof Error ? err.message : String(err)}`;
     report.errori.push(msg);
@@ -134,7 +139,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     console.log(`[Scheduler] Pratica ${pratica.contratto_nsm_id}: ${giorni} giorni a scadenza`);
 
     // --- SOLLECITI EMAIL ---
-    const sollecitoCfg = SOLLECITO_MAP[giorni];
+    const sollecitoCfg = SOLLECITO_MAP.get(giorni);
     if (sollecitoCfg) {
       if (pratica.cliente.opt_out_comunicazioni) {
         console.log(`[Scheduler] Skip sollecito ${sollecitoCfg.tipo} per ${pratica.contratto_nsm_id}: opt-out`);
@@ -153,7 +158,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
           report.solleciti_skippati++;
         } else {
           try {
-            await inviaSollecito(pratica, sollecitoCfg, templates.get(sollecitoCfg.template)!);
+            await inviaSollecito(pratica, { tipo: sollecitoCfg.tipo, template: sollecitoCfg.emailKey, numero: sollecitoCfg.numero }, sollecitoCfg.compiledTemplate);
             report.solleciti_inviati++;
           } catch (err) {
             const msg = `Errore sollecito ${sollecitoCfg.tipo} per ${pratica.contratto_nsm_id}: ${err instanceof Error ? err.message : String(err)}`;
@@ -165,7 +170,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     }
 
     // --- ESCALATION TELEFONICA ---
-    const escalationCfg = ESCALATION_MAP[giorni];
+    const escalationCfg = ESCALATION_MAP.get(giorni);
     if (escalationCfg) {
       const giàCreato = await prisma.task_Escalation.findFirst({
         where: {
@@ -181,8 +186,8 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
         try {
           await creaEscalation(
             pratica,
-            escalationCfg,
-            scripts.get(escalationCfg.script)!,
+            { tipo: escalationCfg.tipo, script: escalationCfg.scriptKey },
+            escalationCfg.scriptText,
             notificaAgenteTemplate!,
           );
           report.escalation_creati++;
@@ -194,8 +199,8 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
       }
     }
 
-    // --- DEADLINE T-30: SILENZIO ---
-    if (giorni <= 30) {
+    // --- DEADLINE SILENZIO ---
+    if (giorni <= deadlineGiorni) {
       if (pratica.decisioni.length === 0) {
         const giàMarcato = pratica.stato === 'SILENZIO_PERDITA_DEFINITIVA';
         if (!giàMarcato) {

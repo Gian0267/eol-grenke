@@ -25,8 +25,23 @@ interface PraticaData {
     pricing_riacquisto_iva: number;
     pricing_riacquisto_totale: number;
     valore_gift_card: number;
+    abilita_gift_card?: boolean;
   };
   deadline_decisione: string;
+}
+
+interface ConfigPubblica {
+  abilita_gift_card: boolean;
+  titolo_opzione_rinnovo: string;
+  desc_opzione_rinnovo: string;
+  titolo_opzione_riacquisto: string;
+  desc_opzione_riacquisto: string;
+  titolo_opzione_contatto: string;
+  desc_opzione_contatto: string;
+  titolo_opzione_restituzione: string;
+  desc_opzione_restituzione: string;
+  testo_widget_chiamami: string;
+  testo_avviso_proroga: string;
 }
 
 function formatEur(n: number): string {
@@ -37,16 +52,17 @@ export default function AreaPratica() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<PraticaData | null>(null);
+  const [config, setConfig] = useState<ConfigPubblica | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!token) return;
 
-    fetch(`${API_BASE}/api/cliente/pratica`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (res) => {
+    const headers = { Authorization: `Bearer ${token}` };
+
+    Promise.all([
+      fetch(`${API_BASE}/api/cliente/pratica`, { headers }).then(async (res) => {
         if (res.ok) return res.json();
         const body = await res.json().catch(() => ({}));
         if (body.codice === 'TOKEN_SCADUTO') {
@@ -54,9 +70,14 @@ export default function AreaPratica() {
           return null;
         }
         throw new Error(body.messaggio || 'Errore nel caricamento');
-      })
-      .then((json) => {
-        if (json) setData(json);
+      }),
+      fetch(`${API_BASE}/api/cliente/configurazione`, { headers })
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null),
+    ])
+      .then(([praticaJson, configJson]) => {
+        if (praticaJson) setData(praticaJson);
+        if (configJson) setConfig(configJson);
       })
       .catch((err) => setErrore(err.message))
       .finally(() => setLoading(false));
@@ -90,25 +111,32 @@ export default function AreaPratica() {
     giorniMancanti > 15 ? 'text-yellow-600 bg-yellow-50' :
     'text-red-600 bg-red-50';
 
+  // Determina se mostrare il badge gift card:
+  // priorità: config.abilita_gift_card (dal nuovo endpoint), fallback su data.economica.abilita_gift_card
+  const giftCardAbilitata = config?.abilita_gift_card ?? data.economica.abilita_gift_card ?? true;
+
+  const rinnovoBadges: { testo: string; stile: string }[] = [];
+  if (giftCardAbilitata && data.economica.valore_gift_card > 0) {
+    rinnovoBadges.push({ testo: `Premio Fedeltà € ${formatEur(data.economica.valore_gift_card)}`, stile: 'bg-green-100 text-green-800' });
+  }
+  rinnovoBadges.push({ testo: 'Consigliata', stile: 'bg-[#16a34a] text-white' });
+
   const opzioni = [
     {
       id: 'rinnovo',
-      titolo: 'Rinnova il contratto',
-      descrizione: 'Prosegui con un nuovo contratto FLEX alle stesse condizioni e ricevi un premio fedeltà.',
+      titolo: config?.titolo_opzione_rinnovo || 'Rinnova il contratto',
+      descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX alle stesse condizioni e ricevi un premio fedeltà.',
       icona: <Gift className="w-6 h-6" />,
       colore: 'border-[#16a34a]',
       bgColore: 'bg-green-50',
       testoColore: 'text-[#16a34a]',
       btnColore: 'bg-[#16a34a] hover:bg-green-700',
-      badges: [
-        { testo: `Premio Fedeltà € ${formatEur(data.economica.valore_gift_card)}`, stile: 'bg-green-100 text-green-800' },
-        { testo: 'Consigliata', stile: 'bg-[#16a34a] text-white' },
-      ],
+      badges: rinnovoBadges,
     },
     {
       id: 'riacquisto',
-      titolo: 'Acquista il bene',
-      descrizione: 'Riscatta i beni in locazione al prezzo di riacquisto concordato.',
+      titolo: config?.titolo_opzione_riacquisto || 'Acquista il bene',
+      descrizione: config?.desc_opzione_riacquisto || 'Riscatta i beni in locazione al prezzo di riacquisto concordato.',
       icona: <ShoppingCart className="w-6 h-6" />,
       colore: 'border-[#2563eb]',
       bgColore: 'bg-blue-50',
@@ -120,8 +148,8 @@ export default function AreaPratica() {
     },
     {
       id: 'contatto',
-      titolo: 'Contatto personalizzato',
-      descrizione: 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.',
+      titolo: config?.titolo_opzione_contatto || 'Contatto personalizzato',
+      descrizione: config?.desc_opzione_contatto || 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.',
       icona: <Phone className="w-6 h-6" />,
       colore: 'border-[#ca8a04]',
       bgColore: 'bg-yellow-50',
@@ -131,8 +159,8 @@ export default function AreaPratica() {
     },
     {
       id: 'restituzione',
-      titolo: 'Restituisci i beni',
-      descrizione: 'Concludi il contratto e restituisci i beni alla società di leasing.',
+      titolo: config?.titolo_opzione_restituzione || 'Restituisci i beni',
+      descrizione: config?.desc_opzione_restituzione || 'Concludi il contratto e restituisci i beni alla società di leasing.',
       icona: <RotateCcw className="w-6 h-6" />,
       colore: 'border-[#6b7280]',
       bgColore: 'bg-gray-50',

@@ -6,12 +6,9 @@ import { fileURLToPath } from 'url';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
+import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const templatePath = resolve(__dirname, '../../../templates/email/comunicazione_iniziale.html');
-const templateSource = readFileSync(templatePath, 'utf-8');
-const compiledTemplate = Handlebars.compile(templateSource);
-
 const emailProvider = new SmtpEmailProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
@@ -99,7 +96,12 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     link_opt_out: `${BACKEND_URL}/api/clienti/opt-out?token=${optOutToken}`,
   };
 
-  const html = compiledTemplate(templateVars);
+  let templateHtml = await configService.getHtml('email.comunicazione_iniziale');
+  if (!templateHtml) {
+    const templatePath = resolve(__dirname, '../../../templates/email/comunicazione_iniziale.html');
+    templateHtml = readFileSync(templatePath, 'utf-8');
+  }
+  const html = Handlebars.compile(templateHtml)(templateVars);
   const oggetto = `Comunicazione relativa al Suo contratto di locazione operativa n. ${contratto.contratto_nsm_id} in scadenza`;
 
   const destinatari: Array<{ email: string; canale: string }> = [
