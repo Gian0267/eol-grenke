@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import Handlebars from 'handlebars';
+import rateLimit from 'express-rate-limit';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -24,8 +25,24 @@ import { registraEvento } from '../services/audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db.js';
 const emailProvider = new SmtpEmailProvider();
+
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { errore: 'Troppi tentativi OTP, riprova tra 10 minuti' },
+});
+
+const contattoLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { errore: 'Troppe richieste di contatto, riprova tra 5 minuti' },
+});
 
 const configDir = resolve(__dirname, '../../../config');
 const templateDir = resolve(__dirname, '../../../templates/email');
@@ -139,6 +156,7 @@ const richiestaContattoSchema = z.object({
 
 router.post(
   '/richiesta-contatto',
+  contattoLimiter,
   verifyClienteToken,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
@@ -257,6 +275,7 @@ const iniziaRestituzioneSchema = z.object({
 
 router.post(
   '/decisione/restituzione/inizia',
+  otpLimiter,
   verifyClienteToken,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
@@ -487,6 +506,7 @@ const iniziaRiacquistoSchema = z.object({
 
 router.post(
   '/decisione/riacquisto/inizia',
+  otpLimiter,
   verifyClienteToken,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
@@ -680,6 +700,7 @@ const richiediOtpRiacquistoSchema = z.object({
 
 router.post(
   '/decisione/riacquisto/richiedi-otp',
+  otpLimiter,
   verifyClienteToken,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
@@ -808,6 +829,7 @@ const iniziaRinnovoSchema = z.object({
 
 router.post(
   '/decisione/rinnovo/inizia',
+  otpLimiter,
   verifyClienteToken,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {

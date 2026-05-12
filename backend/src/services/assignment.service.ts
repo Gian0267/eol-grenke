@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const prisma = new PrismaClient();
 
 const configDir = resolve(__dirname, '../../../config');
 const assignmentRules = JSON.parse(

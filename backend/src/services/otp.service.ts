@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const featureFlags = JSON.parse(
   readFileSync(resolve(__dirname, '../../../config/feature_flags.json'), 'utf-8'),
 );
-
-const prisma = new PrismaClient();
 const OTP_VALIDITY_MINUTES = 10;
 const TEST_CODE = '123456';
 
@@ -27,7 +25,7 @@ export async function generateOtp(
     data: { destinatario, codice, metodo, scadenza },
   });
 
-  console.log(`[OTP] ${metodo} → ${destinatario}: ${codice} (scade ${scadenza.toISOString()})`);
+  console.log('[OTP] Codice inviato a:', destinatario.substring(0, 3) + '***');
 
   return { codice };
 }
@@ -37,7 +35,7 @@ export async function verifyOtp(
   destinatario: string,
   codice: string,
 ): Promise<{ valid: boolean; errore?: string }> {
-  if (featureFlags.modalita_test && codice === TEST_CODE) {
+  if (process.env.NODE_ENV !== 'production' && featureFlags.modalita_test && codice === TEST_CODE) {
     return { valid: true };
   }
 

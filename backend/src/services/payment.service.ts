@@ -1,7 +1,8 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { prisma } from '../lib/db.js';
 import { MockFabrickProvider } from '../providers/payment/fabrick.provider.js';
 import { MockStripeProvider } from '../providers/payment/stripe.provider.js';
 import { generaRicevutaPagamento } from './invoice.service.js';
@@ -11,8 +12,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pricingRules = JSON.parse(
   readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'),
 );
-
-const prisma = new PrismaClient();
 const fabrickProvider = new MockFabrickProvider();
 const stripeProvider = new MockStripeProvider();
 
@@ -107,21 +106,22 @@ export async function handlePaymentCallback(
   if (esito === 'success') {
     const providerStatus = await providerInstance.verifyPayment(sessionId);
 
-    await prisma.pagamento.update({
-      where: { session_id: sessionId },
-      data: {
-        stato: 'COMPLETATO',
-        data_completato: new Date(),
-        riferimento_transazione: providerStatus.transaction_id || null,
-      },
-    });
-
     const fattura = await generaRicevutaPagamento(pagamento.id);
 
-    await prisma.contratto_EOL.update({
-      where: { id: pagamento.contratto_eol_id },
-      data: { stato: 'RIACQUISTO_PAGATO' },
-    });
+    await prisma.$transaction([
+      prisma.pagamento.update({
+        where: { session_id: sessionId },
+        data: {
+          stato: 'COMPLETATO',
+          data_completato: new Date(),
+          riferimento_transazione: providerStatus.transaction_id || null,
+        },
+      }),
+      prisma.contratto_EOL.update({
+        where: { id: pagamento.contratto_eol_id },
+        data: { stato: 'RIACQUISTO_PAGATO' },
+      }),
+    ]);
 
     await registraEvento(pagamento.contratto_eol_id, 'SISTEMA', provider, 'PAGAMENTO_COMPLETATO', {
       session_id: sessionId,

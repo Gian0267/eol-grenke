@@ -16,6 +16,7 @@
 6. [Gestione del silenzio cliente](#6-gestione-del-silenzio-cliente)
 7. [Calcolo gift card](#7-calcolo-gift-card)
 8. [Inquadramento privacy](#8-inquadramento-privacy)
+9. [Note di hardening pre-consegna](#9-note-di-hardening-pre-consegna-review-security)
 
 > Aggiungi nuove voci numerate progressivamente. Le voci qui sotto sono pre-popolate con le decisioni prese durante la stesura di SPECS.md v1.1.
 
@@ -226,6 +227,29 @@ L'esercizio di Grenke nella Lettera di scadenza presenta Smartcom come "partner 
 - Data minimization dopo 24 mesi dalla chiusura pratica
 - Audit log degli accessi degli operatori NSM
 - Script telefonici standardizzati (no derive commerciali)
+
+---
+
+## 9. Note di hardening pre-consegna (review security)
+
+**Data decisione:** maggio 2026
+**Stato:** ✅ Documentata
+
+### Decisione
+
+Elenco degli item segnalati in review ma non fixati ora perché dipendono da contesto di produzione o volumi reali.
+
+### Item da risolvere in produzione
+
+**C1 — CORS whitelist**: in `index.ts` CORS è configurato con `origin: true` (qualsiasi origine). In produzione va sostituito con una whitelist esplicita contenente l'URL del frontend di produzione. Non fixato ora perché l'URL di produzione non è ancora noto.
+
+**M4 — Tipizzazione `req.user`**: diversi file usano `(req.user as any)` per accedere ai campi utente. Da sistemare quando il team tipizza correttamente `req.user` con il proprio sistema di autenticazione (dichiarazione dei tipi Express/Passport).
+
+**M7 — Query N+1 in batch**: l'invio comunicazioni batch (`invia-comunicazione-batch`) e altre operazioni iterative eseguono query sequenziali. Da ottimizzare con `Promise.all()` in produzione quando i volumi lo richiedono.
+
+**M8 — `findMany` senza limiti**: diverse query `findMany` (lista pratiche, agenti, outlier) non hanno `take`/`skip`. Da aggiungere paginazione DB-side quando i volumi lo richiedono.
+
+**M9 — GDPR Art. 17 (diritto alla cancellazione)**: la cancellazione selettiva dei dati personali è incompatibile con la catena hash dell'audit log (decisione §4). La soluzione in produzione è **anonimizzare** i dati personali mantenendo gli hash intatti: sostituire nome, email, P.IVA con placeholder tipo `[CANCELLATO]` senza rompere la catena di hash.
 
 ---
 

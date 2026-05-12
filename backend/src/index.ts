@@ -9,7 +9,6 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import passport from 'passport';
-import { PrismaClient } from '@prisma/client';
 import backofficeRoutes from './routes/backoffice.routes.js';
 import backofficeDashboardRoutes from './routes/backoffice-dashboard.routes.js';
 import backofficeAdvancedRoutes from './routes/backoffice-advanced.routes.js';
@@ -22,19 +21,24 @@ import adminRoutes from './routes/admin.routes.js';
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? process.env.PORT ?? 3001);
-const prisma = new PrismaClient();
 
+if (!process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET non configurato');
+  process.exit(1);
+}
+
+// TODO produzione: sostituire origin:true con whitelist esplicita es. ['https://app.example.com']
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'nsm-eol-dev-secret-change-in-prod',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 8 * 60 * 60 * 1000, // 8 hours
     },
   }),

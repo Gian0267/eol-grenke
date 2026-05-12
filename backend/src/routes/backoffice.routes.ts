@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -21,7 +20,7 @@ const templateDir = resolve(__dirname, '../../../templates/email');
 const boEmailProvider = new SmtpEmailProvider();
 
 const router = Router();
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db.js';
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.use(verifyBackofficeToken as any);
@@ -408,10 +407,14 @@ router.get('/miei-task', async (req: AuthenticatedRequest, res: Response) => {
 
     // Decisioni RINNOVO/CONTATTO assegnate a me
     const whereContratto: any = { agente_assegnato_id: userId };
-    if (tipo === 'RINNOVO' || tipo === 'CONTATTO') {
-      whereContratto.stato = tipo === 'RINNOVO' ? 'DECISIONE_RINNOVO' : 'DECISIONE_CONTATTO';
+    if (tipo === 'RINNOVO') {
+      whereContratto.stato = 'DECISIONE_RINNOVO';
+    } else if (tipo === 'CONTATTO') {
+      whereContratto.stato = 'DECISIONE_CONTATTO';
+    } else if (tipo === 'RIACQUISTO') {
+      whereContratto.stato = 'DECISIONE_RIACQUISTO_IN_CORSO';
     } else {
-      whereContratto.stato = { in: ['DECISIONE_RINNOVO', 'DECISIONE_CONTATTO'] };
+      whereContratto.stato = { in: ['DECISIONE_RINNOVO', 'DECISIONE_CONTATTO', 'DECISIONE_RIACQUISTO_IN_CORSO'] };
     }
 
     const contratti = await prisma.contratto_EOL.findMany({

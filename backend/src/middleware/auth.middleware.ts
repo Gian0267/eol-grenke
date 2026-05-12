@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -23,6 +21,11 @@ export async function verifyBackofficeToken(
   // Accept passport session auth
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    res.status(401).json({ error: 'Sessione non valida' });
+    return;
   }
 
   const userId = req.headers['x-user-id'] as string | undefined;

@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { runScheduler } from '../services/scheduler.service.js';
 import { verificaCatena } from '../services/audit.service.js';
 import { generaAuditExport } from '../services/pdf.service.js';
 import { readFileSync } from 'fs';
+import { prisma } from '../lib/db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 interface AdminRequest {
   headers: Record<string, string | string[] | undefined>;

@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthenticatedRequest, verifyBackofficeToken } from '../middleware/auth.middleware.js';
+import { prisma } from '../lib/db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(verifyBackofficeToken as any);
 

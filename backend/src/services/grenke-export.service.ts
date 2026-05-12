@@ -2,12 +2,11 @@ import XLSX from 'xlsx';
 import { writeFileSync, readdirSync, statSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
 import { registraEvento } from './audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const exportDir = resolve(__dirname, '../../../backend/storage/grenke-exports');
-const prisma = new PrismaClient();
 
 export interface GrenkeExportRow {
   contratto_id: string;

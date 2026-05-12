@@ -4,12 +4,11 @@ import jwt from 'jsonwebtoken';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const prisma = new PrismaClient();
 const emailProvider = new SmtpEmailProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';

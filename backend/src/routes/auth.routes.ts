@@ -2,10 +2,18 @@ import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import rateLimit from 'express-rate-limit';
+import { prisma } from '../lib/db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { errore: 'Troppi tentativi di login, riprova tra 15 minuti' },
+});
 
 // Passport local strategy
 passport.use(
@@ -55,7 +63,7 @@ passport.deserializeUser(async (id: string, done) => {
 });
 
 // POST /api/backoffice/auth/login
-router.post('/login', (req: Request, res: Response, next: NextFunction) => {
+router.post('/login', loginLimiter, (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate('local', (err: any, user: any, info: any) => {
     if (err) return next(err);
     if (!user) {

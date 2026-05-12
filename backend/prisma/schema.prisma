@@ -42,6 +42,9 @@ model Contratto_EOL {
   richieste_contatto    Richiesta_Contatto[]
   audit_events          Audit_Event[]
   task_escalation       Task_Escalation[]
+
+  @@index([stato])
+  @@index([data_scadenza])
 }
 
 model Cliente {
@@ -118,6 +121,8 @@ model Comunicazione {
   operatore_id     String?
   operatore        Utente_NSM?   @relation(fields: [operatore_id], references: [id])
   created_at       DateTime      @default(now())
+
+  @@index([contratto_eol_id, tipo])
 }
 
 model Richiesta_Contatto {
@@ -202,4 +207,6 @@ model Task_Escalation {
   data_completamento  DateTime?
   esito               String?
   note                String?
+
+  @@index([assegnato_a_id, stato])
 }

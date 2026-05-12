@@ -3,9 +3,9 @@ import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templatePath = resolve(__dirname, '../../../templates/email/comunicazione_iniziale.html');
@@ -13,7 +13,6 @@ const templateSource = readFileSync(templatePath, 'utf-8');
 const compiledTemplate = Handlebars.compile(templateSource);
 
 const emailProvider = new SmtpEmailProvider();
-const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);

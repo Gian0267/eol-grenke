@@ -3,12 +3,11 @@ import crypto from 'crypto';
 import { createWriteStream, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
 import { verificaCatena } from './audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storagePath = resolve(__dirname, '../../../backend/storage/pdfs');
-const prisma = new PrismaClient();
 
 const ISTRUZIONI_OPERATIVE = [
   'Disabilita "Trova il mio iPhone" (Apple) o Samsung Knox / Google FRP su tutti i dispositivi oggetto della restituzione.',

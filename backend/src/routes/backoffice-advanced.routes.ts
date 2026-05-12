@@ -1,12 +1,12 @@
 import { Router, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
+import { prisma } from '../lib/db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(verifyBackofficeToken as any);
 
@@ -526,10 +526,10 @@ router.get('/reports/sintesi', async (req: AuthenticatedRequest, res: Response) 
     const total = pratiche.length;
     const silenzi = pratiche.filter(p => p.stato === 'SILENZIO_PERDITA_DEFINITIVA').length;
     const rinnovi = pratiche.filter(p => ['DECISIONE_RINNOVO', 'RINNOVO_IN_CORSO'].includes(p.stato)).length;
-    const riacquisti = pratiche.filter(p => ['DECISIONE_RIACQUISTO', 'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO'].includes(p.stato)).length;
+    const riacquisti = pratiche.filter(p => ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO', 'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO'].includes(p.stato)).length;
     const restituzioni = pratiche.filter(p => ['DECISIONE_RESTITUZIONE', 'RESTITUZIONE_CONFERMATA'].includes(p.stato)).length;
 
-    const statiChiusi = ['DECISIONE_RINNOVO', 'DECISIONE_RIACQUISTO', 'DECISIONE_CONTATTO', 'DECISIONE_RESTITUZIONE',
+    const statiChiusi = ['DECISIONE_RINNOVO', 'DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO', 'DECISIONE_CONTATTO', 'DECISIONE_RESTITUZIONE',
       'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO', 'RINNOVO_IN_CORSO', 'RESTITUZIONE_CONFERMATA', 'SILENZIO_PERDITA_DEFINITIVA'];
     const chiuse = pratiche.filter(p => statiChiusi.includes(p.stato)).length;
 
@@ -547,7 +547,7 @@ router.get('/reports/sintesi', async (req: AuthenticatedRequest, res: Response) 
         mese: mStart.toLocaleDateString('it-IT', { month: 'short', year: 'numeric' }),
         tasso_non_silenzio: Math.round(tns * 10) / 10,
         rinnovi: mp.filter(p => ['DECISIONE_RINNOVO', 'RINNOVO_IN_CORSO'].includes(p.stato)).length,
-        riacquisti: mp.filter(p => ['DECISIONE_RIACQUISTO', 'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO'].includes(p.stato)).length,
+        riacquisti: mp.filter(p => ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO', 'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO'].includes(p.stato)).length,
         restituzioni: mp.filter(p => ['DECISIONE_RESTITUZIONE', 'RESTITUZIONE_CONFERMATA'].includes(p.stato)).length,
         silenzi: ms,
       });
@@ -622,7 +622,7 @@ router.get('/reports/performance-agenti', async (req: AuthenticatedRequest, res:
       select: { agente_assegnato_id: true, stato: true, margine_lordo: true },
     });
 
-    const statiChiusi = ['DECISIONE_RINNOVO', 'DECISIONE_RIACQUISTO', 'DECISIONE_CONTATTO', 'DECISIONE_RESTITUZIONE',
+    const statiChiusi = ['DECISIONE_RINNOVO', 'DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO', 'DECISIONE_CONTATTO', 'DECISIONE_RESTITUZIONE',
       'RIACQUISTO_IN_ATTESA_CHIAMATA', 'RIACQUISTO_PAGATO', 'RINNOVO_IN_CORSO', 'RESTITUZIONE_CONFERMATA', 'SILENZIO_PERDITA_DEFINITIVA'];
 
     const result = agenti.map(a => {

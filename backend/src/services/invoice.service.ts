@@ -3,11 +3,10 @@ import crypto from 'crypto';
 import { createWriteStream, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storagePath = resolve(__dirname, '../../../backend/storage/pdfs');
-const prisma = new PrismaClient();
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
