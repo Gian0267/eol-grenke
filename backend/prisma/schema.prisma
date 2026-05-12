@@ -151,6 +151,16 @@ model Audit_Event {
   hash_corrente    String
 }
 
+model OtpCode {
+  id           String   @id @default(uuid())
+  destinatario String
+  codice       String
+  metodo       String
+  scadenza     DateTime
+  usato        Boolean  @default(false)
+  created_at   DateTime @default(now())
+}
+
 model Utente_NSM {
   id         String   @id @default(uuid())
   nome       String

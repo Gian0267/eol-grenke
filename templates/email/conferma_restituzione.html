@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#1a3a52;padding:24px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Noleggio Su Misura</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">Smartcom Solutions Srl</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="color:#1a3a52;font-size:18px;margin:0 0 16px;">Conferma restituzione beni</h2>
+
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 24px;">
+                confermiamo la ricezione della Sua decisione di <strong>restituire i beni</strong>
+                relativi al contratto n. <strong>{{numero_contratto_nsm}}</strong>
+                (Grenke: {{numero_contratto_grenke}}).
+              </p>
+
+              <!-- Riepilogo -->
+              <table width="100%" cellpadding="12" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:24px;">
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Contratto</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #e5e7eb;">{{numero_contratto_nsm}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Scadenza</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #e5e7eb;">{{data_scadenza}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;">Beni</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;">{{beni}}</td>
+                </tr>
+              </table>
+
+              <h3 style="color:#1a3a52;font-size:15px;margin:0 0 12px;">Istruzioni per la restituzione</h3>
+              <ol style="color:#374151;font-size:13px;line-height:1.8;padding-left:20px;margin:0 0 24px;">
+                <li>Disabilita "Trova il mio iPhone" / Samsung Knox su tutti i dispositivi</li>
+                <li>Esegui il reset alle impostazioni di fabbrica</li>
+                <li>Verifica l'integrit&agrave; del dispositivo (funzionamento, accessori)</li>
+                <li>Imballa nel packaging originale o adeguato</li>
+                <li>Spedisci a: <strong>Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO)</strong></li>
+              </ol>
+
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+                In allegato trova il <strong>Verbale di conferma restituzione</strong> (PDF)
+                con tutti i dettagli della pratica.
+              </p>
+
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 8px;">
+                Ha tempo fino a <strong>10 giorni dalla scadenza del contratto</strong>
+                per completare la spedizione.
+              </p>
+
+              <!-- Nota -->
+              <table width="100%" cellpadding="12" cellspacing="0" style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;margin:24px 0;">
+                <tr>
+                  <td style="font-size:12px;color:#92400e;">
+                    In caso di restituzione non conforme (danni, accessori mancanti, dispositivo
+                    non resettato), potranno essere applicati addebiti secondo le condizioni contrattuali.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+                Smartcom Solutions Srl — Via Tunisia 5, 10093 Collegno (TO) — 011 4557949
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

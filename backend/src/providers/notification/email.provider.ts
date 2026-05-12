@@ -6,8 +6,14 @@ export interface SendResult {
   error?: string;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 export interface EmailProvider {
   send(to: string, subject: string, html: string): Promise<SendResult>;
+  sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult>;
 }
 
 export class SmtpEmailProvider implements EmailProvider {
@@ -36,6 +42,23 @@ export class SmtpEmailProvider implements EmailProvider {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[EmailProvider] Errore invio a ${to}: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject,
+        html,
+        attachments: attachments.map(a => ({ filename: a.filename, content: a.content })),
+      });
+      return { success: true, messageId: info.messageId };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[EmailProvider] Errore invio con allegato a ${to}: ${message}`);
       return { success: false, error: message };
     }
   }

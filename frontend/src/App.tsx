@@ -4,6 +4,7 @@ import ListaPratiche from './pages/backoffice/ListaPratiche'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
+import FlussoRestituzione from './pages/cliente/FlussoRestituzione'
 import WidgetChiamami from './components/WidgetChiamami'
 
 function ClienteLayout() {
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/pratica/scaduta" element={<PraticaScaduta />} />
         <Route path="/pratica/:token" element={<ClienteLayout />}>
           <Route index element={<AreaPratica />} />
+          <Route path="restituzione" element={<FlussoRestituzione />} />
           <Route path=":opzione" element={<OpzionePlaceholder />} />
         </Route>
         <Route path="*" element={<Navigate to="/backoffice/pratiche" replace />} />

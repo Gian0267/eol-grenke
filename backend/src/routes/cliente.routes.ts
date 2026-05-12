@@ -10,6 +10,9 @@ import {
   ClienteAuthenticatedRequest,
 } from '../middleware/cliente.middleware.js';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { generateOtp, verifyOtp } from '../services/otp.service.js';
+import { generaVerbaleRestituzione } from '../services/pdf.service.js';
+import { MockFeaProvider } from '../providers/signature/fea.provider.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -23,10 +26,14 @@ const assignmentRules = JSON.parse(
   readFileSync(resolve(configDir, 'assignment_rules.json'), 'utf-8'),
 );
 
-// B1+B2 fix: Handlebars template (auto-escapes user input)
 const notificaTemplate = Handlebars.compile(
   readFileSync(resolve(templateDir, 'notifica_richiesta_contatto.html'), 'utf-8'),
 );
+const confermaRestituzioneTemplate = Handlebars.compile(
+  readFileSync(resolve(templateDir, 'conferma_restituzione.html'), 'utf-8'),
+);
+
+const feaProvider = new MockFeaProvider();
 
 // I3 fix: shared deadline calculation
 function calcolaDeadline(dataScadenza: Date): Date {
@@ -244,6 +251,218 @@ router.post(
       });
     } catch (err) {
       console.error('[POST /api/cliente/richiesta-contatto] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/restituzione/inizia
+const iniziaRestituzioneSchema = z.object({
+  metodo: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/restituzione/inizia',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = iniziaRestituzioneSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Metodo OTP non valido', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      if (!statiValidi.includes(contratto.stato)) {
+        res.status(400).json({ errore: `Stato pratica non valido: ${contratto.stato}` });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { metodo } = parsed.data;
+      const destinatario = metodo === 'EMAIL' ? contratto.cliente.email : (contratto.cliente.telefono || contratto.cliente.email);
+
+      await generateOtp(metodo, destinatario);
+
+      if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
+        await prisma.contratto_EOL.update({
+          where: { id: contratto.id },
+          data: { stato: 'IN_ATTESA_DECISIONE' },
+        });
+      }
+
+      res.json({ success: true, messaggio: `Codice OTP inviato via ${metodo}`, destinatario_mascherato: destinatario.replace(/(.{3}).*(@.*)/, '$1***$2') });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/restituzione/inizia] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/restituzione/conferma
+const confermaRestituzioneSchema = z.object({
+  codice: z.string().length(6),
+  metodo: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/restituzione/conferma',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = confermaRestituzioneSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { codice, metodo } = parsed.data;
+      const destinatario = metodo === 'EMAIL' ? contratto.cliente.email : (contratto.cliente.telefono || contratto.cliente.email);
+
+      const otpResult = await verifyOtp(metodo, destinatario, codice);
+      if (!otpResult.valid) {
+        res.status(400).json({ errore: otpResult.errore });
+        return;
+      }
+
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      const decisione = await prisma.decisione_Cliente.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          opzione_scelta: 'RESTITUZIONE',
+          otp_verificato: true,
+          otp_metodo: metodo,
+          ip_address: ip,
+          user_agent: userAgent,
+        },
+      });
+
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: { stato: 'CHIUSA_RESTITUZIONE_CONFERMATA' },
+      });
+
+      const { pdfPath, hash } = await generaVerbaleRestituzione(contratto.id, decisione.id, {
+        nome: contratto.cliente.ragione_sociale,
+        ip,
+        userAgent,
+        otpVerificato: true,
+      });
+
+      await feaProvider.requestSignature(pdfPath, {
+        nome: contratto.cliente.ragione_sociale,
+        ip,
+        userAgent,
+        otpVerificato: true,
+      });
+
+      let beni: Array<{ descrizione?: string }> = [];
+      try { beni = JSON.parse(contratto.beni_json); } catch {}
+
+      const html = confermaRestituzioneTemplate({
+        ragione_sociale: contratto.cliente.ragione_sociale,
+        numero_contratto_nsm: contratto.contratto_nsm_id,
+        numero_contratto_grenke: contratto.contratto_grenke_id,
+        data_scadenza: new Date(contratto.data_scadenza).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        beni: beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto',
+      });
+
+      const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_nsm_id}`;
+      const { readFileSync } = await import('fs');
+      const pdfBuffer = readFileSync(pdfPath);
+
+      await emailProvider.sendWithAttachment(
+        contratto.cliente.email,
+        oggetto,
+        html,
+        [{ filename: `verbale_restituzione_${contratto.contratto_nsm_id}.pdf`, content: pdfBuffer }],
+      );
+
+      await prisma.comunicazione.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          tipo: 'CONFERMA_RESTITUZIONE',
+          canale: 'EMAIL',
+          destinatario: contratto.cliente.email,
+          oggetto,
+          corpo_html: html,
+          data_invio: new Date(),
+          esito_invio: 'INVIATO',
+        },
+      });
+
+      res.json({
+        success: true,
+        messaggio: 'Restituzione confermata',
+        decisione_id: decisione.id,
+        pdf_hash: hash,
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/restituzione/conferma] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// GET /api/cliente/decisione/pdf — download del verbale PDF
+router.get(
+  '/decisione/pdf',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const decisione = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: req.contrattoEolId },
+      });
+
+      if (!decisione?.pdf_conferma_path) {
+        res.status(404).json({ errore: 'PDF non trovato' });
+        return;
+      }
+
+      const { readFileSync } = await import('fs');
+      const pdf = readFileSync(decisione.pdf_conferma_path);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="verbale_restituzione.pdf"`);
+      res.send(pdf);
+    } catch (err) {
+      console.error('[GET /api/cliente/decisione/pdf] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },
