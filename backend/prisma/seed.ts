@@ -1,6 +1,17 @@
+import dotenv from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
 
 const prisma = new PrismaClient();
 
@@ -8,6 +19,14 @@ function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+function generateClienteToken(contrattoEolId: string, clienteId: string, dataScadenza: Date): string {
+  const exp = Math.floor((dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000);
+  return jwt.sign(
+    { contratto_eol_id: contrattoEolId, cliente_id: clienteId, exp },
+    JWT_SECRET,
+  );
 }
 
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -134,10 +153,13 @@ async function main() {
     const data_stipula = new Date(data_scadenza);
     data_stipula.setFullYear(data_stipula.getFullYear() - Math.floor(cfg.mesi / 12));
 
+    const contrattoId = crypto.randomUUID();
+
     await prisma.contratto_EOL.upsert({
       where: { contratto_nsm_id: cfg.nsmId },
       update: {},
       create: {
+        id: contrattoId,
         contratto_nsm_id: cfg.nsmId,
         contratto_grenke_id: cfg.grenkeId,
         cliente_id: clienti[cfg.clienteIdx]!.id,
@@ -157,7 +179,7 @@ async function main() {
         data_importazione: new Date(),
         stato_riconciliazione: cfg.riconciliazione,
         beni_json: JSON.stringify([{ descrizione: 'Notebook aziendale', seriale: `SN-${cfg.grenkeId}`, marca: 'Lenovo', modello: 'ThinkPad X1' }]),
-        token_accesso_cliente: crypto.randomBytes(32).toString('hex'),
+        token_accesso_cliente: generateClienteToken(contrattoId, clienti[cfg.clienteIdx]!.id, data_scadenza),
       },
     });
   }
@@ -192,11 +214,13 @@ async function main() {
 
     const clienteRef = tuttiClienti[5 + idx]!;
     const agenteRef = idx % 2 === 0 ? agente : junior;
+    const contrattoId = crypto.randomUUID();
 
     await prisma.contratto_EOL.upsert({
       where: { contratto_nsm_id: nsmId },
       update: {},
       create: {
+        id: contrattoId,
         contratto_nsm_id: nsmId,
         contratto_grenke_id: grenkeId,
         cliente_id: clienteRef.id,
@@ -214,9 +238,9 @@ async function main() {
         agente_originario_id: agenteRef.id,
         agente_assegnato_id: agenteRef.id,
         data_importazione: new Date(),
-        stato_riconciliazione: 'NON_APPLICABILE',
+        stato_riconciliazione: 'RICONCILIATO_AUTO',
         beni_json: JSON.stringify([{ descrizione: `Apparecchiatura IT #${i + 6}`, marca: 'HP', modello: `EliteBook ${800 + i}` }]),
-        token_accesso_cliente: crypto.randomBytes(32).toString('hex'),
+        token_accesso_cliente: generateClienteToken(contrattoId, clienteRef.id, data_scadenza),
       },
     });
   }

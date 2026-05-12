@@ -61,13 +61,14 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
   const deadlineMs = dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 24 * 60 * 60 * 1000;
   const deadline = new Date(deadlineMs);
 
+  const exp = Math.floor(deadlineMs / 1000);
   const token = jwt.sign(
     {
       contratto_eol_id: contratto.id,
       cliente_id: contratto.cliente_id,
+      exp,
     },
     JWT_SECRET,
-    { expiresIn: Math.max(Math.floor((deadlineMs - Date.now()) / 1000), 3600) },
   );
 
   const optOutToken = jwt.sign(
@@ -75,6 +76,11 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     JWT_SECRET,
     { expiresIn: '365d' },
   );
+
+  await prisma.contratto_EOL.update({
+    where: { id: contratto.id },
+    data: { token_accesso_cliente: token },
+  });
 
   const beni = contratto.beni_json ? JSON.parse(contratto.beni_json) : [];
   const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');

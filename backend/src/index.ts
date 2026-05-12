@@ -10,6 +10,7 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import backofficeRoutes from './routes/backoffice.routes.js';
 import clientRoutes from './routes/client.routes.js';
+import clienteRoutes from './routes/cliente.routes.js';
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? process.env.PORT ?? 3001);
@@ -24,6 +25,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/backoffice', backofficeRoutes);
 app.use('/api/clienti', clientRoutes);
+app.use('/api/cliente', clienteRoutes);
 
 app.listen(port, () => {
   console.log(`NSM EOL Backend listening on port ${port}`);

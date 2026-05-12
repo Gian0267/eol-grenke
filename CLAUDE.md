@@ -77,6 +77,25 @@ JSON-driven business rules read at startup by backend services:
 - **Backend port**: use `BACKEND_PORT` env var (not `PORT`) — `PORT` can conflict with Vite when started via concurrently. Dotenv loads from `backend/.env` using explicit path.
 - **Email service env vars**: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `JWT_SECRET`, `JWT_EXPIRES_OFFSET_DAYS`, `FRONTEND_URL` — all in `backend/.env`.
 
+## Regole di business — Fine Noleggio Grenke (FLEX)
+
+- **Formula FLEX**: contratti di locazione operativa finanziati da Grenke, durate 12–48 mesi
+- **Early termination**: possibile solo dopo 12 mesi dall'attivazione del contratto
+- **Opzione riscatto**: a fine contratto il cliente può riscattare i beni (a differenza della formula PLUS, che prevede reso obbligatorio)
+- **Transizione automatica**: lo stato del contratto passa a "In Chiusura" automaticamente 3 mesi prima della data di scadenza
+- **Workflow stati**: `Attivo → In Chiusura → Chiuso`
+- **Processo di reso** (se il cliente non riscatta), 5 step obbligatori:
+  1. Disattivazione Find My iPhone / Samsung Knox
+  2. Reset del dispositivo (factory reset)
+  3. Integrity check (verifica funzionamento e danni)
+  4. Packaging originale (imballo adeguato)
+  5. Spedizione a Collegno (spese a carico del cliente)
+- **Comunicazioni cliente**: notifica automatica all'ingresso in "In Chiusura" + promemoria periodici fino alla scadenza
+- **Edge cases da gestire**:
+  - Cliente irreperibile (escalation e tentativi di contatto multipli)
+  - Dispositivo non restituito entro i termini
+  - Richiesta di riscatto tardiva (dopo scadenza deadline)
+
 ## Mission Progress
 
 Development follows MISSIONS.md (10 missions total). Check that file for current status and next steps.

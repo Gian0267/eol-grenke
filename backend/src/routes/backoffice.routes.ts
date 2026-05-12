@@ -1,7 +1,10 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
 import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
@@ -170,8 +173,19 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             origine: raw.origine || 'Smartcom',
             data_importazione: new Date(),
             stato_riconciliazione: row.status === 'RICONCILIATO_AUTO' ? 'RICONCILIATO_AUTO' : 'OUTLIER_RISOLTO',
-            token_accesso_cliente: crypto.randomBytes(32).toString('hex'),
+            token_accesso_cliente: null,
           },
+        });
+
+        const dataScadenza = new Date(raw.data_scadenza);
+        const exp = Math.floor((dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000);
+        const token = jwt.sign(
+          { contratto_eol_id: contratto.id, cliente_id: clienteId, exp },
+          JWT_SECRET,
+        );
+        await tx.contratto_EOL.update({
+          where: { id: contratto.id },
+          data: { token_accesso_cliente: token },
         });
 
         contrattiCreati.push(contratto.id);
