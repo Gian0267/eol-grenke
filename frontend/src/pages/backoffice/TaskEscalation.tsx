@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Phone, LogOut, Loader2, CheckCircle, XCircle, PhoneOff, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, Loader2, CheckCircle, XCircle, PhoneOff, RotateCcw } from 'lucide-react';
 
 const API_BASE = '';
 
@@ -127,12 +127,6 @@ export default function TaskEscalation() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('nsm_user');
-    localStorage.removeItem('nsm_token');
-    navigate('/backoffice/login');
-  };
-
   const formatDate = (d: string) => new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const formatEur = (n: number) => Number(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -145,34 +139,15 @@ export default function TaskEscalation() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-[#1a3a52] text-white px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Escalation Telefoniche</h1>
-            <p className="text-sm text-slate-300">
-              {utente?.nome} {utente?.cognome} — {utente?.ruolo}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/backoffice/miei-task" className="text-sm text-slate-300 hover:text-white">I miei task</Link>
-            <Link to="/backoffice/pratiche" className="text-sm text-slate-300 hover:text-white">Pratiche</Link>
-            <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-slate-300 hover:text-white">
-              <LogOut className="w-4 h-4" /> Esci
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-8">
+    <div>
+      <h1 className="text-xl font-bold text-[#1a3a52] mb-6">Escalation Telefoniche</h1>
         {errore && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-700">{errore}</p>
@@ -360,7 +335,6 @@ export default function TaskEscalation() {
             })}
           </div>
         )}
-      </main>
     </div>
   );
 }

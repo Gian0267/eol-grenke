@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Phone, Unlock, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Phone, Unlock, Loader2, CheckCircle2 } from 'lucide-react';
 
 const API_BASE = '';
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -71,20 +70,11 @@ export default function RiacquistiInAttesa() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#1a3a52] text-white">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex items-center gap-3">
-          <Link to="/backoffice/pratiche" className="text-white/70 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Riacquisti in attesa di chiamata</h1>
-            <p className="text-sm text-white/70">Pratiche che richiedono contatto prima del pagamento</p>
-          </div>
-        </div>
-      </header>
+    <div>
+      <h1 className="text-xl font-bold text-[#1a3a52] mb-1">Riacquisti in attesa di chiamata</h1>
+      <p className="text-sm text-gray-500 mb-6">Pratiche che richiedono contatto prima del pagamento</p>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <div>
         {loading ? (
           <div className="text-center py-12 text-gray-500">
             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
@@ -173,7 +163,7 @@ export default function RiacquistiInAttesa() {
             })}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

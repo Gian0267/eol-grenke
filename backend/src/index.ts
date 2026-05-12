@@ -11,6 +11,8 @@ import session from 'express-session';
 import passport from 'passport';
 import { PrismaClient } from '@prisma/client';
 import backofficeRoutes from './routes/backoffice.routes.js';
+import backofficeDashboardRoutes from './routes/backoffice-dashboard.routes.js';
+import backofficeAdvancedRoutes from './routes/backoffice-advanced.routes.js';
 import clientRoutes from './routes/client.routes.js';
 import clienteRoutes from './routes/cliente.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -46,6 +48,8 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/backoffice/auth', authRoutes);
 app.use('/api/backoffice', backofficeRoutes);
+app.use('/api/backoffice/dashboard', backofficeDashboardRoutes);
+app.use('/api/backoffice', backofficeAdvancedRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/clienti', clientRoutes);
 app.use('/api/cliente', clienteRoutes);

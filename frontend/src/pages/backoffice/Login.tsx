@@ -26,7 +26,7 @@ export default function Login() {
       if (!res.ok) throw new Error(body.errore || 'Credenziali non valide');
 
       localStorage.setItem('nsm_user', JSON.stringify(body.utente));
-      navigate('/backoffice/miei-task');
+      navigate('/backoffice/dashboard');
     } catch (err: any) {
       setErrore(err.message);
     } finally {

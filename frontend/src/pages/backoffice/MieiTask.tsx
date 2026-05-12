@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Gift, Phone, LogOut, Loader2, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Gift, Phone, Loader2, Filter } from 'lucide-react';
 
 const API_BASE = '';
 
@@ -85,47 +85,11 @@ export default function MieiTask() {
     }
   };
 
-  const logout = async () => {
-    await fetch(`${API_BASE}/api/backoffice/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    localStorage.removeItem('nsm_user');
-    navigate('/backoffice/login');
-  };
-
   const formatData = (d: string) =>
     new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#1a3a52] text-white">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm">
-              NSM
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">I miei task</h1>
-              {utente && (
-                <p className="text-sm text-white/70">
-                  {utente.nome} {utente.cognome} ({utente.ruolo})
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/backoffice/pratiche" className="text-sm text-white/70 hover:text-white">
-              Pratiche
-            </Link>
-            <button onClick={logout} className="text-white/70 hover:text-white flex items-center gap-1 text-sm">
-              <LogOut className="w-4 h-4" /> Esci
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-6">
+    <div>
         {/* Filtri */}
         <div className="flex items-center gap-3 mb-6">
           <Filter className="w-4 h-4 text-gray-500" />
@@ -250,7 +214,6 @@ export default function MieiTask() {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 }

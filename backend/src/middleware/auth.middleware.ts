@@ -13,7 +13,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-const RUOLI_BACKOFFICE = ['BACKOFFICE_INTERNO', 'ADMIN'];
+const RUOLI_BACKOFFICE = ['AGENTE', 'JUNIOR_AGENT', 'CAPO_AREA', 'GROUP_MANAGER', 'AGENZIA', 'BACKOFFICE_INTERNO', 'ADMIN'];
 
 export async function verifyBackofficeToken(
   req: AuthenticatedRequest,

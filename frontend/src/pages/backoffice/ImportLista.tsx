@@ -189,24 +189,10 @@ export default function ImportLista() {
   const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
+    <div>
       <Toaster position="top-right" richColors />
 
-      {/* Header */}
-      <header className="bg-[#1a3a52] text-white px-6 py-4 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Noleggio Su Misura — Backoffice</h1>
-            <p className="text-sm text-slate-300">Gestione pratiche EOL Grenke</p>
-          </div>
-          <nav className="flex gap-4 text-sm">
-            <a href="/backoffice/import" className="text-white font-semibold border-b-2 border-white pb-0.5">Importazione</a>
-            <a href="/backoffice/pratiche" className="text-slate-300 hover:text-white transition-colors">Pratiche</a>
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <div>
         {/* Step: Upload */}
         {step === 'upload' && (
           <div className="max-w-2xl mx-auto">
@@ -496,7 +482,7 @@ export default function ImportLista() {
             </button>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

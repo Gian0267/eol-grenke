@@ -1,10 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
-import ImportLista from './pages/backoffice/ImportLista'
-import ListaPratiche from './pages/backoffice/ListaPratiche'
-import RiacquistiInAttesa from './pages/backoffice/RiacquistiInAttesa'
+import BackofficeLayout from './components/BackofficeLayout'
 import Login from './pages/backoffice/Login'
+import Dashboard from './pages/backoffice/Dashboard'
+import ListaPratiche from './pages/backoffice/ListaPratiche'
+import PraticaDettaglio from './pages/backoffice/PraticaDettaglio'
 import MieiTask from './pages/backoffice/MieiTask'
 import TaskEscalation from './pages/backoffice/TaskEscalation'
+import RiacquistiInAttesa from './pages/backoffice/RiacquistiInAttesa'
+import ImportLista from './pages/backoffice/ImportLista'
+import GestioneOutlier from './pages/backoffice/GestioneOutlier'
+import Reportistica from './pages/backoffice/Reportistica'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
@@ -29,11 +34,18 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/backoffice/login" element={<Login />} />
-        <Route path="/backoffice/miei-task" element={<MieiTask />} />
-        <Route path="/backoffice/import" element={<ImportLista />} />
-        <Route path="/backoffice/pratiche" element={<ListaPratiche />} />
-        <Route path="/backoffice/riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
-        <Route path="/backoffice/task-escalation" element={<TaskEscalation />} />
+        <Route path="/backoffice" element={<BackofficeLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="pratiche" element={<ListaPratiche />} />
+          <Route path="pratiche/:id" element={<PraticaDettaglio />} />
+          <Route path="miei-task" element={<MieiTask />} />
+          <Route path="task-escalation" element={<TaskEscalation />} />
+          <Route path="riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
+          <Route path="import" element={<ImportLista />} />
+          <Route path="outlier" element={<GestioneOutlier />} />
+          <Route path="reportistica" element={<Reportistica />} />
+        </Route>
         <Route path="/pratica/scaduta" element={<PraticaScaduta />} />
         <Route path="/pratica/:token" element={<ClienteLayout />}>
           <Route index element={<AreaPratica />} />
@@ -43,7 +55,7 @@ export default function App() {
           <Route path="contatto" element={<FlussoContatto />} />
           <Route path=":opzione" element={<OpzionePlaceholder />} />
         </Route>
-        <Route path="*" element={<Navigate to="/backoffice/pratiche" replace />} />
+        <Route path="*" element={<Navigate to="/backoffice/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   )
