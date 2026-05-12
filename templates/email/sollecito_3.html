@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promemoria contratto in scadenza</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">Noleggio Su Misura</h1>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:13px;">Smartcom Solutions Srl</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+
+              <p style="margin:0 0 16px;color:#1a3a52;font-size:15px;line-height:1.6;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                La contattiamo nuovamente in merito al Suo contratto
+                n. <strong>{{numero_contratto_nsm}}</strong>.
+                La scadenza del <strong>{{data_scadenza}}</strong> si avvicina
+                e <strong>non abbiamo ancora ricevuto la Sua scelta</strong>.
+              </p>
+
+              <!-- Avviso urgenza -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#fff7ed;padding:16px 20px;border-radius:6px;border:1px solid #fed7aa;">
+                    <p style="margin:0 0 8px;color:#c2410c;font-size:14px;font-weight:700;">&#x23F0; La deadline si avvicina</p>
+                    <p style="margin:0;color:#9a3412;font-size:14px;line-height:1.5;">
+                      Mancano poche settimane al termine utile per scegliere.
+                      Dopo il <strong>{{deadline_decisione}}</strong>, se non avremo
+                      ricevuto la Sua preferenza, il contratto proseguir&agrave;
+                      automaticamente in proroga per 6 mesi con canoni invariati.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                La procedura &egrave; semplice e richiede pochi minuti.
+                Acceda alla Sua area riservata per visualizzare le opzioni e confermare la Sua scelta:
+              </p>
+
+              <!-- Opzioni sintetiche -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="padding:0 0 8px;">
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.8;">
+                      &#x1F7E2; <strong>Rinnovo</strong> &mdash; nuovo contratto + gift card da {{valore_gift_card}}&euro;<br>
+                      &#x1F535; <strong>Riacquisto</strong> &mdash; il bene diventa Suo a &euro;{{pricing_riacquisto}} + IVA<br>
+                      &#x1F7E1; <strong>Contatto</strong> &mdash; parliamone insieme, senza impegno<br>
+                      &#x1F534; <strong>Restituzione</strong> &mdash; restituisca il bene a fine contratto
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{{link_area_cliente}}}" target="_blank" style="display:inline-block;background-color:#c2410c;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:6px;font-size:16px;font-weight:700;letter-spacing:0.3px;">SCEGLI LA TUA OPZIONE</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 24px;color:#6b7280;font-size:13px;line-height:1.5;text-align:center;">
+                Termine per la scelta: <strong>{{deadline_decisione}}</strong>
+              </p>
+
+              <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
+                Cordiali saluti,<br>
+                <strong>Il Team Noleggio Su Misura</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0 0 4px;color:#64748b;font-size:13px;text-align:center;">
+                Smartcom Solutions Srl &mdash; Via Tunisia 5, Collegno (TO) &mdash; P.IVA 12711040019
+              </p>
+              <p style="margin:0 0 12px;color:#64748b;font-size:13px;text-align:center;">
+                Tel: 011 4557949 &nbsp;|&nbsp; <a href="mailto:info@noleggiosumisura.it" style="color:#2563eb;text-decoration:none;">info@noleggiosumisura.it</a>
+              </p>
+              <p style="margin:0;text-align:center;">
+                <a href="{{{link_opt_out}}}" style="color:#94a3b8;font-size:11px;text-decoration:underline;">Non desidero pi&ugrave; ricevere comunicazioni</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

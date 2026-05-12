@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task escalation telefonica</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Noleggio Su Misura &mdash; Backoffice</h1>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:13px;">Task di escalation telefonica</p>
+            </td>
+          </tr>
+
+          <!-- Priorità badge -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:{{colore_priorita_bg}};padding:10px 16px;border-radius:6px;border-left:4px solid {{colore_priorita}};">
+                    <p style="margin:0;color:{{colore_priorita}};font-size:14px;font-weight:700;">{{etichetta_priorita}} &mdash; {{tipo_escalation}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px 32px 32px;">
+
+              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                Ciao <strong>{{nome_agente}}</strong>,
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                Ti &egrave; stato assegnato un task di escalation telefonica per una pratica EOL
+                che non ha ancora ricevuto risposta dal cliente.
+              </p>
+
+              <!-- Dati cliente -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                <tr>
+                  <td style="background-color:#f0f4f8;padding:16px 20px;border-radius:6px;">
+                    <p style="margin:0 0 4px;color:#1a3a52;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Dati cliente</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Ragione sociale:</strong> {{ragione_sociale}}</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Referente:</strong> {{referente_nome}}</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Telefono:</strong> <a href="tel:{{telefono}}" style="color:#2563eb;text-decoration:none;font-weight:700;font-size:16px;">{{telefono}}</a></p>
+                    <p style="margin:0;color:#374151;font-size:14px;"><strong>Email:</strong> {{email_cliente}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Dati contratto -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                <tr>
+                  <td style="background-color:#f0f4f8;padding:16px 20px;border-radius:6px;">
+                    <p style="margin:0 0 4px;color:#1a3a52;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Dati contratto</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Contratto NSM:</strong> {{numero_contratto_nsm}}</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Contratto Grenke:</strong> {{numero_contratto_grenke}}</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Scadenza:</strong> {{data_scadenza}}</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:14px;"><strong>Monte canoni:</strong> &euro;{{monte_canoni}}</p>
+                    <p style="margin:0;color:#374151;font-size:14px;"><strong>Beni:</strong> {{beni}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Storico comunicazioni -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                <tr>
+                  <td style="background-color:#fefce8;padding:16px 20px;border-radius:6px;">
+                    <p style="margin:0 0 8px;color:#1a3a52;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Storico comunicazioni inviate</p>
+                    {{#each storico_comunicazioni}}
+                    <p style="margin:0 0 4px;color:#374151;font-size:13px;">&#x2022; {{this.data}} &mdash; {{this.tipo}} ({{this.esito}})</p>
+                    {{/each}}
+                    {{#unless storico_comunicazioni}}
+                    <p style="margin:0;color:#6b7280;font-size:13px;font-style:italic;">Nessuna comunicazione precedente registrata.</p>
+                    {{/unless}}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Script di chiamata -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#eff6ff;padding:20px;border-radius:6px;border:1px solid #bfdbfe;">
+                    <p style="margin:0 0 12px;color:#1e40af;font-size:14px;font-weight:700;">&#x1F4DE; Script di chiamata suggerito</p>
+                    <p style="margin:0;color:#1e3a5f;font-size:13px;line-height:1.7;white-space:pre-line;">{{script_chiamata}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{{link_task}}}" target="_blank" style="display:inline-block;background-color:#1a3a52;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:6px;font-size:16px;font-weight:700;">APRI IL TASK NEL BACKOFFICE</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.5;">
+                Dopo aver effettuato la chiamata, accedi al backoffice per registrare l&rsquo;esito.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#64748b;font-size:13px;text-align:center;">
+                Questa &egrave; una notifica interna di Noleggio Su Misura &mdash; Smartcom Solutions Srl
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

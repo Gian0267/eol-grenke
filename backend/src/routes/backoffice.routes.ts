@@ -451,4 +451,171 @@ router.get('/miei-task', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// GET /api/backoffice/task-escalation — task escalation assegnati all'utente
+router.get('/task-escalation', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = (req.user as any)?.id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(401).json({ error: 'Autenticazione richiesta' });
+      return;
+    }
+
+    const userRecord = await prisma.utente_NSM.findUnique({ where: { id: userId } });
+    const isAdmin = userRecord && (userRecord.ruolo === 'ADMIN' || userRecord.ruolo === 'BACKOFFICE_INTERNO');
+
+    const where: any = { stato: { in: ['DA_CHIAMARE', 'RICHIAMARE'] } };
+    if (!isAdmin) {
+      where.assegnato_a_id = userId;
+    }
+
+    const tasks = await prisma.task_Escalation.findMany({
+      where,
+      include: {
+        contratto_eol: {
+          include: {
+            cliente: { select: { ragione_sociale: true, piva: true, email: true, telefono: true, referente_nome: true, referente_telefono: true } },
+            comunicazioni: { orderBy: { data_invio: 'desc' }, take: 10 },
+          },
+        },
+        assegnato_a: { select: { nome: true, cognome: true, email: true } },
+      },
+      orderBy: [
+        { tipo: 'desc' },
+        { data_creazione: 'desc' },
+      ],
+    });
+
+    const result = tasks.map(t => ({
+      id: t.id,
+      tipo: t.tipo,
+      stato: t.stato,
+      data_creazione: t.data_creazione,
+      data_completamento: t.data_completamento,
+      esito: t.esito,
+      note: t.note,
+      assegnato_a: t.assegnato_a,
+      contratto: {
+        id: t.contratto_eol.id,
+        contratto_nsm_id: t.contratto_eol.contratto_nsm_id,
+        contratto_grenke_id: t.contratto_eol.contratto_grenke_id,
+        data_scadenza: t.contratto_eol.data_scadenza,
+        monte_canoni: t.contratto_eol.monte_canoni,
+        beni_json: t.contratto_eol.beni_json,
+        stato: t.contratto_eol.stato,
+      },
+      cliente: t.contratto_eol.cliente,
+      storico_comunicazioni: t.contratto_eol.comunicazioni.map(c => ({
+        tipo: c.tipo,
+        data: c.data_invio,
+        esito: c.esito_invio,
+        canale: c.canale,
+      })),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('[task-escalation] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/task-escalation/:id/esito — registra esito chiamata
+router.post('/task-escalation/:id/esito', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = (req.user as any)?.id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(401).json({ error: 'Autenticazione richiesta' });
+      return;
+    }
+
+    const taskId = req.params.id as string;
+    const { esito, note, decisione_cliente } = req.body as {
+      esito: 'RISPOSTA_POSITIVA' | 'RISPOSTA_NEGATIVA' | 'NON_RAGGIUNTO' | 'RICHIAMARE';
+      note?: string;
+      decisione_cliente?: 'RINNOVO' | 'RIACQUISTO' | 'CONTATTO' | 'RESTITUZIONE';
+    };
+
+    if (!esito || !['RISPOSTA_POSITIVA', 'RISPOSTA_NEGATIVA', 'NON_RAGGIUNTO', 'RICHIAMARE'].includes(esito)) {
+      res.status(400).json({ error: 'Esito non valido' });
+      return;
+    }
+
+    if (esito === 'RISPOSTA_POSITIVA' && !decisione_cliente) {
+      res.status(400).json({ error: 'Decisione cliente obbligatoria per esito positivo' });
+      return;
+    }
+
+    const task = await prisma.task_Escalation.findUnique({
+      where: { id: taskId },
+      include: { contratto_eol: { include: { cliente: true } } },
+    });
+
+    if (!task) {
+      res.status(404).json({ error: 'Task non trovato' });
+      return;
+    }
+
+    const nuovoStato = esito === 'RICHIAMARE' ? 'RICHIAMARE' :
+                        esito === 'NON_RAGGIUNTO' ? 'NON_RAGGIUNTO' : 'CHIAMATO';
+
+    await prisma.task_Escalation.update({
+      where: { id: taskId },
+      data: {
+        stato: nuovoStato,
+        esito,
+        note: note || null,
+        data_completamento: esito !== 'RICHIAMARE' ? new Date() : null,
+      },
+    });
+
+    const tipoCom = `ESCALATION_TELEFONICA_${task.tipo}`;
+    await prisma.comunicazione.create({
+      data: {
+        contratto_eol_id: task.contratto_eol_id,
+        tipo: tipoCom,
+        canale: 'TELEFONO',
+        destinatario: task.contratto_eol.cliente.telefono || task.contratto_eol.cliente.email,
+        oggetto: `Chiamata escalation ${task.tipo}`,
+        esito_chiamata: esito,
+        data_invio: new Date(),
+        esito_invio: 'COMPLETATO',
+        operatore_id: userId,
+      },
+    });
+
+    if (esito === 'RISPOSTA_POSITIVA' && decisione_cliente) {
+      const statoMap: Record<string, string> = {
+        RINNOVO: 'DECISIONE_RINNOVO',
+        RIACQUISTO: 'DECISIONE_RIACQUISTO',
+        CONTATTO: 'DECISIONE_CONTATTO',
+        RESTITUZIONE: 'DECISIONE_RESTITUZIONE',
+      };
+
+      await prisma.decisione_Cliente.create({
+        data: {
+          contratto_eol_id: task.contratto_eol_id,
+          opzione_scelta: decisione_cliente,
+          otp_verificato: false,
+          otp_metodo: 'TELEFONICA',
+          note_cliente: note ? `[Via telefono] ${note}` : '[Decisione registrata via telefono]',
+        },
+      });
+
+      await prisma.contratto_EOL.update({
+        where: { id: task.contratto_eol_id },
+        data: { stato: statoMap[decisione_cliente] || 'IN_ATTESA_DECISIONE' },
+      });
+    }
+
+    res.json({
+      success: true,
+      messaggio: `Esito ${esito} registrato per task ${task.tipo}`,
+      task_stato: nuovoStato,
+    });
+  } catch (err) {
+    console.error('[task-escalation/esito] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
 export default router;

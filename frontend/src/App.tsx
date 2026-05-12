@@ -4,6 +4,7 @@ import ListaPratiche from './pages/backoffice/ListaPratiche'
 import RiacquistiInAttesa from './pages/backoffice/RiacquistiInAttesa'
 import Login from './pages/backoffice/Login'
 import MieiTask from './pages/backoffice/MieiTask'
+import TaskEscalation from './pages/backoffice/TaskEscalation'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/backoffice/import" element={<ImportLista />} />
         <Route path="/backoffice/pratiche" element={<ListaPratiche />} />
         <Route path="/backoffice/riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
+        <Route path="/backoffice/task-escalation" element={<TaskEscalation />} />
         <Route path="/pratica/scaduta" element={<PraticaScaduta />} />
         <Route path="/pratica/:token" element={<ClienteLayout />}>
           <Route index element={<AreaPratica />} />

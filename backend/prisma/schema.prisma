@@ -41,6 +41,7 @@ model Contratto_EOL {
   comunicazioni         Comunicazione[]
   richieste_contatto    Richiesta_Contatto[]
   audit_events          Audit_Event[]
+  task_escalation       Task_Escalation[]
 }
 
 model Cliente {
@@ -186,4 +187,19 @@ model Utente_NSM {
   contratti_assegnati Contratto_EOL[]      @relation("AgenteAssegnato")
   chiamate_effettuate Comunicazione[]
   richieste_assegnate Richiesta_Contatto[]
+  task_assegnati      Task_Escalation[]
+}
+
+model Task_Escalation {
+  id                  String        @id @default(uuid())
+  contratto_eol_id    String
+  contratto_eol       Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  tipo                String
+  assegnato_a_id      String
+  assegnato_a         Utente_NSM    @relation(fields: [assegnato_a_id], references: [id])
+  stato               String        @default("DA_CHIAMARE")
+  data_creazione      DateTime      @default(now())
+  data_completamento  DateTime?
+  esito               String?
+  note                String?
 }
