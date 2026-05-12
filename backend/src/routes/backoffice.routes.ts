@@ -384,4 +384,71 @@ router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest,
   }
 });
 
+// GET /api/backoffice/miei-task — task assegnati all'utente loggato (sessione passport)
+router.get('/miei-task', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Supporta sia sessione passport che header x-user-id
+    const userId = (req.user as any)?.id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(401).json({ error: 'Autenticazione richiesta' });
+      return;
+    }
+
+    const { tipo, stato } = req.query as { tipo?: string; stato?: string };
+
+    // Decisioni RINNOVO/CONTATTO assegnate a me
+    const whereContratto: any = { agente_assegnato_id: userId };
+    if (tipo === 'RINNOVO' || tipo === 'CONTATTO') {
+      whereContratto.stato = tipo === 'RINNOVO' ? 'DECISIONE_RINNOVO' : 'DECISIONE_CONTATTO';
+    } else {
+      whereContratto.stato = { in: ['DECISIONE_RINNOVO', 'DECISIONE_CONTATTO'] };
+    }
+
+    const contratti = await prisma.contratto_EOL.findMany({
+      where: whereContratto,
+      include: {
+        cliente: { select: { ragione_sociale: true, piva: true, email: true, telefono: true } },
+        decisioni: {
+          orderBy: { created_at: 'desc' },
+          take: 1,
+        },
+        richieste_contatto: {
+          where: { agente_assegnato_id: userId },
+          orderBy: { created_at: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updated_at: 'desc' },
+    });
+
+    const tasks = contratti.map(c => {
+      const decisione = c.decisioni[0];
+      const richiesta = c.richieste_contatto[0];
+      return {
+        contratto_id: c.id,
+        contratto_nsm: c.contratto_nsm_id,
+        contratto_grenke: c.contratto_grenke_id,
+        cliente: c.cliente,
+        tipo: decisione?.opzione_scelta || 'CONTATTO',
+        stato_pratica: c.stato,
+        data_creazione: decisione?.created_at || c.updated_at,
+        note_cliente: decisione?.note_cliente || richiesta?.note || null,
+        prequalificazione: decisione?.opzione_scelta === 'RINNOVO' && decisione?.note_cliente
+          ? JSON.parse(decisione.note_cliente)
+          : null,
+        richiesta_contatto: richiesta ? {
+          fascia_oraria: richiesta.fascia_oraria,
+          modalita_preferita: richiesta.modalita_preferita,
+          stato: richiesta.stato,
+        } : null,
+      };
+    });
+
+    res.json(tasks);
+  } catch (err) {
+    console.error('[miei-task] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
 export default router;

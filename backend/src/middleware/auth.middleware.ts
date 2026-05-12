@@ -20,6 +20,11 @@ export async function verifyBackofficeToken(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  // Accept passport session auth
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    return next();
+  }
+
   const userId = req.headers['x-user-id'] as string | undefined;
 
   if (!userId) {

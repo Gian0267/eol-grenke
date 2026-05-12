@@ -18,6 +18,8 @@ import {
   verifyPayment as verifyPaymentService,
   handlePaymentCallback,
 } from '../services/payment.service.js';
+import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf.service.js';
+import { assegnaPratica } from '../services/assignment.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -27,15 +29,21 @@ const emailProvider = new SmtpEmailProvider();
 const configDir = resolve(__dirname, '../../../config');
 const templateDir = resolve(__dirname, '../../../templates/email');
 const pricingRules = JSON.parse(readFileSync(resolve(configDir, 'pricing_rules.json'), 'utf-8'));
-const assignmentRules = JSON.parse(
-  readFileSync(resolve(configDir, 'assignment_rules.json'), 'utf-8'),
-);
 
 const notificaTemplate = Handlebars.compile(
   readFileSync(resolve(templateDir, 'notifica_richiesta_contatto.html'), 'utf-8'),
 );
 const confermaRestituzioneTemplate = Handlebars.compile(
   readFileSync(resolve(templateDir, 'conferma_restituzione.html'), 'utf-8'),
+);
+const confermaRinnovoTemplate = Handlebars.compile(
+  readFileSync(resolve(templateDir, 'conferma_rinnovo.html'), 'utf-8'),
+);
+const notificaAgenteRinnovoTemplate = Handlebars.compile(
+  readFileSync(resolve(templateDir, 'notifica_agente_rinnovo.html'), 'utf-8'),
+);
+const notificaAgenteContattoTemplate = Handlebars.compile(
+  readFileSync(resolve(templateDir, 'notifica_agente_contatto.html'), 'utf-8'),
 );
 
 const feaProvider = new MockFeaProvider();
@@ -164,37 +172,7 @@ router.post(
         return;
       }
 
-      // Assignment rules (SPECS 5.3)
-      let agenteAssegnatoId: string | null = null;
-      let motivoAssegnazione = '';
-
-      const soglia = assignmentRules.soglia_alto_valore_eur as number;
-
-      if (contratto.agente_originario && contratto.agente_originario.attivo) {
-        agenteAssegnatoId = contratto.agente_originario.id;
-        motivoAssegnazione = 'agente_originario';
-      }
-
-      // I7: capo_area = primo ADMIN attivo (workaround: manca relazione gerarchica nello schema)
-      if (!agenteAssegnatoId && Number(contratto.monte_canoni) >= soglia) {
-        const capoArea = await prisma.utente_NSM.findFirst({
-          where: { ruolo: 'ADMIN', attivo: true },
-        });
-        if (capoArea) {
-          agenteAssegnatoId = capoArea.id;
-          motivoAssegnazione = 'capo_area';
-        }
-      }
-
-      if (!agenteAssegnatoId) {
-        const teamBackoffice = await prisma.utente_NSM.findFirst({
-          where: { ruolo: 'BACKOFFICE_INTERNO', attivo: true },
-        });
-        if (teamBackoffice) {
-          agenteAssegnatoId = teamBackoffice.id;
-          motivoAssegnazione = 'backoffice_interno';
-        }
-      }
+      const { agenteAssegnatoId, motivoAssegnazione } = await assegnaPratica(contratto.id);
 
       const richiesta = await prisma.richiesta_Contatto.create({
         data: {
@@ -520,24 +498,7 @@ router.post(
           return;
         }
 
-        // Assignment rules
-        let agenteAssegnatoId: string | null = null;
-        const soglia = assignmentRules.soglia_alto_valore_eur as number;
-
-        if (contratto.agente_originario && contratto.agente_originario.attivo) {
-          agenteAssegnatoId = contratto.agente_originario.id;
-        } else if (Number(contratto.monte_canoni) >= soglia) {
-          const capoArea = await prisma.utente_NSM.findFirst({
-            where: { ruolo: 'ADMIN', attivo: true },
-          });
-          if (capoArea) agenteAssegnatoId = capoArea.id;
-        }
-        if (!agenteAssegnatoId) {
-          const team = await prisma.utente_NSM.findFirst({
-            where: { ruolo: 'BACKOFFICE_INTERNO', attivo: true },
-          });
-          if (team) agenteAssegnatoId = team.id;
-        }
+        const { agenteAssegnatoId } = await assegnaPratica(contratto.id);
 
         await prisma.richiesta_Contatto.create({
           data: {
@@ -794,6 +755,393 @@ router.get(
       res.send(pdf);
     } catch (err) {
       console.error('[GET /api/cliente/pagamento/:pagamento_id/ricevuta] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// ===== RINNOVO ROUTES =====
+
+const iniziaRinnovoSchema = z.object({
+  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  numero_device: z.number().int().min(1).default(1),
+  durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
+  budget_mensile: z.number().optional(),
+  note: z.string().optional(),
+  metodo_otp: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/rinnovo/inizia',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = iniziaRinnovoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      if (!statiValidi.includes(contratto.stato)) {
+        res.status(400).json({ errore: `Stato pratica non valido: ${contratto.stato}` });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { metodo_otp } = parsed.data;
+      const destinatario = metodo_otp === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      await generateOtp(metodo_otp, destinatario);
+
+      if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
+        await prisma.contratto_EOL.update({
+          where: { id: contratto.id },
+          data: { stato: 'IN_ATTESA_DECISIONE' },
+        });
+      }
+
+      res.json({
+        success: true,
+        messaggio: `Codice OTP inviato via ${metodo_otp}`,
+        destinatario_mascherato: destinatario.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/rinnovo/inizia] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+const confermaRinnovoSchema = z.object({
+  codice: z.string().length(6),
+  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  numero_device: z.number().int().min(1).default(1),
+  durata_desiderata: z.number().int(),
+  budget_mensile: z.number().optional(),
+  note: z.string().optional(),
+});
+
+router.post(
+  '/decisione/rinnovo/conferma',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = confermaRinnovoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true, agente_originario: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { codice, metodo_otp, tipo_device, numero_device, durata_desiderata, budget_mensile, note } = parsed.data;
+      const destinatario = metodo_otp === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      const otpResult = await verifyOtp(metodo_otp, destinatario, codice);
+      if (!otpResult.valid) {
+        res.status(400).json({ errore: otpResult.errore });
+        return;
+      }
+
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      const prequalificazione: PrequalificazioneRinnovo = {
+        tipo_device,
+        numero_device,
+        durata_desiderata,
+        budget_mensile,
+        note,
+      };
+
+      const decisione = await prisma.decisione_Cliente.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          opzione_scelta: 'RINNOVO',
+          otp_verificato: true,
+          otp_metodo: metodo_otp,
+          ip_address: ip,
+          user_agent: userAgent,
+          note_cliente: JSON.stringify(prequalificazione),
+        },
+      });
+
+      // Assegna agente
+      const { agenteAssegnatoId, motivoAssegnazione } = await assegnaPratica(contratto.id);
+
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: {
+          stato: 'DECISIONE_RINNOVO',
+          agente_assegnato_id: agenteAssegnatoId,
+        },
+      });
+
+      // Genera PDF conferma rinnovo
+      const { pdfPath, hash } = await generaConfermaRinnovo(
+        contratto.id,
+        decisione.id,
+        prequalificazione,
+        { nome: contratto.cliente.ragione_sociale, ip, userAgent, otpVerificato: true },
+      );
+
+      // Invia email al cliente con PDF allegato
+      let beni: Array<{ descrizione?: string }> = [];
+      try { beni = JSON.parse(contratto.beni_json); } catch {}
+
+      const htmlCliente = confermaRinnovoTemplate({
+        ragione_sociale: contratto.cliente.ragione_sociale,
+        numero_contratto_nsm: contratto.contratto_nsm_id,
+        numero_contratto_grenke: contratto.contratto_grenke_id,
+        tipo_device,
+        numero_device,
+        durata_desiderata,
+        budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
+        note: note || null,
+        valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+      });
+
+      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
+      const { readFileSync: readPdf } = await import('fs');
+      const pdfBuffer = readPdf(pdfPath);
+
+      const sendCliente = await emailProvider.sendWithAttachment(
+        contratto.cliente.email,
+        oggettoCliente,
+        htmlCliente,
+        [{ filename: `conferma_rinnovo_${contratto.contratto_nsm_id}.pdf`, content: pdfBuffer }],
+      );
+
+      await prisma.comunicazione.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          tipo: 'CONFERMA_RINNOVO',
+          canale: 'EMAIL',
+          destinatario: contratto.cliente.email,
+          oggetto: oggettoCliente,
+          corpo_html: htmlCliente,
+          data_invio: new Date(),
+          esito_invio: sendCliente.success ? 'INVIATO' : 'ERRORE',
+        },
+      });
+
+      // Notifica agente assegnato
+      if (agenteAssegnatoId) {
+        const agente = await prisma.utente_NSM.findUnique({ where: { id: agenteAssegnatoId } });
+        if (agente) {
+          const htmlAgente = notificaAgenteRinnovoTemplate({
+            ragione_sociale: contratto.cliente.ragione_sociale,
+            contratto_nsm: contratto.contratto_nsm_id,
+            email_cliente: contratto.cliente.email,
+            telefono_cliente: contratto.cliente.telefono || 'Non disponibile',
+            monte_canoni: formatEur(Number(contratto.monte_canoni)),
+            tipo_device,
+            numero_device,
+            durata_desiderata,
+            budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
+            note: note || null,
+            valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+            motivo_assegnazione: motivoAssegnazione,
+          });
+
+          const oggettoAgente = `Nuova richiesta rinnovo: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
+          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+
+          await prisma.comunicazione.create({
+            data: {
+              contratto_eol_id: contratto.id,
+              tipo: 'NOTIFICA_AGENTE_RINNOVO',
+              canale: 'EMAIL',
+              destinatario: agente.email,
+              oggetto: oggettoAgente,
+              corpo_html: htmlAgente,
+              data_invio: new Date(),
+              esito_invio: sendAgente.success ? 'INVIATO' : 'ERRORE',
+            },
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        messaggio: 'Richiesta di rinnovo confermata',
+        decisione_id: decisione.id,
+        pdf_hash: hash,
+        valore_gift_card: Number(contratto.valore_gift_card),
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/rinnovo/conferma] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// ===== CONTATTO PERSONALIZZATO ROUTE =====
+
+const decisioneContattoSchema = z.object({
+  fascia_oraria: z.enum(['MATTINA', 'POMERIGGIO', 'INDIFFERENTE']),
+  modalita_preferita: z.enum(['TELEFONO', 'EMAIL', 'VIDEOCALL']),
+  note: z.string().optional(),
+});
+
+router.post(
+  '/decisione/contatto',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = decisioneContattoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true, agente_originario: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      if (!statiValidi.includes(contratto.stato)) {
+        res.status(400).json({ errore: `Stato pratica non valido: ${contratto.stato}` });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { fascia_oraria, modalita_preferita, note } = parsed.data;
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      // Crea Decisione_Cliente
+      const decisione = await prisma.decisione_Cliente.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          opzione_scelta: 'CONTATTO',
+          otp_verificato: false,
+          ip_address: ip,
+          user_agent: userAgent,
+          note_cliente: note || null,
+        },
+      });
+
+      // Assegna agente
+      const { agenteAssegnatoId, motivoAssegnazione } = await assegnaPratica(contratto.id);
+
+      // Crea Richiesta_Contatto
+      await prisma.richiesta_Contatto.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          origine: 'OPZIONE_CONTATTO_PERSONALIZZATO',
+          nome_referente: contratto.cliente.referente_nome || contratto.cliente.ragione_sociale,
+          telefono: contratto.cliente.telefono || '',
+          fascia_oraria,
+          modalita_preferita,
+          note: note || null,
+          agente_assegnato_id: agenteAssegnatoId,
+          stato: 'DA_GESTIRE',
+        },
+      });
+
+      // Aggiorna stato pratica
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: {
+          stato: 'DECISIONE_CONTATTO',
+          agente_assegnato_id: agenteAssegnatoId,
+        },
+      });
+
+      // Notifica agente assegnato
+      if (agenteAssegnatoId) {
+        const agente = await prisma.utente_NSM.findUnique({ where: { id: agenteAssegnatoId } });
+        if (agente) {
+          const htmlAgente = notificaAgenteContattoTemplate({
+            ragione_sociale: contratto.cliente.ragione_sociale,
+            contratto_nsm: contratto.contratto_nsm_id,
+            email_cliente: contratto.cliente.email,
+            telefono_cliente: contratto.cliente.telefono || 'Non disponibile',
+            monte_canoni: formatEur(Number(contratto.monte_canoni)),
+            fascia_oraria,
+            modalita_preferita,
+            note: note || null,
+            motivo_assegnazione: motivoAssegnazione,
+          });
+
+          const oggettoAgente = `Richiesta contatto personalizzato: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
+          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+
+          await prisma.comunicazione.create({
+            data: {
+              contratto_eol_id: contratto.id,
+              tipo: 'NOTIFICA_AGENTE_CONTATTO',
+              canale: 'EMAIL',
+              destinatario: agente.email,
+              oggetto: oggettoAgente,
+              corpo_html: htmlAgente,
+              data_invio: new Date(),
+              esito_invio: sendAgente.success ? 'INVIATO' : 'ERRORE',
+            },
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        messaggio: 'Richiesta di contatto personalizzato registrata. Ti contatteremo a breve.',
+        decisione_id: decisione.id,
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/contatto] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },

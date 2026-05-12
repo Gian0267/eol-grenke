@@ -184,3 +184,158 @@ export async function generaVerbaleRestituzione(
 
   return { pdfPath, hash };
 }
+
+export interface PrequalificazioneRinnovo {
+  tipo_device: string;
+  numero_device: number;
+  durata_desiderata: number;
+  budget_mensile?: number;
+  note?: string;
+}
+
+export async function generaConfermaRinnovo(
+  contrattoEolId: string,
+  decisioneId: string,
+  prequalificazione: PrequalificazioneRinnovo,
+  firma: FirmaInfo,
+): Promise<{ pdfPath: string; hash: string }> {
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contrattoEolId },
+    include: { cliente: true },
+  });
+
+  if (!contratto) throw new Error('Contratto non trovato');
+
+  let beni: Array<{ descrizione?: string }> = [];
+  try { beni = JSON.parse(contratto.beni_json); } catch {}
+
+  const timestamp = Date.now();
+  const filename = `conferma_rinnovo_${contrattoEolId}_${timestamp}.pdf`;
+  const pdfPath = resolve(storagePath, filename);
+
+  const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
+    Title: 'Conferma interesse al rinnovo',
+    Author: 'Noleggio Su Misura - Smartcom Solutions Srl',
+  }});
+
+  const stream = createWriteStream(pdfPath);
+  doc.pipe(stream);
+
+  // Header
+  doc.fontSize(16).font('Helvetica-Bold')
+    .text('NSM', 50, 50, { continued: true })
+    .fontSize(10).font('Helvetica')
+    .text('  Noleggio Su Misura', { continued: false });
+
+  doc.moveDown(0.5);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#1a3a52');
+  doc.moveDown(0.8);
+
+  doc.fontSize(18).font('Helvetica-Bold').fillColor('#16a34a')
+    .text('Conferma interesse al rinnovo', { align: 'center' });
+  doc.moveDown(1.5);
+
+  // Dati cliente
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000')
+    .text('Dati del cliente');
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica');
+  doc.text(`Ragione sociale: ${contratto.cliente.ragione_sociale}`);
+  doc.text(`P.IVA: ${contratto.cliente.piva}`);
+  if (contratto.cliente.indirizzo_sede || contratto.cliente.citta) {
+    const sede = [contratto.cliente.indirizzo_sede, contratto.cliente.cap, contratto.cliente.citta, contratto.cliente.provincia].filter(Boolean).join(', ');
+    doc.text(`Sede: ${sede}`);
+  }
+  doc.moveDown(1);
+
+  // Dati contratto in scadenza
+  doc.fontSize(12).font('Helvetica-Bold')
+    .text('Contratto in scadenza');
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica');
+  doc.text(`Numero contratto NSM: ${contratto.contratto_nsm_id}`);
+  doc.text(`Numero contratto Grenke: ${contratto.contratto_grenke_id}`);
+  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza))}`);
+  doc.text(`Monte canoni: EUR ${formatEur(Number(contratto.monte_canoni))}`);
+  doc.text(`Beni attuali: ${beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto'}`);
+  doc.moveDown(1);
+
+  // Pre-qualificazione
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#16a34a')
+    .text('Dati di pre-qualificazione per il nuovo contratto FLEX');
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica').fillColor('#000000');
+  doc.text(`Tipo device desiderato: ${prequalificazione.tipo_device}`);
+  doc.text(`Numero device: ${prequalificazione.numero_device}`);
+  doc.text(`Durata desiderata: ${prequalificazione.durata_desiderata} mesi`);
+  if (prequalificazione.budget_mensile) {
+    doc.text(`Budget orientativo mensile: EUR ${formatEur(prequalificazione.budget_mensile)}`);
+  }
+  if (prequalificazione.note) {
+    doc.text(`Note: ${prequalificazione.note}`);
+  }
+  doc.moveDown(1);
+
+  // Gift card
+  doc.rect(50, doc.y, 495, 45).fill('#dcfce7');
+  const gcY = doc.y + 12;
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('#166534')
+    .text(
+      `Alla firma del nuovo contratto FLEX riceverai una gift card Smartcom Solutions da EUR ${formatEur(Number(contratto.valore_gift_card))}`,
+      60, gcY, { width: 475, align: 'center' },
+    );
+  doc.y = gcY + 35;
+  doc.moveDown(1);
+
+  // Prossimi passi
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000')
+    .text('Prossimi passi');
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica');
+  doc.text('1. Un agente NSM ti contattera entro 5 giorni lavorativi per definire i dettagli del nuovo contratto FLEX.');
+  doc.text('2. Riceverai una proposta personalizzata in base alle tue esigenze.');
+  doc.text('3. Alla firma del nuovo contratto riceverai la gift card Smartcom Solutions.');
+  doc.moveDown(1.5);
+
+  // Sezione firma
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
+  doc.moveDown(0.5);
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a3a52')
+    .text('Firma elettronica');
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica').fillColor('#000000');
+  doc.text(`Nome: ${firma.nome}`);
+  doc.text(`Data: ${formatDate(new Date())} ore ${new Date().toLocaleTimeString('it-IT')}`);
+  doc.text(`Indirizzo IP: ${firma.ip}`);
+  doc.text(`OTP verificato: ${firma.otpVerificato ? 'Si' : 'No'}`);
+  doc.moveDown(1);
+
+  // Nota mock
+  doc.rect(50, doc.y, 495, 50).fill('#fff3cd');
+  const noteY = doc.y + 10;
+  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#856404')
+    .text(
+      'Documento firmato elettronicamente in modalita MOCK. ' +
+      'Per uso in produzione integrare provider FEA certificato eIDAS (es. Namirial, InfoCert, Aruba).',
+      60, noteY, { width: 475 },
+    );
+
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+
+  const pdfBuffer = readFileSync(pdfPath);
+  const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  await prisma.decisione_Cliente.update({
+    where: { id: decisioneId },
+    data: { pdf_conferma_path: pdfPath, hash_pdf: hash },
+  });
+
+  console.log(`[PDF] Conferma rinnovo generata: ${filename} (hash: ${hash.substring(0, 16)}...)`);
+
+  return { pdfPath, hash };
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#1a3a52;padding:24px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">NSM Backoffice</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">Notifica task rinnovo</p>
+            </td>
+          </tr>
+          <!-- Urgenza -->
+          <tr>
+            <td style="background:#fef3c7;padding:12px 32px;border-bottom:1px solid #fbbf24;">
+              <p style="margin:0;font-size:13px;font-weight:700;color:#92400e;">
+                Da contattare entro 5 giorni lavorativi
+              </p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="color:#16a34a;font-size:18px;margin:0 0 16px;">Nuova richiesta di rinnovo</h2>
+
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 24px;">
+                Il cliente <strong>{{ragione_sociale}}</strong> ha espresso interesse al rinnovo
+                del contratto <strong>{{contratto_nsm}}</strong>.
+              </p>
+
+              <!-- Dati cliente -->
+              <h3 style="color:#1a3a52;font-size:14px;margin:0 0 8px;">Dati cliente</h3>
+              <table width="100%" cellpadding="8" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;width:40%;border-bottom:1px solid #e5e7eb;">Ragione sociale</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #e5e7eb;">{{ragione_sociale}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Email</td>
+                  <td style="font-size:13px;color:#1a3a52;border-bottom:1px solid #e5e7eb;">{{email_cliente}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Telefono</td>
+                  <td style="font-size:13px;color:#1a3a52;border-bottom:1px solid #e5e7eb;">{{telefono_cliente}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;">Monte canoni</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;">&euro; {{monte_canoni}}</td>
+                </tr>
+              </table>
+
+              <!-- Pre-qualificazione -->
+              <h3 style="color:#16a34a;font-size:14px;margin:0 0 8px;">Pre-qualificazione nuovo contratto</h3>
+              <table width="100%" cellpadding="8" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;width:40%;border-bottom:1px solid #bbf7d0;">Tipo device</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #bbf7d0;">{{tipo_device}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #bbf7d0;">Numero device</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #bbf7d0;">{{numero_device}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #bbf7d0;">Durata</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #bbf7d0;">{{durata_desiderata}} mesi</td>
+                </tr>
+                {{#if budget_mensile}}
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;border-bottom:1px solid #bbf7d0;">Budget mensile</td>
+                  <td style="font-size:13px;font-weight:600;color:#1a3a52;border-bottom:1px solid #bbf7d0;">&euro; {{budget_mensile}}</td>
+                </tr>
+                {{/if}}
+                {{#if note}}
+                <tr>
+                  <td style="font-size:13px;color:#6b7280;">Note del cliente</td>
+                  <td style="font-size:13px;color:#1a3a52;">{{note}}</td>
+                </tr>
+                {{/if}}
+              </table>
+
+              <!-- Gift card -->
+              <table width="100%" cellpadding="10" cellspacing="0" style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:13px;color:#166534;text-align:center;">
+                    Valore gift card promessa: <strong>&euro; {{valore_gift_card}}</strong>
+                    (erogazione alla firma del nuovo contratto)
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color:#6b7280;font-size:12px;margin:16px 0 0;">
+                Assegnazione: {{motivo_assegnazione}}
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+                NSM Backoffice &mdash; Notifica automatica
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
