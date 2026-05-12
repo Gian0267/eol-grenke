@@ -4,6 +4,7 @@ import { createWriteStream, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
+import { verificaCatena } from './audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storagePath = resolve(__dirname, '../../../backend/storage/pdfs');
@@ -338,4 +339,120 @@ export async function generaConfermaRinnovo(
   console.log(`[PDF] Conferma rinnovo generata: ${filename} (hash: ${hash.substring(0, 16)}...)`);
 
   return { pdfPath, hash };
+}
+
+const ACCENT_MAP: Record<string, string> = {
+  'à': 'a', 'è': 'e', 'é': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
+  'À': 'A', 'È': 'E', 'É': 'E', 'Ì': 'I', 'Ò': 'O', 'Ù': 'U',
+};
+
+function toAscii(s: string): string {
+  return s.replace(/[àèéìòùÀÈÉÌÒÙ]/g, c => ACCENT_MAP[c] || c);
+}
+
+export async function generaAuditExport(
+  contrattoEolId: string,
+): Promise<{ pdfPath: string; hash: string }> {
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contrattoEolId },
+    include: { cliente: true },
+  });
+  if (!contratto) throw new Error('Contratto non trovato');
+
+  const eventi = await prisma.audit_Event.findMany({
+    where: { contratto_eol_id: contrattoEolId },
+    orderBy: { timestamp: 'asc' },
+  });
+
+  const catena = await verificaCatena(contrattoEolId);
+
+  const timestamp = Date.now();
+  const filename = `audit_export_${contrattoEolId}_${timestamp}.pdf`;
+  const pdfPath = resolve(storagePath, filename);
+
+  const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
+    Title: toAscii('Audit trail — catena di hash'),
+    Author: 'Noleggio Su Misura — Smartcom Solutions Srl',
+  }});
+
+  const stream = createWriteStream(pdfPath);
+  doc.pipe(stream);
+
+  doc.fontSize(16).font('Helvetica-Bold')
+    .text('NSM', 50, 50, { continued: true })
+    .fontSize(10).font('Helvetica')
+    .text('  Noleggio Su Misura', { continued: false });
+  doc.moveDown(0.5);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#1a3a52');
+  doc.moveDown(0.8);
+
+  doc.fontSize(18).font('Helvetica-Bold').fillColor('#1a3a52')
+    .text(toAscii('Audit Trail — Catena di Hash Crittografica'), { align: 'center' });
+  doc.moveDown(1);
+
+  doc.fontSize(10).font('Helvetica').fillColor('#000000');
+  doc.text(toAscii(`Contratto NSM: ${contratto.contratto_nsm_id}`));
+  doc.text(toAscii(`Contratto Grenke: ${contratto.contratto_grenke_id}`));
+  doc.text(toAscii(`Cliente: ${contratto.cliente.ragione_sociale} (P.IVA ${contratto.cliente.piva})`));
+  doc.text(toAscii(`Stato pratica: ${contratto.stato}`));
+  doc.moveDown(0.5);
+
+  const integraTxt = catena.integra ? 'SI' : 'NO';
+  const integraColor = catena.integra ? '#16a34a' : '#dc2626';
+  doc.fontSize(12).font('Helvetica-Bold').fillColor(integraColor)
+    .text(toAscii(`Catena integra: ${integraTxt} — ${catena.eventi} eventi`));
+  if (!catena.integra && catena.errore_al_evento_N) {
+    doc.fontSize(9).font('Helvetica').fillColor('#dc2626')
+      .text(toAscii(catena.errore_al_evento_N));
+  }
+  doc.moveDown(1);
+
+  doc.fillColor('#000000');
+
+  for (let i = 0; i < eventi.length; i++) {
+    const ev = eventi[i]!;
+
+    if (doc.y > 680) {
+      doc.addPage();
+    }
+
+    doc.fontSize(9).font('Helvetica-Bold')
+      .text(toAscii(`Evento ${i + 1}: ${ev.azione}`));
+    doc.fontSize(8).font('Helvetica');
+    doc.text(toAscii(`Timestamp: ${ev.timestamp.toISOString()}`));
+    doc.text(toAscii(`Attore: ${ev.attore_tipo} / ${ev.attore_id}`));
+
+    let dati: Record<string, unknown> = {};
+    try { dati = JSON.parse(ev.dati_json); } catch {}
+    const datiStr = Object.entries(dati).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
+    if (datiStr) {
+      doc.text(toAscii(`Dati: ${datiStr.substring(0, 200)}${datiStr.length > 200 ? '...' : ''}`));
+    }
+
+    doc.font('Courier').fontSize(6);
+    doc.text(`Hash precedente: ${ev.hash_precedente.substring(0, 64)}`);
+    doc.text(`Hash corrente:   ${ev.hash_corrente.substring(0, 64)}`);
+    doc.font('Helvetica').fontSize(8);
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e5e7eb');
+    doc.moveDown(0.3);
+  }
+
+  doc.moveDown(1);
+  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#6b7280')
+    .text(toAscii(`Documento generato il ${formatDate(new Date())} alle ${new Date().toLocaleTimeString('it-IT')}. Catena integra: ${integraTxt}.`));
+
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+
+  const pdfBuffer = readFileSync(pdfPath);
+  const pdfHash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  console.log(`[PDF] Audit export generato: ${filename} (hash: ${pdfHash.substring(0, 16)}...)`);
+
+  return { pdfPath, hash: pdfHash };
 }

@@ -20,6 +20,7 @@ import {
 } from '../services/payment.service.js';
 import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf.service.js';
 import { assegnaPratica } from '../services/assignment.service.js';
+import { registraEvento } from '../services/audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -83,6 +84,11 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
       res.status(404).json({ errore: 'Contratto non trovato' });
       return;
     }
+
+    await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'LINK_APERTO_DAL_CLIENTE', {
+      ip: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown',
+      user_agent: req.headers['user-agent'] || 'unknown',
+    });
 
     const ivaPerc = pricingRules.iva_percentuale as number;
     const { iva, totale } = calcolaIva(contratto.pricing_riacquisto, ivaPerc);
@@ -227,6 +233,11 @@ router.post(
         }
       }
 
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'RICHIESTA_CONTATTO_CREATA', {
+        origine: 'WIDGET_CHIAMAMI',
+        richiesta_id: richiesta.id,
+      });
+
       res.json({
         success: true,
         messaggio: 'Richiesta registrata. Ti richiameremo entro 24 ore.',
@@ -346,6 +357,10 @@ router.post(
       const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
 
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'OTP_VERIFICATO', {
+        metodo, opzione: 'RESTITUZIONE',
+      });
+
       const decisione = await prisma.decisione_Cliente.create({
         data: {
           contratto_eol_id: contratto.id,
@@ -360,6 +375,14 @@ router.post(
       await prisma.contratto_EOL.update({
         where: { id: contratto.id },
         data: { stato: 'CHIUSA_RESTITUZIONE_CONFERMATA' },
+      });
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'RESTITUZIONE', decisione_id: decisione.id, ip,
+      });
+
+      await registraEvento(contratto.id, 'SISTEMA', 'SISTEMA', 'PRATICA_CHIUSA', {
+        stato_finale: 'CHIUSA_RESTITUZIONE_CONFERMATA',
       });
 
       const { pdfPath, hash } = await generaVerbaleRestituzione(contratto.id, decisione.id, {
@@ -540,6 +563,10 @@ router.post(
           }
         }
 
+        await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'RICHIESTA_CONTATTO_CREATA', {
+          origine: 'STEP_PRE_PAGAMENTO',
+        });
+
         res.json({
           success: true,
           choice: 'contattatemi',
@@ -614,6 +641,10 @@ router.post(
       const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
 
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'OTP_VERIFICATO', {
+        metodo, opzione: 'RIACQUISTO',
+      });
+
       const decisione = await prisma.decisione_Cliente.create({
         data: {
           contratto_eol_id: contratto.id,
@@ -628,6 +659,10 @@ router.post(
       await prisma.contratto_EOL.update({
         where: { id: contratto.id },
         data: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
+      });
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'RIACQUISTO', decisione_id: decisione.id, ip,
       });
 
       res.json({ success: true, decisione_id: decisione.id });
@@ -885,6 +920,10 @@ router.post(
       const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
 
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'OTP_VERIFICATO', {
+        metodo: metodo_otp, opzione: 'RINNOVO',
+      });
+
       const prequalificazione: PrequalificazioneRinnovo = {
         tipo_device,
         numero_device,
@@ -1000,6 +1039,10 @@ router.post(
           });
         }
       }
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'RINNOVO', decisione_id: decisione.id, prequalificazione,
+      });
 
       res.json({
         success: true,
@@ -1134,6 +1177,14 @@ router.post(
           });
         }
       }
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'CONTATTO', decisione_id: decisione.id, fascia_oraria, modalita_preferita,
+      });
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'RICHIESTA_CONTATTO_CREATA', {
+        origine: 'OPZIONE_CONTATTO_PERSONALIZZATO',
+      });
 
       res.json({
         success: true,

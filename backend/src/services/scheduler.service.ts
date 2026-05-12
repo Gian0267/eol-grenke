@@ -6,7 +6,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
-import crypto from 'crypto';
+import { registraEvento } from './audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const prisma = new PrismaClient();
@@ -271,6 +271,13 @@ async function inviaSollecito(
     },
   });
 
+  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', 'COMUNICAZIONE_INVIATA', {
+    tipo: cfg.tipo,
+    canale: 'EMAIL',
+    destinatario: pratica.cliente.email,
+    esito: sendResult.success ? 'INVIATO' : 'ERRORE',
+  });
+
   if (sendResult.success) {
     console.log(`[Scheduler] Sollecito ${cfg.tipo} inviato a ${pratica.cliente.email} per ${pratica.contratto_nsm_id}`);
   } else {
@@ -319,6 +326,12 @@ async function creaEscalation(
       assegnato_a_id: assegnatoAId,
       stato: 'DA_CHIAMARE',
     },
+  });
+
+  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', 'TASK_ESCALATION_CREATO', {
+    tipo: cfg.tipo,
+    task_id: task.id,
+    assegnato_a: nomeAgente,
   });
 
   console.log(`[Scheduler] Task_Escalation ${cfg.tipo} creato per ${pratica.contratto_nsm_id}, assegnato a ${nomeAgente}`);
@@ -402,29 +415,10 @@ async function marcaSilenzio(pratica: any): Promise<void> {
     data: { stato: 'SILENZIO_PERDITA_DEFINITIVA' },
   });
 
-  const lastAudit = await prisma.audit_Event.findFirst({
-    where: { contratto_eol_id: pratica.id },
-    orderBy: { timestamp: 'desc' },
-  });
-  const hashPrecedente = lastAudit?.hash_corrente || 'GENESIS';
-  const datiJson = JSON.stringify({
-    azione: 'TRANSIZIONE_SILENZIO',
+  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', 'SILENZIO_DEFINITO', {
     stato_precedente: pratica.stato,
     stato_nuovo: 'SILENZIO_PERDITA_DEFINITIVA',
     motivo: 'Nessuna decisione cliente entro deadline T-30',
-  });
-  const hashCorrente = crypto.createHash('sha256').update(hashPrecedente + datiJson).digest('hex');
-
-  await prisma.audit_Event.create({
-    data: {
-      contratto_eol_id: pratica.id,
-      attore_tipo: 'SISTEMA',
-      attore_id: 'SCHEDULER',
-      azione: 'SILENZIO_PERDITA_DEFINITIVA',
-      dati_json: datiJson,
-      hash_precedente: hashPrecedente,
-      hash_corrente: hashCorrente,
-    },
   });
 
   const backofficeUsers = await prisma.utente_NSM.findMany({

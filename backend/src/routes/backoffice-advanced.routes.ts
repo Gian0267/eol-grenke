@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
+import { registraEvento } from '../services/audit.service.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -273,17 +274,13 @@ router.post('/pratiche-dettaglio/:id/modifica-deadline', async (req: Authenticat
       data: { data_scadenza: new Date(nuova_data) },
     });
 
-    await prisma.audit_Event.create({
-      data: {
-        contratto_eol_id: req.params.id as string,
-        attore_tipo: 'BACKOFFICE',
-        attore_id: (req.user as any)?.id || 'system',
-        azione: 'MODIFICA_DEADLINE',
-        dati_json: JSON.stringify({ nuova_data, motivazione }),
-        hash_precedente: 'N/A',
-        hash_corrente: 'N/A',
-      },
-    });
+    await registraEvento(
+      req.params.id as string,
+      'BACKOFFICE',
+      (req.user as any)?.id || 'system',
+      'MODIFICA_BACKOFFICE',
+      { sotto_azione: 'MODIFICA_DEADLINE', nuova_data, motivazione },
+    );
 
     res.json({ success: true, messaggio: 'Deadline modificata' });
   } catch (err) {
@@ -324,17 +321,13 @@ router.post('/pratiche-dettaglio/:id/decisione-manuale', async (req: Authenticat
       data: { stato: statoMap[decisione] },
     });
 
-    await prisma.audit_Event.create({
-      data: {
-        contratto_eol_id: req.params.id as string,
-        attore_tipo: 'BACKOFFICE',
-        attore_id: (req.user as any)?.id || 'system',
-        azione: 'DECISIONE_MANUALE',
-        dati_json: JSON.stringify({ decisione, note }),
-        hash_precedente: 'N/A',
-        hash_corrente: 'N/A',
-      },
-    });
+    await registraEvento(
+      req.params.id as string,
+      'BACKOFFICE',
+      (req.user as any)?.id || 'system',
+      'MODIFICA_BACKOFFICE',
+      { sotto_azione: 'DECISIONE_MANUALE', decisione, note },
+    );
 
     res.json({ success: true, messaggio: `Decisione ${decisione} registrata manualmente` });
   } catch (err) {
@@ -652,6 +645,100 @@ router.get('/reports/performance-agenti', async (req: AuthenticatedRequest, res:
     res.json(result.sort((a, b) => b.pratiche_totali - a.pratiche_totali));
   } catch (err) {
     console.error('[reports/performance-agenti] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// ─── GRENKE EXPORT ────────────────────────────────────────────────────────
+
+import { previewExport, generaExcel, getStorico } from '../services/grenke-export.service.js';
+import { readFileSync } from 'fs';
+import { resolve as pathResolve, dirname as pathDirname } from 'path';
+import { fileURLToPath as pathFileURLToPath } from 'url';
+
+const __exportDir = pathResolve(pathDirname(pathFileURLToPath(import.meta.url)), '../../../backend/storage/grenke-exports');
+
+router.get('/grenke-export/preview', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { da, a } = req.query as { da?: string; a?: string };
+    if (!da || !a) {
+      res.status(400).json({ error: 'Parametri da e a obbligatori (formato YYYY-MM-DD)' });
+      return;
+    }
+    const rows = await previewExport(da, a);
+    res.json(rows);
+  } catch (err) {
+    console.error('[grenke-export/preview] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+router.post('/grenke-export/genera', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { da, a, esclusi } = req.body as { da: string; a: string; esclusi?: string[] };
+    if (!da || !a) {
+      res.status(400).json({ error: 'Parametri da e a obbligatori' });
+      return;
+    }
+    const operatoreId = (req.user as any)?.id || 'system';
+    const result = await generaExcel(da, a, esclusi || [], operatoreId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[grenke-export/genera] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+router.get('/grenke-export/storico', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json(getStorico());
+  } catch (err) {
+    console.error('[grenke-export/storico] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+router.get('/grenke-export/download/:filename', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const filename = req.params.filename as string;
+    if (!filename.startsWith('lista_riacquisti_') || !filename.endsWith('.xlsx')) {
+      res.status(400).json({ error: 'Filename non valido' });
+      return;
+    }
+    const filepath = pathResolve(__exportDir, filename);
+    const file = readFileSync(filepath);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(file);
+  } catch (err) {
+    console.error('[grenke-export/download] Errore:', err);
+    res.status(404).json({ error: 'File non trovato' });
+  }
+});
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────
+
+import { verificaCatena } from '../services/audit.service.js';
+
+router.get('/pratiche-dettaglio/:id/audit', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const eventi = await prisma.audit_Event.findMany({
+      where: { contratto_eol_id: req.params.id as string },
+      orderBy: { timestamp: 'asc' },
+    });
+    res.json(eventi);
+  } catch (err) {
+    console.error('[audit] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+router.get('/pratiche-dettaglio/:id/audit/verify', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await verificaCatena(req.params.id as string);
+    res.json(result);
+  } catch (err) {
+    console.error('[audit/verify] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
   }
 });

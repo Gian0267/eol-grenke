@@ -39,8 +39,10 @@ npx tsx data-samples/generate-sample.ts
 - **Runtime**: Express 5, TypeScript (ESM via tsx), Node ≥ 20
 - **ORM**: Prisma with SQLite (dev) — schema at `backend/prisma/schema.prisma`
 - **8 entities**: Contratto_EOL, Cliente, Decisione_Cliente, Pagamento, Comunicazione, Richiesta_Contatto, Audit_Event, Utente_NSM
-- **Routes**: `/api/backoffice` (import, pratiche, invio comunicazioni), `/api/clienti` (opt-out)
-- **Auth**: `x-user-id` header middleware checking Utente_NSM (roles: BACKOFFICE_INTERNO, ADMIN)
+- **Routes**: `/api/backoffice` (import, pratiche, invio comunicazioni, dashboard, advanced queries, outlier, reports), `/api/clienti` (opt-out)
+- **Dashboard routes** (`backoffice-dashboard.routes.ts`): risk-silence-counts, KPI, pratiche-recenti
+- **Advanced routes** (`backoffice-advanced.routes.ts`): paginated pratiche list with filters, CSV export, pratica detail with timeline, actions (cambia-agente, modifica-deadline, decisione-manuale, reinvia-comunicazione, segna-richiamato, sblocca-pagamento), outlier management, reporting (sintesi, perdite-silenzio, performance-agenti)
+- **Auth**: `x-user-id` header middleware checking Utente_NSM. `verifyBackofficeToken` allows all backoffice roles: AGENTE, JUNIOR_AGENT, CAPO_AREA, GROUP_MANAGER, AGENZIA, BACKOFFICE_INTERNO, ADMIN.
 - **Services**: `reconciliation.service.ts` (Excel parsing + DB matching), `pricing.service.ts` (canone calculations + gift card), `email.service.ts` (comunicazione iniziale via SMTP)
 - **Providers**: `providers/notification/email.provider.ts` — SMTP via nodemailer (Mailpit in dev)
 - **Email templates**: `templates/email/` — Handlebars HTML templates with inline CSS
@@ -48,8 +50,19 @@ npx tsx data-samples/generate-sample.ts
 
 ### Frontend (`@nsm-eol/frontend`)
 - **Stack**: React 19, Vite 8, Tailwind CSS v4 (via `@tailwindcss/vite` plugin), TypeScript
-- **UI**: lucide-react icons, sonner toasts, no component library (vanilla Tailwind)
-- **Routing**: react-router-dom — `/backoffice/import` (ImportLista), `/backoffice/pratiche` (ListaPratiche), `/pratica/:token` (client placeholder)
+- **UI**: lucide-react icons, sonner toasts, recharts (LineChart, BarChart), date-fns (Italian locale), no component library (vanilla Tailwind)
+- **Layout**: `BackofficeLayout.tsx` wraps all `/backoffice/*` routes with `BackofficeSidebar.tsx` (collapsible desktop sidebar, hamburger mobile overlay) + `<Outlet />`
+- **Routing**: react-router-dom with nested routes under `/backoffice`:
+  - `/dashboard` — Dashboard (risk-silence cards, 6 KPIs, pratiche recenti)
+  - `/pratiche` — ListaPratiche (filters, sortable table, server-side pagination, CSV export)
+  - `/pratiche/:id` — PraticaDettaglio (4 tabs: Panoramica/Timeline/Richieste contatto/Audit log + action sidebar with modals)
+  - `/miei-task` — MieiTask (agent-only task list)
+  - `/task-escalation` — TaskEscalation (phone escalation workflow)
+  - `/riacquisti-in-attesa` — RiacquistiInAttesa (buyback unlock)
+  - `/import` — ImportLista (Excel upload + reconciliation)
+  - `/outlier` — GestioneOutlier (fuzzy matching, associa/crea/scarta — BACKOFFICE_INTERNO/ADMIN only)
+  - `/reportistica` — Reportistica (period selector, Recharts graphs, perdite silenzio, performance agenti, CSV export)
+  - `/login` — Login (outside layout)
 - **API proxy**: Vite proxies `/api` → `http://localhost:3001`
 
 ### Config (`config/`)
@@ -67,6 +80,8 @@ JSON-driven business rules read at startup by backend services:
 - **Comunicazione iniziale**: email + PEC to each client with JWT link to area cliente, 4 options, deadline warning. GDPR-compliant subject line required.
 - **Opt-out**: `GET /api/clienti/opt-out?token=...` sets `opt_out_comunicazioni` flag, blocks future automated communications.
 - **Test user ID**: `00000000-0000-0000-0000-000000000001` (backoffice user for x-user-id header).
+- **Silence risk monitoring**: T-50 (41–50 days), T-40 (36–40 days), T-35 (31–35 days) before contract expiry. KPI target: tasso non-silenzio > 85%.
+- **Role-based UI**: sidebar menu items are conditionally visible based on user role (e.g., "I miei Task" for agents only, "Outlier"/"Importa lista" for BACKOFFICE_INTERNO/ADMIN only).
 
 ## Gotchas
 
@@ -96,6 +111,11 @@ JSON-driven business rules read at startup by backend services:
   - Dispositivo non restituito entro i termini
   - Richiesta di riscatto tardiva (dopo scadenza deadline)
 
+## Gotchas (continued)
+
+- **PraticaDettaglio infinite loop**: avoid `useCallback` chains depending on objects created at render time (e.g. `getUtente()` returns new object each render). Use `useState` with lazy init or simple `useEffect` with primitive deps like `[id]`.
+- **Recharts**: use `recharts` (not Chart.js). `ReferenceLine` for target lines, `Tooltip` with Italian formatters.
+
 ## Mission Progress
 
-Development follows MISSIONS.md (10 missions total). Check that file for current status and next steps.
+Development follows MISSIONS.md (10 missions total). Missions 1–9 completed. Check that file for current status and next steps.

@@ -1,6 +1,9 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { runScheduler } from '../services/scheduler.service.js';
+import { verificaCatena } from '../services/audit.service.js';
+import { generaAuditExport } from '../services/pdf.service.js';
+import { readFileSync } from 'fs';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -61,6 +64,51 @@ router.post('/scheduler/run-now', async (req: any, res: Response) => {
     res.json({ success: true, report });
   } catch (err) {
     console.error('[Admin] Errore scheduler run-now:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+router.get('/audit/verify/:contratto_id', async (req: any, res: Response) => {
+  try {
+    const authorized = await verifyAdmin(req, res);
+    if (!authorized) return;
+
+    const result = await verificaCatena(req.params.contratto_id as string);
+    res.json(result);
+  } catch (err) {
+    console.error('[Admin] Errore audit verify:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+router.get('/audit/:contratto_id', async (req: any, res: Response) => {
+  try {
+    const authorized = await verifyAdmin(req, res);
+    if (!authorized) return;
+
+    const eventi = await prisma.audit_Event.findMany({
+      where: { contratto_eol_id: req.params.contratto_id as string },
+      orderBy: { timestamp: 'asc' },
+    });
+    res.json(eventi);
+  } catch (err) {
+    console.error('[Admin] Errore audit list:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+router.get('/audit/export/:contratto_id', async (req: any, res: Response) => {
+  try {
+    const authorized = await verifyAdmin(req, res);
+    if (!authorized) return;
+
+    const { pdfPath } = await generaAuditExport(req.params.contratto_id as string);
+    const pdf = readFileSync(pdfPath);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="audit_${req.params.contratto_id}.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error('[Admin] Errore audit export:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });

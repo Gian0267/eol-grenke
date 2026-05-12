@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
-  BarChart3, LogOut, Menu, X, Upload, CreditCard,
+  BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet,
 } from 'lucide-react';
 
 interface Utente {
@@ -42,6 +42,7 @@ export default function BackofficeSidebar() {
   const menuItems = [
     { to: '/backoffice/dashboard', label: 'Dashboard', icon: LayoutDashboard, visible: true },
     { to: '/backoffice/pratiche', label: 'Pratiche', icon: List, visible: true },
+    { to: '/backoffice/export-grenke', label: 'Export Grenke', icon: FileSpreadsheet, visible: isInternoOrAdmin },
     { to: '/backoffice/miei-task', label: 'I miei Task', icon: Bell, visible: isAgenteOrCapo },
     { to: '/backoffice/task-escalation', label: 'Task Escalation', icon: Phone, visible: isAgenteOrCapo || isInternoOrAdmin },
     { to: '/backoffice/riacquisti-in-attesa', label: 'Riacquisti in attesa', icon: CreditCard, visible: true },

@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint placeholder'",
-    "test": "echo 'test placeholder'"
+    "test": "echo 'test placeholder'",
+    "demo:reset": "prisma migrate reset --force && tsx prisma/seed.ts && tsx prisma/seed-demo.ts"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

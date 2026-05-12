@@ -18,7 +18,8 @@
     "db:studio": "npm run db:studio --workspace=backend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "demo:reset": "npm run demo:reset --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

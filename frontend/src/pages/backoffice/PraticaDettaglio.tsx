@@ -519,7 +519,7 @@ export default function PraticaDettaglio() {
               richiamatoLoading={richiamatoLoading}
             />
           )}
-          {tab === 'audit' && <TabAudit />}
+          {tab === 'audit' && <TabAudit contrattoId={id!} />}
         </div>
 
         {/* Sidebar */}
@@ -1103,10 +1103,118 @@ function TabRichieste({
 /*  Tab: Audit log                                                     */
 /* ================================================================== */
 
-function TabAudit() {
+function TabAudit({ contrattoId }: { contrattoId: string }) {
+  const [eventi, setEventi] = useState<any[]>([]);
+  const [verifica, setVerifica] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const headers: Record<string, string> = {};
+    const userId = sessionStorage.getItem('nsm_user_id');
+    if (userId) headers['x-user-id'] = userId;
+
+    Promise.all([
+      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit`, { headers }).then(r => r.json()),
+      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit/verify`, { headers }).then(r => r.json()),
+    ]).then(([ev, ver]) => {
+      setEventi(ev);
+      setVerifica(ver);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [contrattoId]);
+
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  if (loading) return <div className="text-center py-8 text-gray-500 text-sm">Caricamento audit log...</div>;
+
   return (
-    <div className="bg-gray-100 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-      <p className="text-gray-500 text-sm">Audit log disponibile dopo Missione 10</p>
+    <div className="space-y-4">
+      {verifica && (
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
+          verifica.integra
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          <span>{verifica.integra ? '✓' : '⚠'}</span>
+          <span>
+            {verifica.integra
+              ? `Catena verificata — ${verifica.eventi} eventi`
+              : `Catena rotta — ${verifica.errore_al_evento_N}`}
+          </span>
+        </div>
+      )}
+
+      {eventi.length === 0 ? (
+        <div className="bg-gray-100 rounded-xl border border-dashed border-gray-300 p-8 text-center">
+          <p className="text-gray-500 text-sm">Nessun evento audit registrato</p>
+        </div>
+      ) : (
+        <div className="border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-left text-gray-600">
+                <th className="px-4 py-2 font-medium">Timestamp</th>
+                <th className="px-4 py-2 font-medium">Attore</th>
+                <th className="px-4 py-2 font-medium">Azione</th>
+                <th className="px-4 py-2 font-medium">Dati</th>
+              </tr>
+            </thead>
+            <tbody>
+              {eventi.map((ev: any) => {
+                const isOpen = expanded.has(ev.id);
+                let dati: Record<string, unknown> = {};
+                try { dati = JSON.parse(ev.dati_json); } catch {}
+                return (
+                  <tr key={ev.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                    <td className="px-4 py-2 text-gray-600 whitespace-nowrap font-mono text-xs">
+                      {new Date(ev.timestamp).toLocaleString('it-IT')}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        ev.attore_tipo === 'CLIENTE' ? 'bg-blue-100 text-blue-700' :
+                        ev.attore_tipo === 'BACKOFFICE' ? 'bg-purple-100 text-purple-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>{ev.attore_tipo}</span>
+                    </td>
+                    <td className="px-4 py-2 font-medium text-gray-900">{ev.azione}</td>
+                    <td className="px-4 py-2">
+                      <button
+                        onClick={() => toggleExpand(ev.id)}
+                        className="text-blue-600 hover:text-blue-800 text-xs underline"
+                      >
+                        {isOpen ? 'Nascondi' : 'Mostra'}
+                      </button>
+                      {isOpen && (
+                        <pre className="mt-2 text-xs bg-gray-100 rounded p-2 max-w-md overflow-x-auto whitespace-pre-wrap">
+                          {JSON.stringify(dati, null, 2)}
+                        </pre>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <a
+          href={`/api/admin/audit/export/${contrattoId}`}
+          className="text-sm text-blue-600 hover:text-blue-800 underline"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Esporta PDF audit
+        </a>
+      </div>
     </div>
   );
 }

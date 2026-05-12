@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { MockFabrickProvider } from '../providers/payment/fabrick.provider.js';
 import { MockStripeProvider } from '../providers/payment/stripe.provider.js';
 import { generaRicevutaPagamento } from './invoice.service.js';
+import { registraEvento } from './audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pricingRules = JSON.parse(
@@ -56,6 +57,12 @@ export async function initiatePayment(
       session_id: session.session_id,
       natura_giuridica: 'ACCONTO',
     },
+  });
+
+  await registraEvento(contrattoEolId, 'CLIENTE', contratto.cliente_id, 'PAGAMENTO_INIZIATO', {
+    metodo,
+    session_id: session.session_id,
+    importo_totale: importi.importo_totale,
   });
 
   return { session_id: session.session_id, importi };
@@ -116,11 +123,21 @@ export async function handlePaymentCallback(
       data: { stato: 'RIACQUISTO_PAGATO' },
     });
 
+    await registraEvento(pagamento.contratto_eol_id, 'SISTEMA', provider, 'PAGAMENTO_COMPLETATO', {
+      session_id: sessionId,
+      importo_totale: Number(pagamento.importo_totale),
+      riferimento_transazione: providerStatus.transaction_id || null,
+    });
+
     return { stato: 'COMPLETATO', fattura_path: fattura.pdfPath };
   } else {
     await prisma.pagamento.update({
       where: { session_id: sessionId },
       data: { stato: 'FALLITO' },
+    });
+
+    await registraEvento(pagamento.contratto_eol_id, 'SISTEMA', provider, 'PAGAMENTO_FALLITO', {
+      session_id: sessionId,
     });
 
     return { stato: 'FALLITO' };

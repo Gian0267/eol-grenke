@@ -10,6 +10,7 @@ import { parseAndReconcile, PreviewRow } from '../services/reconciliation.servic
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { registraEvento } from '../services/audit.service.js';
 import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -105,7 +106,6 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             throw new Error(`Decisione mancante per outlier riga ${row.index}`);
           }
           if (decision.action === 'SCARTA') {
-            console.log(`[AUDIT] Riga ${row.index} scartata: ${decision.motivazione}`);
             scartati++;
             continue;
           }
@@ -151,7 +151,6 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
               data: { piva: raw['cliente.piva'], ...clienteData },
             });
             clienteId = newCliente.id;
-            console.log(`[AUDIT] Nuovo cliente creato per outlier riga ${row.index}: ${newCliente.id} - ${decision?.motivazione}`);
           }
         } else {
           continue;
@@ -199,11 +198,16 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
 
         contrattiCreati.push(contratto.id);
         creati++;
-        console.log(`[AUDIT] Contratto_EOL creato: ${contratto.id} (grenke: ${raw.contratto_grenke_id}, stato_ric: ${row.status})`);
       }
 
       return { creati, scartati, errori, contrattiCreati };
     });
+
+    for (const cId of result.contrattiCreati) {
+      await registraEvento(cId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'PRATICA_CREATA', {
+        origine: 'IMPORTAZIONE_EXCEL',
+      });
+    }
 
     res.json({
       success: true,
@@ -376,6 +380,12 @@ router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest,
         html,
       );
     }
+
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'SBLOCCA_PAGAMENTO',
+      stato_precedente: 'RIACQUISTO_IN_ATTESA_CHIAMATA',
+      stato_nuovo: 'IN_ATTESA_DECISIONE',
+    });
 
     res.json({ success: true, messaggio: 'Pagamento sbloccato e cliente notificato' });
   } catch (err) {
@@ -606,6 +616,13 @@ router.post('/task-escalation/:id/esito', async (req: AuthenticatedRequest, res:
         data: { stato: statoMap[decisione_cliente] || 'IN_ATTESA_DECISIONE' },
       });
     }
+
+    await registraEvento(task.contratto_eol_id, 'BACKOFFICE', userId, 'TASK_ESCALATION_COMPLETATO', {
+      task_id: taskId,
+      tipo: task.tipo,
+      esito,
+      decisione_cliente: decisione_cliente || null,
+    });
 
     res.json({
       success: true,

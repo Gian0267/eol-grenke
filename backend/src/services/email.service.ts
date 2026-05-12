@@ -5,6 +5,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { registraEvento } from './audit.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templatePath = resolve(__dirname, '../../../templates/email/comunicazione_iniziale.html');
@@ -143,6 +144,12 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
       data: { stato: 'COMUNICAZIONE_INVIATA' },
     });
     result.success = true;
+
+    await registraEvento(contratto.id, 'SISTEMA', 'EMAIL_SERVICE', 'COMUNICAZIONE_INVIATA', {
+      tipo: 'COMUNICAZIONE_INIZIALE',
+      destinatari: destinatari.map(d => d.email),
+      email_inviate: result.emailInviate,
+    });
   }
 
   return result;
