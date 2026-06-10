@@ -82,13 +82,6 @@ export default function Login() {
           >
             {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Accesso in corso...</> : 'Accedi'}
           </button>
-
-          <div className="bg-warn border border-warn-border/30 rounded-lg p-3 text-xs text-warn-text">
-            <p className="font-semibold mb-1">Credenziali di test:</p>
-            <p>agente@nsm.it / test1234</p>
-            <p>capoarea@nsm.it / test1234</p>
-            <p>backoffice@nsm.it / test1234</p>
-          </div>
         </form>
       </div>
     </div>
