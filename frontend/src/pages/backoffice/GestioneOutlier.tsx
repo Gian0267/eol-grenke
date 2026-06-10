@@ -73,9 +73,9 @@ function formatEur(n: number): string {
 }
 
 function scoreLabel(score: number): { label: string; color: string; border: string } {
-  if (score > 50) return { label: 'Alta', color: 'text-green-700 bg-green-50', border: 'border-l-green-500' }
-  if (score > 20) return { label: 'Media', color: 'text-yellow-700 bg-yellow-50', border: 'border-l-yellow-500' }
-  return { label: 'Bassa', color: 'text-gray-600 bg-gray-100', border: 'border-l-gray-400' }
+  if (score > 50) return { label: 'Alta', color: 'text-ok-text bg-ok', border: 'border-l-ok-border' }
+  if (score > 20) return { label: 'Media', color: 'text-warn-text bg-warn', border: 'border-l-warn-border' }
+  return { label: 'Bassa', color: 'text-stone bg-paper', border: 'border-l-stone' }
 }
 
 const ALLOWED_ROLES = ['BACKOFFICE_INTERNO', 'ADMIN']
@@ -231,9 +231,9 @@ export default function GestioneOutlier() {
   /* --- permission guard ------------------------------------------- */
   if (utente && !authorized) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-gray-500">
-        <ShieldAlert className="h-12 w-12 mb-4 text-red-400" />
-        <p className="text-lg font-semibold text-gray-700">Accesso non autorizzato</p>
+      <div className="flex flex-col items-center justify-center py-32 text-stone">
+        <ShieldAlert className="h-12 w-12 mb-4 text-danger-text" />
+        <p className="text-lg font-semibold text-graphite">Accesso non autorizzato</p>
         <p className="text-sm mt-1">
           Questa pagina è riservata agli utenti con ruolo BACKOFFICE_INTERNO o ADMIN.
         </p>
@@ -247,8 +247,8 @@ export default function GestioneOutlier() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1a3a52]" />
-        <span className="ml-3 text-lg text-gray-500">Caricamento outlier...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-flex" />
+        <span className="ml-3 text-lg text-stone">Caricamento outlier...</span>
       </div>
     )
   }
@@ -256,12 +256,12 @@ export default function GestioneOutlier() {
   /* --- error ------------------------------------------------------ */
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-red-600">
+      <div className="flex flex-col items-center justify-center py-32 text-danger-text">
         <AlertTriangle className="h-10 w-10 mb-3" />
         <p className="text-lg font-medium">{error}</p>
         <button
           onClick={fetchOutliers}
-          className="mt-4 rounded-lg bg-[#1a3a52] px-5 py-2 text-white hover:bg-[#15304a] transition-colors"
+          className="mt-4 rounded-lg bg-flex px-5 py-2 text-white hover:bg-flex-dark transition-colors"
         >
           Riprova
         </button>
@@ -277,10 +277,10 @@ export default function GestioneOutlier() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <AlertTriangle className="h-6 w-6 text-yellow-500" />
-          <h1 className="text-2xl font-bold text-[#1a3a52]">Gestione Outlier</h1>
+          <AlertTriangle className="h-6 w-6 text-outlier-text" />
+          <h1 className="text-2xl font-bold text-graphite">Gestione Outlier</h1>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-stone">
           {outliers.length === 0
             ? 'Nessun outlier da gestire'
             : `${outliers.length} contratt${outliers.length === 1 ? 'o' : 'i'} con stato OUTLIER_DA_GESTIRE`}
@@ -289,9 +289,9 @@ export default function GestioneOutlier() {
 
       {/* Empty state */}
       {outliers.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
-          <CheckCircle2 className="h-14 w-14 mx-auto mb-4 text-green-400" />
-          <p className="text-lg font-medium text-gray-600">Nessun outlier da gestire</p>
+        <div className="text-center py-16 text-stone">
+          <CheckCircle2 className="h-14 w-14 mx-auto mb-4 text-ok-text" />
+          <p className="text-lg font-medium text-graphite">Nessun outlier da gestire</p>
           <p className="text-sm mt-1">Tutti i contratti sono stati riconciliati correttamente.</p>
         </div>
       )}
@@ -303,16 +303,16 @@ export default function GestioneOutlier() {
           const isLoadingSugg = loadingSugg[outlier.id] ?? false
 
           return (
-            <div key={outlier.id} className="bg-white rounded-xl border p-5">
+            <div key={outlier.id} className="bg-card rounded-xl border border-border p-5">
               {/* Contract info header */}
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                    <h3 className="font-semibold text-[#1a3a52]">
+                    <AlertTriangle className="h-4 w-4 text-outlier-text flex-shrink-0" />
+                    <h3 className="font-semibold text-graphite">
                       {outlier.cliente.ragione_sociale}
                     </h3>
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">
+                    <span className="text-xs bg-outlier text-outlier-text px-2 py-0.5 rounded-full font-medium">
                       Outlier
                     </span>
                   </div>
@@ -320,39 +320,39 @@ export default function GestioneOutlier() {
                   {/* Contract details grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500 text-xs">ID Grenke</span>
+                      <span className="text-stone text-xs">ID Grenke</span>
                       <p className="font-medium">{outlier.contratto_grenke_id || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">ID NSM</span>
+                      <span className="text-stone text-xs">ID NSM</span>
                       <p className="font-medium">{outlier.contratto_nsm_id || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">Canone mensile</span>
+                      <span className="text-stone text-xs">Canone mensile</span>
                       <p className="font-medium">&euro; {formatEur(Number(outlier.canone_mensile))}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">Mesi</span>
+                      <span className="text-stone text-xs">Mesi</span>
                       <p className="font-medium">{outlier.numero_mesi}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">Scadenza</span>
+                      <span className="text-stone text-xs">Scadenza</span>
                       <p className="font-medium">{outlier.data_scadenza ? formatDate(outlier.data_scadenza) : '—'}</p>
                     </div>
                   </div>
 
                   {/* Client data from Excel */}
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm bg-gray-50 rounded-lg p-3">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm bg-paper rounded-lg p-3">
                     <div>
-                      <span className="text-gray-500 text-xs">Ragione sociale (Excel)</span>
+                      <span className="text-stone text-xs">Ragione sociale (Excel)</span>
                       <p className="font-medium">{outlier.cliente.ragione_sociale}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">P.IVA</span>
+                      <span className="text-stone text-xs">P.IVA</span>
                       <p className="font-medium">{outlier.cliente.piva || '—'}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs">Email</span>
+                      <span className="text-stone text-xs">Email</span>
                       <p className="font-medium">{outlier.cliente.email || '—'}</p>
                     </div>
                   </div>
@@ -364,7 +364,7 @@ export default function GestioneOutlier() {
                 <button
                   onClick={() => fetchSuggestions(outlier.id)}
                   disabled={isLoadingSugg}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#1a3a52] text-white hover:bg-[#15304a] transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-flex text-white hover:bg-flex-dark transition-colors disabled:opacity-50"
                 >
                   {isLoadingSugg ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -375,14 +375,14 @@ export default function GestioneOutlier() {
                 </button>
                 <button
                   onClick={() => openModal(outlier.id, 'CREA')}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-green-300 text-green-700 hover:bg-green-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-ok-border text-ok-text hover:bg-ok transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   Crea nuovo cliente
                 </button>
                 <button
                   onClick={() => openModal(outlier.id, 'SCARTA')}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-700 hover:bg-red-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-danger-border text-danger-text hover:bg-danger transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                   Scarta
@@ -392,7 +392,7 @@ export default function GestioneOutlier() {
               {/* Suggestions list */}
               {sugg && (
                 <div className="mt-2">
-                  <p className="text-sm font-medium text-gray-600 mb-2">
+                  <p className="text-sm font-medium text-stone mb-2">
                     {sugg.length === 0
                       ? 'Nessun suggerimento trovato'
                       : `${sugg.length} suggeriment${sugg.length === 1 ? 'o' : 'i'} trovati`}
@@ -407,15 +407,15 @@ export default function GestioneOutlier() {
                         >
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                             <div>
-                              <span className="text-gray-500 text-xs">Ragione sociale</span>
+                              <span className="text-stone text-xs">Ragione sociale</span>
                               <p className="font-medium">{s.ragione_sociale}</p>
                             </div>
                             <div>
-                              <span className="text-gray-500 text-xs">P.IVA</span>
+                              <span className="text-stone text-xs">P.IVA</span>
                               <p className="font-medium">{s.piva || '—'}</p>
                             </div>
                             <div>
-                              <span className="text-gray-500 text-xs">Email</span>
+                              <span className="text-stone text-xs">Email</span>
                               <p className="font-medium">{s.email || '—'}</p>
                             </div>
                           </div>
@@ -427,7 +427,7 @@ export default function GestioneOutlier() {
                               onClick={() =>
                                 openModal(outlier.id, 'ASSOCIA', s.id, s.ragione_sociale)
                               }
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-flex text-white hover:bg-flex-dark transition-colors"
                             >
                               <Link2 className="h-3.5 w-3.5" />
                               Associa
@@ -447,17 +447,17 @@ export default function GestioneOutlier() {
       {/* ---- Confirm Modal ---------------------------------------- */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
             {/* Modal header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[#1a3a52]">
+              <h2 className="text-lg font-semibold text-graphite">
                 {modal.action === 'ASSOCIA' && 'Conferma associazione'}
                 {modal.action === 'CREA' && 'Crea nuovo cliente'}
                 {modal.action === 'SCARTA' && 'Scarta outlier'}
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-stone hover:text-graphite transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -466,36 +466,36 @@ export default function GestioneOutlier() {
             {/* Modal body */}
             <div className="space-y-4">
               {modal.action === 'ASSOCIA' && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-stone">
                   Vuoi associare questo outlier al cliente{' '}
-                  <span className="font-semibold text-[#1a3a52]">{modal.clienteLabel}</span>?
+                  <span className="font-semibold text-graphite">{modal.clienteLabel}</span>?
                 </p>
               )}
 
               {modal.action === 'CREA' && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-stone">
                   Verrà creato un nuovo cliente a partire dai dati dell'outlier. Inserisci una
                   motivazione.
                 </p>
               )}
 
               {modal.action === 'SCARTA' && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-stone">
                   L'outlier verrà scartato e non sarà più visibile. Inserisci una motivazione.
                 </p>
               )}
 
               {(modal.action === 'CREA' || modal.action === 'SCARTA') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Motivazione <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-graphite mb-1">
+                    Motivazione <span className="text-danger-text">*</span>
                   </label>
                   <textarea
                     value={motivazione}
                     onChange={e => setMotivazione(e.target.value)}
                     placeholder="Inserisci la motivazione..."
                     rows={3}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52] focus:border-transparent resize-none"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex focus:border-transparent resize-none"
                   />
                 </div>
               )}
@@ -506,7 +506,7 @@ export default function GestioneOutlier() {
               <button
                 onClick={closeModal}
                 disabled={submitting}
-                className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-border text-graphite hover:bg-paper transition-colors disabled:opacity-50"
               >
                 Annulla
               </button>
@@ -516,7 +516,7 @@ export default function GestioneOutlier() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50 flex items-center gap-2 ${
                   modal.action === 'SCARTA'
                     ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-[#1a3a52] hover:bg-[#15304a]'
+                    : 'bg-flex hover:bg-flex-dark'
                 }`}
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}

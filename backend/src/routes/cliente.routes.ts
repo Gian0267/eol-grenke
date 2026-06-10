@@ -10,7 +10,7 @@ import {
   verifyClienteToken,
   ClienteAuthenticatedRequest,
 } from '../middleware/cliente.middleware.js';
-import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { generateOtp, verifyOtp } from '../services/otp.service.js';
 import { generaVerbaleRestituzione } from '../services/pdf.service.js';
 import { MockFeaProvider } from '../providers/signature/fea.provider.js';
@@ -20,13 +20,14 @@ import {
   handlePaymentCallback,
 } from '../services/payment.service.js';
 import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf.service.js';
+import { loadDocument } from '../services/storage.service.js';
 import { assegnaPratica } from '../services/assignment.service.js';
 import { registraEvento } from '../services/audit.service.js';
 import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-const emailProvider = new SmtpEmailProvider();
+const emailProvider = createEmailProvider();
 
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -76,13 +77,18 @@ function formatEur(n: number): string {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// I4 fix: IVA calculation using integer cents to avoid floating point errors
-function calcolaIva(importo: Prisma.Decimal, ivaPerc: number): { iva: number; totale: number } {
-  const centesimi = Math.round(Number(importo) * 100);
-  const ivaCentesimi = Math.round(centesimi * ivaPerc);
+// I4 fix: IVA a margine — l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
+function calcolaIvaAMargine(
+  prezzoVendita: Prisma.Decimal,
+  margine: Prisma.Decimal,
+  ivaPerc: number,
+): { iva: number; totale: number } {
+  const centMargine = Math.round(Number(margine) * 100);
+  const ivaCentesimi = Math.round(centMargine * ivaPerc);
+  const centVendita = Math.round(Number(prezzoVendita) * 100);
   return {
     iva: ivaCentesimi / 100,
-    totale: (centesimi + ivaCentesimi) / 100,
+    totale: (centVendita + ivaCentesimi) / 100,
   };
 }
 
@@ -108,7 +114,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
     });
 
     const ivaPerc = pricingRules.iva_percentuale as number;
-    const { iva, totale } = calcolaIva(contratto.pricing_riacquisto, ivaPerc);
+    const { iva, totale } = calcolaIvaAMargine(contratto.pricing_riacquisto, contratto.margine_lordo, ivaPerc);
 
     const dataScadenza = new Date(contratto.data_scadenza);
     const deadlineDecisione = calcolaDeadline(dataScadenza);
@@ -409,14 +415,14 @@ router.post(
         stato_finale: 'CHIUSA_RESTITUZIONE_CONFERMATA',
       });
 
-      const { pdfPath, hash } = await generaVerbaleRestituzione(contratto.id, decisione.id, {
+      const { hash, buffer: pdfBuffer } = await generaVerbaleRestituzione(contratto.id, decisione.id, {
         nome: contratto.cliente.ragione_sociale,
         ip,
         userAgent,
         otpVerificato: true,
       });
 
-      await feaProvider.requestSignature(pdfPath, {
+      await feaProvider.requestSignature(pdfBuffer, {
         nome: contratto.cliente.ragione_sociale,
         ip,
         userAgent,
@@ -435,8 +441,6 @@ router.post(
       });
 
       const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_nsm_id}`;
-      const { readFileSync } = await import('fs');
-      const pdfBuffer = readFileSync(pdfPath);
 
       await emailProvider.sendWithAttachment(
         contratto.cliente.email,
@@ -486,8 +490,7 @@ router.get(
         return;
       }
 
-      const { readFileSync } = await import('fs');
-      const pdf = readFileSync(decisione.pdf_conferma_path);
+      const pdf = await loadDocument(decisione.pdf_conferma_path);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="verbale_restituzione.pdf"`);
       res.send(pdf);
@@ -607,7 +610,7 @@ router.post(
         }
 
         const ivaPerc = pricingRules.iva_percentuale as number;
-        const { iva, totale } = calcolaIva(contratto.pricing_riacquisto, ivaPerc);
+        const { iva, totale } = calcolaIvaAMargine(contratto.pricing_riacquisto, contratto.margine_lordo, ivaPerc);
 
         res.json({
           success: true,
@@ -690,9 +693,83 @@ router.post(
         opzione: 'RIACQUISTO', decisione_id: decisione.id, ip,
       });
 
-      res.json({ success: true, decisione_id: decisione.id });
+      // Determina se il pagamento è immediato o differito (T-7)
+      const configService = await import('../services/config.service.js');
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+      const oggi = new Date();
+      const scadenza = new Date(contratto.data_scadenza);
+      const diffMs = scadenza.getTime() - oggi.getTime();
+      const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+
+      if (giorniAllaScadenza <= giorniPagamento) {
+        // Pagamento immediato: siamo già entro T-7
+        res.json({ success: true, decisione_id: decisione.id, pagamento_immediato: true });
+      } else {
+        // Pagamento differito: invieremo il link a T-7
+        const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
+        res.json({
+          success: true,
+          decisione_id: decisione.id,
+          pagamento_differito: true,
+          data_pagamento: dataPagamento.toISOString(),
+        });
+      }
     } catch (err) {
       console.error('[POST /api/cliente/decisione/riacquisto/conferma-tc] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// GET /api/cliente/decisione/riacquisto/stato — controlla se il pagamento è disponibile
+router.get(
+  '/decisione/riacquisto/stato',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true, decisioni: true },
+      });
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const decisioneRiacquisto = contratto.decisioni.find(d => d.opzione_scelta === 'RIACQUISTO');
+
+      if (!decisioneRiacquisto) {
+        res.json({ stato: 'NESSUNA_DECISIONE' });
+        return;
+      }
+
+      if (contratto.stato === 'RIACQUISTO_PAGATO') {
+        res.json({ stato: 'GIA_PAGATO' });
+        return;
+      }
+
+      const configService = await import('../services/config.service.js');
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+      const oggi = new Date();
+      const scadenza = new Date(contratto.data_scadenza);
+      const diffMs = scadenza.getTime() - oggi.getTime();
+      const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+
+      if (giorniAllaScadenza <= giorniPagamento) {
+        res.json({
+          stato: 'PAGAMENTO_DISPONIBILE',
+          decisione_id: decisioneRiacquisto.id,
+        });
+      } else {
+        const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
+        res.json({
+          stato: 'PAGAMENTO_DIFFERITO',
+          data_pagamento: dataPagamento.toISOString(),
+          decisione_id: decisioneRiacquisto.id,
+        });
+      }
+    } catch (err) {
+      console.error('[GET /api/cliente/decisione/riacquisto/stato] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },
@@ -809,8 +886,7 @@ router.get(
         return;
       }
 
-      const { readFileSync } = await import('fs');
-      const pdf = readFileSync(pagamento.fattura_path);
+      const pdf = await loadDocument(pagamento.fattura_path);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="ricevuta_${pagamento.fattura_numero || 'pagamento'}.pdf"`);
       res.send(pdf);
@@ -983,7 +1059,7 @@ router.post(
       });
 
       // Genera PDF conferma rinnovo
-      const { pdfPath, hash } = await generaConfermaRinnovo(
+      const { hash, buffer: pdfBuffer } = await generaConfermaRinnovo(
         contratto.id,
         decisione.id,
         prequalificazione,
@@ -1007,8 +1083,6 @@ router.post(
       });
 
       const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
-      const { readFileSync: readPdf } = await import('fs');
-      const pdfBuffer = readPdf(pdfPath);
 
       const sendCliente = await emailProvider.sendWithAttachment(
         contratto.cliente.email,
@@ -1080,6 +1154,317 @@ router.post(
       });
     } catch (err) {
       console.error('[POST /api/cliente/decisione/rinnovo/conferma] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// ===== RINNOVO COMPLETO (compound: scelta beni + rinnovo) =====
+
+const iniziaRinnovoCompletoSchema = z.object({
+  scelta_beni: z.enum(['TENGO', 'RESTITUISCO']),
+  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  numero_device: z.number().int().min(1).default(1),
+  durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
+  budget_mensile: z.number().optional(),
+  note: z.string().optional(),
+  metodo_otp: z.enum(['SMS', 'EMAIL']),
+});
+
+router.post(
+  '/decisione/rinnovo-completo/inizia',
+  otpLimiter,
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = iniziaRinnovoCompletoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      if (!statiValidi.includes(contratto.stato)) {
+        res.status(400).json({ errore: `Stato pratica non valido: ${contratto.stato}` });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { metodo_otp } = parsed.data;
+      const destinatario = metodo_otp === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      await generateOtp(metodo_otp, destinatario);
+
+      if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
+        await prisma.contratto_EOL.update({
+          where: { id: contratto.id },
+          data: { stato: 'IN_ATTESA_DECISIONE' },
+        });
+      }
+
+      res.json({
+        success: true,
+        messaggio: `Codice OTP inviato via ${metodo_otp}`,
+        destinatario_mascherato: destinatario.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/rinnovo-completo/inizia] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+const confermaRinnovoCompletoSchema = z.object({
+  codice: z.string().length(6),
+  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  scelta_beni: z.enum(['TENGO', 'RESTITUISCO']),
+  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  numero_device: z.number().int().min(1).default(1),
+  durata_desiderata: z.number().int(),
+  budget_mensile: z.number().optional(),
+  note: z.string().optional(),
+});
+
+router.post(
+  '/decisione/rinnovo-completo/conferma',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const parsed = confermaRinnovoCompletoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ errore: 'Dati non validi', dettagli: parsed.error.flatten() });
+        return;
+      }
+
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { cliente: true, agente_originario: true },
+      });
+
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+
+      const decisioneEsistente = await prisma.decisione_Cliente.findFirst({
+        where: { contratto_eol_id: contratto.id },
+      });
+      if (decisioneEsistente) {
+        res.status(409).json({ errore: 'Decisione già registrata per questa pratica' });
+        return;
+      }
+
+      const { codice, metodo_otp, scelta_beni, tipo_device, numero_device, durata_desiderata, budget_mensile, note } = parsed.data;
+      const destinatario = metodo_otp === 'EMAIL'
+        ? contratto.cliente.email
+        : (contratto.cliente.telefono || contratto.cliente.email);
+
+      const otpResult = await verifyOtp(metodo_otp, destinatario, codice);
+      if (!otpResult.valid) {
+        res.status(400).json({ errore: otpResult.errore });
+        return;
+      }
+
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'OTP_VERIFICATO', {
+        metodo: metodo_otp, opzione: 'RINNOVO_COMPLETO', scelta_beni,
+      });
+
+      const prequalificazione: PrequalificazioneRinnovo = {
+        tipo_device,
+        numero_device,
+        durata_desiderata,
+        budget_mensile,
+        note,
+      };
+
+      // Crea DUE decisioni in una transazione: una per i beni, una per il rinnovo
+      const opzioneBeni = scelta_beni === 'TENGO' ? 'RINNOVO_RIACQUISTO_BENI' : 'RINNOVO_RESTITUZIONE_BENI';
+
+      const [decisioneBeni, decisioneRinnovo] = await prisma.$transaction([
+        prisma.decisione_Cliente.create({
+          data: {
+            contratto_eol_id: contratto.id,
+            opzione_scelta: opzioneBeni,
+            otp_verificato: true,
+            otp_metodo: metodo_otp,
+            ip_address: ip,
+            user_agent: userAgent,
+            note_cliente: scelta_beni === 'TENGO'
+              ? JSON.stringify({ prezzo_riacquisto: Number(contratto.pricing_riacquisto) })
+              : null,
+          },
+        }),
+        prisma.decisione_Cliente.create({
+          data: {
+            contratto_eol_id: contratto.id,
+            opzione_scelta: 'RINNOVO',
+            otp_verificato: true,
+            otp_metodo: metodo_otp,
+            ip_address: ip,
+            user_agent: userAgent,
+            note_cliente: JSON.stringify(prequalificazione),
+          },
+        }),
+      ]);
+
+      // Assegna agente
+      const { agenteAssegnatoId, motivoAssegnazione } = await assegnaPratica(contratto.id);
+
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: {
+          stato: 'DECISIONE_RINNOVO',
+          agente_assegnato_id: agenteAssegnatoId,
+        },
+      });
+
+      // Genera PDF conferma rinnovo
+      const { hash, buffer: pdfBuffer } = await generaConfermaRinnovo(
+        contratto.id,
+        decisioneRinnovo.id,
+        prequalificazione,
+        { nome: contratto.cliente.ragione_sociale, ip, userAgent, otpVerificato: true },
+      );
+
+      // Invia email al cliente con PDF allegato
+      let beni: Array<{ descrizione?: string }> = [];
+      try { beni = JSON.parse(contratto.beni_json); } catch {}
+
+      const htmlCliente = confermaRinnovoTemplate({
+        ragione_sociale: contratto.cliente.ragione_sociale,
+        numero_contratto_nsm: contratto.contratto_nsm_id,
+        numero_contratto_grenke: contratto.contratto_grenke_id,
+        tipo_device,
+        numero_device,
+        durata_desiderata,
+        budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
+        note: note || null,
+        valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+        scelta_beni: scelta_beni === 'TENGO' ? 'Acquisto beni attuali' : 'Restituzione beni attuali',
+        prezzo_riacquisto: scelta_beni === 'TENGO' ? formatEur(Number(contratto.pricing_riacquisto)) : null,
+      });
+
+      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
+
+      const sendCliente = await emailProvider.sendWithAttachment(
+        contratto.cliente.email,
+        oggettoCliente,
+        htmlCliente,
+        [{ filename: `conferma_rinnovo_${contratto.contratto_nsm_id}.pdf`, content: pdfBuffer }],
+      );
+
+      await prisma.comunicazione.create({
+        data: {
+          contratto_eol_id: contratto.id,
+          tipo: 'CONFERMA_RINNOVO',
+          canale: 'EMAIL',
+          destinatario: contratto.cliente.email,
+          oggetto: oggettoCliente,
+          corpo_html: htmlCliente,
+          data_invio: new Date(),
+          esito_invio: sendCliente.success ? 'INVIATO' : 'ERRORE',
+        },
+      });
+
+      // Notifica agente assegnato
+      if (agenteAssegnatoId) {
+        const agente = await prisma.utente_NSM.findUnique({ where: { id: agenteAssegnatoId } });
+        if (agente) {
+          const htmlAgente = notificaAgenteRinnovoTemplate({
+            ragione_sociale: contratto.cliente.ragione_sociale,
+            contratto_nsm: contratto.contratto_nsm_id,
+            email_cliente: contratto.cliente.email,
+            telefono_cliente: contratto.cliente.telefono || 'Non disponibile',
+            monte_canoni: formatEur(Number(contratto.monte_canoni)),
+            tipo_device,
+            numero_device,
+            durata_desiderata,
+            budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
+            note: note || null,
+            valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+            motivo_assegnazione: motivoAssegnazione,
+            scelta_beni: scelta_beni === 'TENGO' ? 'Acquisto beni attuali' : 'Restituzione beni attuali',
+            prezzo_riacquisto: scelta_beni === 'TENGO' ? formatEur(Number(contratto.pricing_riacquisto)) : null,
+          });
+
+          const oggettoAgente = `Nuova richiesta rinnovo: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
+          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+
+          await prisma.comunicazione.create({
+            data: {
+              contratto_eol_id: contratto.id,
+              tipo: 'NOTIFICA_AGENTE_RINNOVO',
+              canale: 'EMAIL',
+              destinatario: agente.email,
+              oggetto: oggettoAgente,
+              corpo_html: htmlAgente,
+              data_invio: new Date(),
+              esito_invio: sendAgente.success ? 'INVIATO' : 'ERRORE',
+            },
+          });
+        }
+      }
+
+      // Se il cliente tiene i beni: gestisci pagamento differito (come per riacquisto)
+      let pagamento_info: { pagamento_differito?: boolean; data_pagamento?: string; pagamento_immediato?: boolean } = {};
+      if (scelta_beni === 'TENGO') {
+        const configService = await import('../services/config.service.js');
+        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+        const oggi = new Date();
+        const scadenza = new Date(contratto.data_scadenza);
+        const diffMs = scadenza.getTime() - oggi.getTime();
+        const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+
+        if (giorniAllaScadenza <= giorniPagamento) {
+          pagamento_info = { pagamento_immediato: true };
+        } else {
+          const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
+          pagamento_info = { pagamento_differito: true, data_pagamento: dataPagamento.toISOString() };
+        }
+      }
+
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'RINNOVO_COMPLETO',
+        scelta_beni,
+        decisione_beni_id: decisioneBeni.id,
+        decisione_rinnovo_id: decisioneRinnovo.id,
+        prequalificazione,
+      });
+
+      res.json({
+        success: true,
+        messaggio: 'Richiesta di rinnovo confermata',
+        decisione_rinnovo_id: decisioneRinnovo.id,
+        decisione_beni_id: decisioneBeni.id,
+        scelta_beni,
+        pdf_hash: hash,
+        valore_gift_card: Number(contratto.valore_gift_card),
+        ...pagamento_info,
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/rinnovo-completo/conferma] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },
@@ -1258,8 +1643,8 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Rinnova il contratto'),
       desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX alle stesse condizioni e ricevi un premio fedeltà.'),
-      titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Acquista il bene'),
-      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Riscatta i beni in locazione al prezzo di riacquisto concordato.'),
+      titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),
+      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza del contratto.'),
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
       desc_opzione_contatto: await configService.getTesto('cliente.desc_opzione_contatto', 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.'),
       titolo_opzione_restituzione: await configService.getTesto('cliente.titolo_opzione_restituzione', 'Restituisci i beni'),

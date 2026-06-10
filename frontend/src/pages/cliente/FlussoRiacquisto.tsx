@@ -13,6 +13,7 @@ import {
   Landmark,
   MessageCircleQuestion,
   Phone,
+  CalendarClock,
 } from 'lucide-react';
 
 const API_BASE = '';
@@ -24,7 +25,7 @@ interface PraticaData {
   economica: { pricing_riacquisto: number; pricing_riacquisto_iva: number; pricing_riacquisto_totale: number };
 }
 
-type Step = 'STEP_A' | 'STEP_A_CONTATTO' | 'STEP_B_OTP_SCELTA' | 'STEP_B_OTP_VERIFICA' | 'STEP_C' | 'STEP_D' | 'STEP_E_SUCCESSO' | 'STEP_E_FALLIMENTO';
+type Step = 'STEP_A' | 'STEP_A_CONTATTO' | 'STEP_B_OTP_SCELTA' | 'STEP_B_OTP_VERIFICA' | 'STEP_DIFFERITO' | 'STEP_C' | 'STEP_D' | 'STEP_E_SUCCESSO' | 'STEP_E_FALLIMENTO';
 
 type Action =
   | { type: 'SCEGLI_CONTATTATEMI' }
@@ -32,6 +33,8 @@ type Action =
   | { type: 'SCEGLI_PROCEDI' }
   | { type: 'OTP_INVIATO'; metodo: 'SMS' | 'EMAIL' }
   | { type: 'OTP_VERIFICATO'; decisione_id: string }
+  | { type: 'PAGAMENTO_DIFFERITO'; data_pagamento: string }
+  | { type: 'PAGAMENTO_DISPONIBILE'; decisione_id: string }
   | { type: 'SCEGLI_METODO'; metodo: 'FABRICK' | 'STRIPE'; session_id: string }
   | { type: 'PAGAMENTO_SUCCESSO'; pagamento_id: string; fattura_path: string }
   | { type: 'PAGAMENTO_FALLITO' }
@@ -42,6 +45,7 @@ interface State {
   tcAccettati: boolean;
   metodoOtp: 'SMS' | 'EMAIL' | null;
   decisione_id: string | null;
+  data_pagamento: string | null;
   metodo_pagamento: 'FABRICK' | 'STRIPE' | null;
   session_id: string | null;
   pagamento_id: string | null;
@@ -59,6 +63,10 @@ function reducer(state: State, action: Action): State {
     case 'OTP_INVIATO':
       return { ...state, step: 'STEP_B_OTP_VERIFICA', metodoOtp: action.metodo };
     case 'OTP_VERIFICATO':
+      return { ...state, step: 'STEP_C', decisione_id: action.decisione_id };
+    case 'PAGAMENTO_DIFFERITO':
+      return { ...state, step: 'STEP_DIFFERITO', data_pagamento: action.data_pagamento };
+    case 'PAGAMENTO_DISPONIBILE':
       return { ...state, step: 'STEP_C', decisione_id: action.decisione_id };
     case 'SCEGLI_METODO':
       return { ...state, step: 'STEP_D', metodo_pagamento: action.metodo, session_id: action.session_id };
@@ -78,6 +86,7 @@ const initialState: State = {
   tcAccettati: false,
   metodoOtp: null,
   decisione_id: null,
+  data_pagamento: null,
   metodo_pagamento: null,
   session_id: null,
   pagamento_id: null,
@@ -92,6 +101,7 @@ function formatEur(n: number): string {
 const STEP_MAP: Record<Step, number> = {
   STEP_A: 1, STEP_A_CONTATTO: 1,
   STEP_B_OTP_SCELTA: 2, STEP_B_OTP_VERIFICA: 2,
+  STEP_DIFFERITO: 3,
   STEP_C: 3, STEP_D: 4,
   STEP_E_SUCCESSO: 5, STEP_E_FALLIMENTO: 5,
 };
@@ -117,12 +127,29 @@ export default function FlussoRiacquisto() {
   const otpInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch pratica
+  // Fetch pratica + check stato riacquisto
   useEffect(() => {
     if (!token) return;
     fetch(`${API_BASE}/api/cliente/pratica`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Errore caricamento')))
-      .then(setPratica)
+      .then(data => {
+        setPratica(data);
+        // Se la pratica è già in stato riacquisto, controlla se il pagamento è disponibile
+        if (data.contratto.stato === 'DECISIONE_RIACQUISTO_IN_CORSO') {
+          fetch(`${API_BASE}/api/cliente/decisione/riacquisto/stato`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then(r => r.ok ? r.json() : null)
+            .then(statoData => {
+              if (!statoData) return;
+              if (statoData.stato === 'PAGAMENTO_DISPONIBILE') {
+                dispatch({ type: 'PAGAMENTO_DISPONIBILE', decisione_id: statoData.decisione_id });
+              } else if (statoData.stato === 'PAGAMENTO_DIFFERITO') {
+                dispatch({ type: 'PAGAMENTO_DIFFERITO', data_pagamento: statoData.data_pagamento });
+              }
+            });
+        }
+      })
       .catch(err => setErrore(err.message))
       .finally(() => setLoading(false));
   }, [token]);
@@ -200,7 +227,11 @@ export default function FlussoRiacquisto() {
         metodo: state.metodoOtp,
       });
       if (timerRef.current) clearInterval(timerRef.current);
-      dispatch({ type: 'OTP_VERIFICATO', decisione_id: data.decisione_id });
+      if (data.pagamento_differito) {
+        dispatch({ type: 'PAGAMENTO_DIFFERITO', data_pagamento: data.data_pagamento });
+      } else {
+        dispatch({ type: 'OTP_VERIFICATO', decisione_id: data.decisione_id });
+      }
     } catch (err: any) { setErrore(err.message); }
     finally { setSubmitting(false); }
   };
@@ -297,7 +328,7 @@ export default function FlussoRiacquisto() {
         {state.step === 'STEP_A' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border p-6">
-              <h2 className="font-semibold text-[#1a3a52] text-lg mb-4">Stai per acquistare:</h2>
+              <h2 className="font-semibold text-[#1a3a52] text-lg mb-4">Stai prenotando l'acquisto di</h2>
               <ul className="space-y-2 mb-6">
                 {pratica.contratto.beni.map((bene, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
@@ -349,7 +380,7 @@ export default function FlussoRiacquisto() {
                   className="bg-[#2563eb] text-white font-medium py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  No, procedo con il pagamento
+                  No, confermo la prenotazione
                 </button>
               </div>
             </div>
@@ -538,6 +569,59 @@ export default function FlussoRiacquisto() {
             >
               {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifica in corso...</> : 'Verifica codice'}
             </button>
+          </div>
+        )}
+
+        {/* ===== STEP DIFFERITO — Decisione confermata, pagamento a T-7 ===== */}
+        {state.step === 'STEP_DIFFERITO' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border p-6 text-center">
+              <CalendarClock className="w-16 h-16 text-[#2563eb] mx-auto mb-4" />
+              <h2 className="font-semibold text-[#1a3a52] text-xl mb-2">Scelta confermata</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                La tua decisione di riacquisto e' stata registrata con successo.
+              </p>
+              <p className="text-sm text-gray-600 mt-4">
+                Riceverai il <strong>link per il pagamento</strong> il giorno
+                {' '}<strong className="text-[#2563eb]">
+                  {state.data_pagamento ? new Date(state.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''}
+                </strong>,
+                {' '}7 giorni prima della scadenza del contratto.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
+              <h3 className="font-semibold text-[#1a3a52] text-sm mb-3">Perche' il pagamento non e' immediato?</h3>
+              <p className="text-sm text-gray-600">
+                Per tua comodita, non ti chiediamo di pagare con largo anticipo.
+                Ti invieremo una email con il link per completare il pagamento pochi giorni prima della scadenza del contratto.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl border p-5">
+              <h3 className="font-semibold text-[#1a3a52] text-sm mb-3">Riepilogo</h3>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex justify-between">
+                  <span>Prezzo netto</span>
+                  <span className="font-medium">&euro; {formatEur(pratica.economica.pricing_riacquisto)}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>IVA 22%</span>
+                  <span className="font-medium">&euro; {formatEur(pratica.economica.pricing_riacquisto_iva)}</span>
+                </li>
+                <li className="flex justify-between border-t pt-2">
+                  <span className="font-semibold">Totale</span>
+                  <span className="font-bold text-[#2563eb]">&euro; {formatEur(pratica.economica.pricing_riacquisto_totale)}</span>
+                </li>
+              </ul>
+            </div>
+
+            <Link
+              to={`/pratica/${token}`}
+              className="block text-center text-sm text-[#2563eb] hover:underline"
+            >
+              Torna all'area cliente
+            </Link>
           </div>
         )}
 

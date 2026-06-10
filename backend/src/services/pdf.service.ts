@@ -1,13 +1,18 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
-import { createWriteStream, readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { verificaCatena } from './audit.service.js';
 import { prisma } from '../lib/db.js';
+import { saveDocument } from './storage.service.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const storagePath = resolve(__dirname, '../../../backend/storage/pdfs');
+/** Raccoglie l'output di un documento PDFKit in un Buffer in memoria. */
+function collectPdf(doc: InstanceType<typeof PDFDocument>): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+  });
+}
 
 const ISTRUZIONI_OPERATIVE = [
   'Disabilita "Trova il mio iPhone" (Apple) o Samsung Knox / Google FRP su tutti i dispositivi oggetto della restituzione.',
@@ -36,7 +41,7 @@ export async function generaVerbaleRestituzione(
   contrattoEolId: string,
   decisioneId: string,
   firma: FirmaInfo,
-): Promise<{ pdfPath: string; hash: string }> {
+): Promise<{ pdfPath: string; hash: string; buffer: Buffer }> {
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoEolId },
     include: { cliente: true },
@@ -49,15 +54,13 @@ export async function generaVerbaleRestituzione(
 
   const timestamp = Date.now();
   const filename = `verbale_restituzione_${contrattoEolId}_${timestamp}.pdf`;
-  const pdfPath = resolve(storagePath, filename);
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: 'Verbale di conferma restituzione',
     Author: 'Noleggio Su Misura — Smartcom Solutions Srl',
   }});
 
-  const stream = createWriteStream(pdfPath);
-  doc.pipe(stream);
+  const pdfDone = collectPdf(doc);
 
   // Header
   doc.fontSize(16).font('Helvetica-Bold')
@@ -164,25 +167,23 @@ export async function generaVerbaleRestituzione(
     );
 
   doc.end();
-
-  await new Promise<void>((resolve, reject) => {
-    stream.on('finish', resolve);
-    stream.on('error', reject);
-  });
+  const pdfBuffer = await pdfDone;
 
   // Calcola SHA-256
-  const pdfBuffer = readFileSync(pdfPath);
   const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  // Salva su storage (Supabase o locale) e ottieni il riferimento
+  const pdfRef = await saveDocument(pdfBuffer, filename);
 
   // Aggiorna Decisione_Cliente
   await prisma.decisione_Cliente.update({
     where: { id: decisioneId },
-    data: { pdf_conferma_path: pdfPath, hash_pdf: hash },
+    data: { pdf_conferma_path: pdfRef, hash_pdf: hash },
   });
 
   console.log(`[PDF] Verbale generato: ${filename} (hash: ${hash.substring(0, 16)}...)`);
 
-  return { pdfPath, hash };
+  return { pdfPath: pdfRef, hash, buffer: pdfBuffer };
 }
 
 export interface PrequalificazioneRinnovo {
@@ -198,7 +199,7 @@ export async function generaConfermaRinnovo(
   decisioneId: string,
   prequalificazione: PrequalificazioneRinnovo,
   firma: FirmaInfo,
-): Promise<{ pdfPath: string; hash: string }> {
+): Promise<{ pdfPath: string; hash: string; buffer: Buffer }> {
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoEolId },
     include: { cliente: true },
@@ -211,15 +212,13 @@ export async function generaConfermaRinnovo(
 
   const timestamp = Date.now();
   const filename = `conferma_rinnovo_${contrattoEolId}_${timestamp}.pdf`;
-  const pdfPath = resolve(storagePath, filename);
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: 'Conferma interesse al rinnovo',
     Author: 'Noleggio Su Misura - Smartcom Solutions Srl',
   }});
 
-  const stream = createWriteStream(pdfPath);
-  doc.pipe(stream);
+  const pdfDone = collectPdf(doc);
 
   // Header
   doc.fontSize(16).font('Helvetica-Bold')
@@ -321,23 +320,21 @@ export async function generaConfermaRinnovo(
     );
 
   doc.end();
+  const pdfBuffer = await pdfDone;
 
-  await new Promise<void>((resolve, reject) => {
-    stream.on('finish', resolve);
-    stream.on('error', reject);
-  });
-
-  const pdfBuffer = readFileSync(pdfPath);
   const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  // Salva su storage (Supabase o locale) e ottieni il riferimento
+  const pdfRef = await saveDocument(pdfBuffer, filename);
 
   await prisma.decisione_Cliente.update({
     where: { id: decisioneId },
-    data: { pdf_conferma_path: pdfPath, hash_pdf: hash },
+    data: { pdf_conferma_path: pdfRef, hash_pdf: hash },
   });
 
   console.log(`[PDF] Conferma rinnovo generata: ${filename} (hash: ${hash.substring(0, 16)}...)`);
 
-  return { pdfPath, hash };
+  return { pdfPath: pdfRef, hash, buffer: pdfBuffer };
 }
 
 const ACCENT_MAP: Record<string, string> = {
@@ -351,7 +348,7 @@ function toAscii(s: string): string {
 
 export async function generaAuditExport(
   contrattoEolId: string,
-): Promise<{ pdfPath: string; hash: string }> {
+): Promise<{ pdfPath: string; hash: string; buffer: Buffer }> {
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoEolId },
     include: { cliente: true },
@@ -367,15 +364,13 @@ export async function generaAuditExport(
 
   const timestamp = Date.now();
   const filename = `audit_export_${contrattoEolId}_${timestamp}.pdf`;
-  const pdfPath = resolve(storagePath, filename);
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: toAscii('Audit trail — catena di hash'),
     Author: 'Noleggio Su Misura — Smartcom Solutions Srl',
   }});
 
-  const stream = createWriteStream(pdfPath);
-  doc.pipe(stream);
+  const pdfDone = collectPdf(doc);
 
   doc.fontSize(16).font('Helvetica-Bold')
     .text('NSM', 50, 50, { continued: true })
@@ -442,16 +437,14 @@ export async function generaAuditExport(
     .text(toAscii(`Documento generato il ${formatDate(new Date())} alle ${new Date().toLocaleTimeString('it-IT')}. Catena integra: ${integraTxt}.`));
 
   doc.end();
+  const pdfBuffer = await pdfDone;
 
-  await new Promise<void>((resolve, reject) => {
-    stream.on('finish', resolve);
-    stream.on('error', reject);
-  });
-
-  const pdfBuffer = readFileSync(pdfPath);
   const pdfHash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  // Salva su storage (Supabase o locale) e ottieni il riferimento
+  const pdfRef = await saveDocument(pdfBuffer, filename);
 
   console.log(`[PDF] Audit export generato: ${filename} (hash: ${pdfHash.substring(0, 16)}...)`);
 
-  return { pdfPath, hash: pdfHash };
+  return { pdfPath: pdfRef, hash: pdfHash, buffer: pdfBuffer };
 }

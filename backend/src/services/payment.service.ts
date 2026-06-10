@@ -15,9 +15,11 @@ const pricingRules = JSON.parse(
 const fabrickProvider = new MockFabrickProvider();
 const stripeProvider = new MockStripeProvider();
 
-function calcolaImporti(netto: number) {
+// IVA a margine: l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
+function calcolaImporti(netto: number, margine: number) {
   const centNetto = Math.round(netto * 100);
-  const centIva = Math.round(centNetto * pricingRules.iva_percentuale);
+  const centMargine = Math.round(margine * 100);
+  const centIva = Math.round(centMargine * pricingRules.iva_percentuale);
   return {
     importo_netto: centNetto / 100,
     importo_iva: centIva / 100,
@@ -36,7 +38,7 @@ export async function initiatePayment(
 
   if (!contratto) throw new Error('Contratto non trovato');
 
-  const importi = calcolaImporti(Number(contratto.pricing_riacquisto));
+  const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
   const provider = metodo === 'FABRICK' ? fabrickProvider : stripeProvider;
 
   const session = await provider.initiatePayment(importi.importo_totale, 'EUR', {

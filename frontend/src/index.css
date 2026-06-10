@@ -1,22 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1a3a52;
-  --color-primary-foreground: #ffffff;
-  --color-accent: #16a34a;
-  --color-accent-foreground: #ffffff;
-  --color-background: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
+  /* ── FLEX brand ── */
+  --color-flex: #185FA5;
+  --color-flex-light: #E6F1FB;
+  --color-flex-dark: #0C447C;
+
+  /* ── Surfaces ── */
+  --color-paper: #F1EFE8;
+  --color-border: #E5E3DC;
   --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
+
+  /* ── Text ── */
+  --color-graphite: #2C2C2A;
+  --color-stone: #5F5E5A;
+
+  /* ── Semantic: success ── */
+  --color-ok: #E1F5EE;
+  --color-ok-text: #085041;
+  --color-ok-border: #1D9E75;
+
+  /* ── Semantic: warning ── */
+  --color-warn: #FAEEDA;
+  --color-warn-text: #633806;
+  --color-warn-border: #BA7517;
+
+  /* ── Semantic: danger ── */
+  --color-danger: #FCEBEB;
+  --color-danger-text: #791F1F;
+  --color-danger-border: #E24B4A;
+
+  /* ── Semantic: outlier / exception ── */
+  --color-outlier: #EEEDFE;
+  --color-outlier-text: #3C3489;
+
+  /* ── Fonts ── */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-body {
-  font-family: var(--font-sans);
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    background-color: var(--color-paper);
+    color: var(--color-graphite);
+    -webkit-font-smoothing: antialiased;
+  }
 }

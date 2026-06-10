@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Contratto_EOL {
@@ -178,14 +179,19 @@ model Counter {
 }
 
 model Utente_NSM {
-  id         String   @id @default(uuid())
-  nome       String
-  cognome    String
-  email      String   @unique
-  password   String
-  ruolo      String
-  attivo     Boolean  @default(true)
-  created_at DateTime @default(now())
+  id            String   @id @default(uuid())
+  nome          String
+  cognome       String
+  email         String   @unique
+  password      String
+  ruolo         String
+  attivo        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  superiore_id  String?
+
+  // Self-relation: gerarchia AGENZIA → CAPO_AREA → GROUP_MANAGER → AGENTE → JUNIOR_AGENT
+  superiore     Utente_NSM?  @relation("Gerarchia", fields: [superiore_id], references: [id])
+  subordinati   Utente_NSM[] @relation("Gerarchia")
 
   // Relations
   contratti_originati  Contratto_EOL[]      @relation("AgenteOriginario")

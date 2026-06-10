@@ -22,6 +22,24 @@ function addDays(date: Date, days: number): Date {
   return result;
 }
 
+// Scadenze Grenke cadono sempre il primo giorno del trimestre: 01/01, 01/04, 01/07, 01/10
+const QUARTERLY_MONTHS = [0, 3, 6, 9]; // 0-based
+function getQuarterlyDates(from: Date, count: number): Date[] {
+  const dates: Date[] = [];
+  let year = from.getFullYear();
+  let monthIdx = QUARTERLY_MONTHS.findIndex(m => {
+    const d = new Date(year, m, 1);
+    return d > from;
+  });
+  if (monthIdx === -1) { monthIdx = 0; year++; }
+  while (dates.length < count) {
+    dates.push(new Date(year, QUARTERLY_MONTHS[monthIdx]!, 1));
+    monthIdx++;
+    if (monthIdx >= QUARTERLY_MONTHS.length) { monthIdx = 0; year++; }
+  }
+  return dates;
+}
+
 function generateClienteToken(contrattoEolId: string, clienteId: string, dataScadenza: Date): string {
   const exp = Math.floor((dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000);
   return jwt.sign(
@@ -131,12 +149,15 @@ async function main() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Le scadenze Grenke cadono sempre il 01/01, 01/04, 01/07, 01/10
+  const quarterlyDates = getQuarterlyDates(today, 5);
+
   const contrattiOriginali = [
-    { nsmId: 'NSM-2024-101', grenkeId: 'G-FLEX-24-001', clienteIdx: 0, offsetGiorni: 30, riconciliazione: 'RICONCILIATO_AUTO', canone: 85.00, mesi: 36, agenteRef: agente },
-    { nsmId: 'NSM-2024-102', grenkeId: 'G-FLEX-24-002', clienteIdx: 1, offsetGiorni: 60, riconciliazione: 'RICONCILIATO_AUTO', canone: 120.50, mesi: 24, agenteRef: agente },
-    { nsmId: 'NSM-2024-103', grenkeId: 'G-FLEX-24-003', clienteIdx: 2, offsetGiorni: 90, riconciliazione: 'RICONCILIATO_AUTO', canone: 200.00, mesi: 48, agenteRef: junior },
-    { nsmId: 'NSM-2024-104', grenkeId: 'G-FLEX-24-004', clienteIdx: 3, offsetGiorni: 120, riconciliazione: 'OUTLIER_DA_GESTIRE', canone: 65.75, mesi: 36, agenteRef: agente },
-    { nsmId: 'NSM-2024-105', grenkeId: 'G-FLEX-24-005', clienteIdx: 4, offsetGiorni: 150, riconciliazione: 'OUTLIER_DA_GESTIRE', canone: 310.00, mesi: 60, agenteRef: junior },
+    { nsmId: 'NSM-2024-101', grenkeId: 'G-FLEX-24-001', clienteIdx: 0, dataScadenza: quarterlyDates[0]!, riconciliazione: 'RICONCILIATO_AUTO', canone: 85.00, mesi: 36, agenteRef: agente },
+    { nsmId: 'NSM-2024-102', grenkeId: 'G-FLEX-24-002', clienteIdx: 1, dataScadenza: quarterlyDates[0]!, riconciliazione: 'RICONCILIATO_AUTO', canone: 120.50, mesi: 24, agenteRef: agente },
+    { nsmId: 'NSM-2024-103', grenkeId: 'G-FLEX-24-003', clienteIdx: 2, dataScadenza: quarterlyDates[1]!, riconciliazione: 'RICONCILIATO_AUTO', canone: 200.00, mesi: 48, agenteRef: junior },
+    { nsmId: 'NSM-2024-104', grenkeId: 'G-FLEX-24-004', clienteIdx: 3, dataScadenza: quarterlyDates[1]!, riconciliazione: 'OUTLIER_DA_GESTIRE', canone: 65.75, mesi: 36, agenteRef: agente },
+    { nsmId: 'NSM-2024-105', grenkeId: 'G-FLEX-24-005', clienteIdx: 4, dataScadenza: quarterlyDates[2]!, riconciliazione: 'OUTLIER_DA_GESTIRE', canone: 310.00, mesi: 60, agenteRef: junior },
   ];
 
   for (const cfg of contrattiOriginali) {
@@ -150,7 +171,7 @@ async function main() {
       if (taglio <= margine_lordo) valore_gift_card = taglio;
       else break;
     }
-    const data_scadenza = addDays(today, cfg.offsetGiorni);
+    const data_scadenza = cfg.dataScadenza;
     const data_stipula = new Date(data_scadenza);
     data_stipula.setFullYear(data_stipula.getFullYear() - Math.floor(cfg.mesi / 12));
 
@@ -190,13 +211,14 @@ async function main() {
   // ─── 23 Contratti FLEX_ATTIVO (preesistenti in piattaforma) ───────────────
   const durate = [36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 48, 48, 48, 48, 24, 24, 24, 24];
   const canoni = [45, 55, 60, 65, 70, 72, 75, 78, 80, 42, 50, 68, 90, 95, 110, 85, 100, 130, 140, 48, 55, 62, 88];
+  // Distribuiamo i 23 contratti sulle prossime 4+ date trimestrali (~6 per trimestre)
+  const quarterlyDatesExtra = getQuarterlyDates(today, 4);
 
   for (let i = 0; i < 23; i++) {
     const idx = i;
     const grenkeId = `G-FLEX-24-${String(i + 6).padStart(3, '0')}`;
     const nsmId = `NSM-2024-${200 + i}`;
-    const offsetGiorni = 30 + Math.round((150 / 22) * i);
-    const data_scadenza = addDays(today, offsetGiorni);
+    const data_scadenza = quarterlyDatesExtra[Math.floor(i / 6) % 4]!;
     const mesi = durate[i]!;
     const canone = canoni[i]!;
     const data_stipula = new Date(data_scadenza);

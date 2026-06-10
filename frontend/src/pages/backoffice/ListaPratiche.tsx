@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Search,
   FileText,
+  Send,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -82,16 +83,16 @@ const DECISIONI = [
 ] as const;
 
 const STATO_BADGE_COLORS: Record<string, string> = {
-  LISTA_RICEVUTA: 'bg-gray-100 text-gray-700',
-  COMUNICAZIONE_INVIATA: 'bg-blue-100 text-blue-700',
-  IN_ATTESA_DECISIONE: 'bg-amber-100 text-amber-700',
-  DECISIONE_RINNOVO: 'bg-green-100 text-green-700',
-  DECISIONE_RIACQUISTO: 'bg-emerald-100 text-emerald-700',
-  DECISIONE_CONTATTO: 'bg-cyan-100 text-cyan-700',
-  DECISIONE_RESTITUZIONE: 'bg-orange-100 text-orange-700',
-  RIACQUISTO_IN_ATTESA_CHIAMATA: 'bg-purple-100 text-purple-700',
-  RIACQUISTO_PAGATO: 'bg-teal-100 text-teal-700',
-  SILENZIO_PERDITA_DEFINITIVA: 'bg-red-100 text-red-700',
+  LISTA_RICEVUTA: 'bg-paper text-stone',
+  COMUNICAZIONE_INVIATA: 'bg-flex-light text-flex-dark',
+  IN_ATTESA_DECISIONE: 'bg-warn text-warn-text',
+  DECISIONE_RINNOVO: 'bg-ok text-ok-text',
+  DECISIONE_RIACQUISTO: 'bg-ok text-ok-text',
+  DECISIONE_CONTATTO: 'bg-flex-light text-flex-dark',
+  DECISIONE_RESTITUZIONE: 'bg-warn text-warn-text',
+  RIACQUISTO_IN_ATTESA_CHIAMATA: 'bg-outlier text-outlier-text',
+  RIACQUISTO_PAGATO: 'bg-ok text-ok-text',
+  SILENZIO_PERDITA_DEFINITIVA: 'bg-danger text-danger-text',
 };
 
 const SORTABLE_COLUMNS: Record<string, string> = {
@@ -166,6 +167,8 @@ export default function ListaPratiche() {
   const [loading, setLoading] = useState(true);
   const [agenti, setAgenti] = useState<Agente[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [sendingBatch, setSendingBatch] = useState(false);
+  const [batchResult, setBatchResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   /* --- Build query string (shared between list + export) --- */
   const buildQueryString = useCallback(
@@ -306,6 +309,33 @@ export default function ListaPratiche() {
     }
   }
 
+  async function handleInviaComunicazioneBatch() {
+    if (!utente) return;
+    const listaRicevutaCount = items.filter(p => p.stato === 'LISTA_RICEVUTA').length;
+    const msg = listaRicevutaCount > 0
+      ? `Inviare la comunicazione iniziale a tutte le pratiche in stato "Lista ricevuta"?`
+      : 'Inviare la comunicazione iniziale a tutte le pratiche in stato "Lista ricevuta"?';
+    if (!confirm(msg)) return;
+
+    setSendingBatch(true);
+    setBatchResult(null);
+    try {
+      const res = await fetch('/api/backoffice/pratiche/invia-comunicazione-batch', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': utente.id },
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore invio');
+      setBatchResult({ message: body.message, type: 'success' });
+      fetchPratiche(); // ricarica la lista
+    } catch (err: any) {
+      setBatchResult({ message: err.message, type: 'error' });
+    } finally {
+      setSendingBatch(false);
+    }
+  }
+
   /* --- Derived --- */
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
   const items = data?.items ?? [];
@@ -313,11 +343,11 @@ export default function ListaPratiche() {
   /* --- Sort icon helper --- */
   function SortIcon({ columnKey }: { columnKey: string }) {
     const apiField = SORTABLE_COLUMNS[columnKey];
-    if (sortBy !== apiField) return <ChevronsUpDown className="w-3.5 h-3.5 text-gray-400" />;
+    if (sortBy !== apiField) return <ChevronsUpDown className="w-3.5 h-3.5 text-stone" />;
     return sortOrder === 'asc' ? (
-      <ChevronUp className="w-3.5 h-3.5 text-[#1a3a52]" />
+      <ChevronUp className="w-3.5 h-3.5 text-graphite" />
     ) : (
-      <ChevronDown className="w-3.5 h-3.5 text-[#1a3a52]" />
+      <ChevronDown className="w-3.5 h-3.5 text-graphite" />
     );
   }
 
@@ -329,20 +359,20 @@ export default function ListaPratiche() {
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Lista pratiche</h1>
-        <p className="text-sm text-gray-500 mt-1">Gestione contratti end-of-lease</p>
+        <h1 className="text-2xl font-bold text-graphite">Lista pratiche</h1>
+        <p className="text-sm text-stone mt-1">Gestione contratti end-of-lease</p>
       </div>
 
       {/* ---- Filter bar ---- */}
-      <div className="bg-white rounded-xl border p-4 space-y-4">
+      <div className="bg-white rounded-xl border border-border p-4 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Stato */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Stato</label>
+            <label className="block text-xs font-medium text-stone mb-1">Stato</label>
             <select
               value={stato}
               onChange={(e) => setStato(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             >
               <option value="">Tutti gli stati</option>
               {STATI.map((s) => (
@@ -355,11 +385,11 @@ export default function ListaPratiche() {
 
           {/* Agente */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Agente</label>
+            <label className="block text-xs font-medium text-stone mb-1">Agente</label>
             <select
               value={agenteId}
               onChange={(e) => setAgenteId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             >
               <option value="">Tutti gli agenti</option>
               {agenti.map((a) => (
@@ -372,33 +402,33 @@ export default function ListaPratiche() {
 
           {/* Scadenza da */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Scadenza da</label>
+            <label className="block text-xs font-medium text-stone mb-1">Scadenza da</label>
             <input
               type="date"
               value={dataScadenzaFrom}
               onChange={(e) => setDataScadenzaFrom(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             />
           </div>
 
           {/* Scadenza a */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Scadenza a</label>
+            <label className="block text-xs font-medium text-stone mb-1">Scadenza a</label>
             <input
               type="date"
               value={dataScadenzaTo}
               onChange={(e) => setDataScadenzaTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             />
           </div>
 
           {/* Origine */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Origine</label>
+            <label className="block text-xs font-medium text-stone mb-1">Origine</label>
             <select
               value={origine}
               onChange={(e) => setOrigine(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             >
               <option value="">Tutte le origini</option>
               {ORIGINI.map((o) => (
@@ -411,11 +441,11 @@ export default function ListaPratiche() {
 
           {/* Decisione */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Decisione</label>
+            <label className="block text-xs font-medium text-stone mb-1">Decisione</label>
             <select
               value={decisione}
               onChange={(e) => setDecisione(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 focus:border-[#1a3a52]"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             >
               <option value="">Tutte le decisioni</option>
               {DECISIONI.map((d) => (
@@ -433,9 +463,9 @@ export default function ListaPratiche() {
                 type="checkbox"
                 checked={rischioSilenzio}
                 onChange={(e) => setRischioSilenzio(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-[#1a3a52] focus:ring-[#1a3a52]/30"
+                className="w-4 h-4 rounded border-border text-flex focus:ring-flex/30"
               />
-              <span className="text-sm text-gray-700">Rischio silenzio</span>
+              <span className="text-sm text-graphite">Rischio silenzio</span>
             </label>
           </div>
         </div>
@@ -444,39 +474,55 @@ export default function ListaPratiche() {
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <button
             onClick={handleFilter}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#1a3a52] rounded-lg hover:bg-[#243f55] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-flex rounded-lg hover:bg-flex-dark transition-colors"
           >
             <Search className="w-4 h-4" />
             Filtra
           </button>
           <button
             onClick={handleReset}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-graphite bg-white border border-border rounded-lg hover:bg-paper/60 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
           </button>
           <div className="flex-1" />
           <button
+            onClick={handleInviaComunicazioneBatch}
+            disabled={sendingBatch}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-flex rounded-lg hover:bg-flex-dark disabled:opacity-50 transition-colors"
+          >
+            {sendingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Invia comunicazione
+          </button>
+          <button
             onClick={handleExportCsv}
             disabled={exporting}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-graphite bg-white border border-border rounded-lg hover:bg-paper/60 disabled:opacity-50 transition-colors"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Esporta CSV
           </button>
         </div>
+
+        {/* Batch result banner */}
+        {batchResult && (
+          <div className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${batchResult.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+            <span>{batchResult.message}</span>
+            <button onClick={() => setBatchResult(null)} className="text-current opacity-60 hover:opacity-100 ml-3">&times;</button>
+          </div>
+        )}
       </div>
 
       {/* ---- Table ---- */}
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-white rounded-xl border border-border overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-stone" />
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center py-24 text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <div className="text-center py-24 text-stone">
+            <FileText className="w-12 h-12 mx-auto mb-3 text-stone/40" />
             <p className="font-medium">Nessuna pratica trovata</p>
             <p className="text-sm mt-1">Prova a modificare i filtri di ricerca.</p>
           </div>
@@ -484,41 +530,41 @@ export default function ListaPratiche() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b text-left">
+                <tr className="bg-paper border-b border-border text-left">
                   <ThSortable columnKey="contratto_nsm" label="Contr. NSM" onSort={handleSort}>
                     <SortIcon columnKey="contratto_nsm" />
                   </ThSortable>
-                  <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap">Contr. Grenke</th>
-                  <th className="px-4 py-3 font-medium text-gray-600">Cliente</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Contr. Grenke</th>
+                  <th className="px-4 py-3 font-medium text-stone">Cliente</th>
                   <ThSortable columnKey="data_scadenza" label="Scadenza" onSort={handleSort}>
                     <SortIcon columnKey="data_scadenza" />
                   </ThSortable>
                   <ThSortable columnKey="stato" label="Stato" onSort={handleSort}>
                     <SortIcon columnKey="stato" />
                   </ThSortable>
-                  <th className="px-4 py-3 font-medium text-gray-600">Agente</th>
-                  <th className="px-4 py-3 font-medium text-gray-600 text-right whitespace-nowrap">
+                  <th className="px-4 py-3 font-medium text-stone">Agente</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">
                     Pricing riacquisto
                   </th>
-                  <th className="px-4 py-3 font-medium text-gray-600">Decisione</th>
-                  <th className="px-4 py-3 font-medium text-gray-600 text-center">Azioni</th>
+                  <th className="px-4 py-3 font-medium text-stone">Decisione</th>
+                  <th className="px-4 py-3 font-medium text-stone text-center">Azioni</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((p, idx) => (
                   <tr
                     key={p.id}
-                    className={`border-b last:border-b-0 hover:bg-gray-50 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}
+                    className={`border-b last:border-b-0 hover:bg-paper/60 transition-colors ${idx % 2 === 1 ? 'bg-paper/30' : ''}`}
                   >
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_nsm}</td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_grenke}</td>
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate" title={p.cliente}>
                       {p.cliente}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(p.data_scadenza)}</td>
+                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{formatDate(p.data_scadenza)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATO_BADGE_COLORS[p.stato] ?? 'bg-gray-100 text-gray-700'}`}
+                        className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATO_BADGE_COLORS[p.stato] ?? 'bg-paper text-stone'}`}
                       >
                         {statoLabel(p.stato)}
                       </span>
@@ -529,7 +575,7 @@ export default function ListaPratiche() {
                     <td className="px-4 py-3 text-center">
                       <Link
                         to={`/backoffice/pratiche/${p.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-[#1a3a52] hover:bg-gray-100 transition-colors"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone hover:text-graphite hover:bg-paper/60 transition-colors"
                         title="Dettaglio pratica"
                       >
                         <Eye className="w-4 h-4" />
@@ -545,7 +591,7 @@ export default function ListaPratiche() {
 
       {/* ---- Pagination ---- */}
       {data && data.total > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-600">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-stone">
           <p>
             {data.total} {data.total === 1 ? 'risultato' : 'risultati'} totali
           </p>
@@ -553,7 +599,7 @@ export default function ListaPratiche() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-border bg-white hover:bg-paper/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Precedente
             </button>
@@ -563,7 +609,7 @@ export default function ListaPratiche() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-border bg-white hover:bg-paper/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Successiva
             </button>
@@ -590,11 +636,11 @@ function ThSortable({
   children: React.ReactNode;
 }) {
   return (
-    <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap">
+    <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">
       <button
         type="button"
         onClick={() => onSort(columnKey)}
-        className="inline-flex items-center gap-1 hover:text-[#1a3a52] transition-colors"
+        className="inline-flex items-center gap-1 hover:text-graphite transition-colors"
       >
         {label}
         {children}

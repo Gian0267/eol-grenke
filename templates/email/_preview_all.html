@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Preview Comunicazioni EOL Grenke</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+    h1 { color: #1a3a52; margin-bottom: 8px; font-size: 24px; }
+    .subtitle { color: #64748b; margin-bottom: 32px; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 32px; max-width: 900px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card-header { padding: 12px 20px; background: #1a3a52; display: flex; align-items: center; justify-content: space-between; }
+    .card-header h2 { color: white; font-size: 14px; font-weight: 600; }
+    .card-header .badge { background: rgba(255,255,255,0.15); color: white; font-size: 11px; padding: 3px 10px; border-radius: 100px; }
+    .badge.cliente { background: #2563eb33; color: #93c5fd; }
+    .badge.agente { background: #f59e0b33; color: #fcd34d; }
+    .badge.sistema { background: #10b98133; color: #6ee7b7; }
+    iframe { width: 100%; border: none; min-height: 500px; }
+    .section-title { color: #1a3a52; font-size: 18px; font-weight: 700; margin: 16px 0 8px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+    .section-desc { color: #64748b; font-size: 13px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Comunicazioni EOL Grenke</h1>
+  <p class="subtitle">Tutti i 15 template email del workflow, suddivisi per destinatario e fase.</p>
+
+  <div class="grid">
+
+    <!-- SEZIONE 1: Comunicazioni al cliente -->
+    <div>
+      <p class="section-title">Comunicazioni al Cliente</p>
+      <p class="section-desc">Email inviate al Conduttore (cliente finale) nelle varie fasi del workflow.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>1. Comunicazione iniziale (T-145)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="comunicazione_iniziale.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>2. Sollecito 1 (T-90)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="sollecito_1.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>3. Sollecito 2 (T-60)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="sollecito_2.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>4. Sollecito 3 (T-45)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="sollecito_3.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>5. Sollecito 4 — ultimo avviso (T-35)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="sollecito_4.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>6. Conferma rinnovo</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="conferma_rinnovo.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>7. Conferma riacquisto</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="conferma_riacquisto.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>8. Invito pagamento (T-7) — NUOVO</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="invito_pagamento.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>9. Sblocco pagamento (post-chiamata)</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="sblocco_pagamento.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>10. Fallimento pagamento</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="fallimento_pagamento.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>11. Conferma restituzione</h2>
+        <span class="badge cliente">Cliente</span>
+      </div>
+      <iframe src="conferma_restituzione.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <!-- SEZIONE 2: Notifiche interne agente/backoffice -->
+    <div>
+      <p class="section-title">Notifiche interne (Agenti / Backoffice)</p>
+      <p class="section-desc">Email inviate agli agenti NSM e al backoffice per notifiche operative.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>12. Notifica richiesta contatto</h2>
+        <span class="badge agente">Agente</span>
+      </div>
+      <iframe src="notifica_richiesta_contatto.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>13. Notifica agente — rinnovo</h2>
+        <span class="badge agente">Agente</span>
+      </div>
+      <iframe src="notifica_agente_rinnovo.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>14. Notifica agente — contatto personalizzato</h2>
+        <span class="badge agente">Agente</span>
+      </div>
+      <iframe src="notifica_agente_contatto.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>15. Notifica agente — escalation telefonica</h2>
+        <span class="badge agente">Agente</span>
+      </div>
+      <iframe src="notifica_agente_escalation.html" onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px'"></iframe>
+    </div>
+
+  </div>
+
+  <p style="text-align:center; color:#94a3b8; font-size:12px; margin-top:40px; padding-bottom:24px;">
+    NSM EOL Grenke — 15 template email — Preview generata il <script>document.write(new Date().toLocaleDateString('it-IT'))</script>
+  </p>
+</body>
+</html>

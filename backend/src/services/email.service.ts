@@ -3,13 +3,14 @@ import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { createEmailProvider, createPecProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const emailProvider = new SmtpEmailProvider();
+const emailProvider = createEmailProvider();
+const pecProvider = createPecProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -115,7 +116,10 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
   let almenoUnInvioOk = false;
 
   for (const dest of destinatari) {
-    const sendResult = await emailProvider.send(dest.email, oggetto, html);
+    // Il canale PEC usa il provider PEC certificato (se configurato);
+    // altrimenti ricade sul provider email normale.
+    const provider = dest.canale === 'PEC' && pecProvider ? pecProvider : emailProvider;
+    const sendResult = await provider.send(dest.email, oggetto, html);
 
     await prisma.comunicazione.create({
       data: {

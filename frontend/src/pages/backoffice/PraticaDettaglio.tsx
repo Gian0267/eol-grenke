@@ -169,32 +169,32 @@ function formatDateTime(d: string): string {
 }
 
 function giornoColor(g: number): string {
-  if (g < 35) return 'bg-red-100 text-red-700';
-  if (g < 50) return 'bg-yellow-100 text-yellow-700';
-  return 'bg-green-100 text-green-700';
+  if (g < 35) return 'bg-danger text-danger-text';
+  if (g < 50) return 'bg-warn text-warn-text';
+  return 'bg-ok text-ok-text';
 }
 
 const STATO_BADGE: Record<string, { bg: string; label: string }> = {
-  LISTA_RICEVUTA: { bg: 'bg-gray-100 text-gray-700', label: 'Lista ricevuta' },
-  COMUNICAZIONE_INVIATA: { bg: 'bg-blue-100 text-blue-700', label: 'Comunicazione inviata' },
-  IN_ATTESA_DECISIONE: { bg: 'bg-yellow-100 text-yellow-800', label: 'In attesa decisione' },
-  DECISIONE_RINNOVO: { bg: 'bg-green-100 text-green-700', label: 'Decisione: Rinnovo' },
-  DECISIONE_RIACQUISTO: { bg: 'bg-emerald-100 text-emerald-700', label: 'Decisione: Riacquisto' },
-  DECISIONE_RESTITUZIONE: { bg: 'bg-orange-100 text-orange-700', label: 'Decisione: Restituzione' },
-  DECISIONE_CONTATTO: { bg: 'bg-cyan-100 text-cyan-700', label: 'Decisione: Contatto' },
-  SILENZIO_REMINDER: { bg: 'bg-red-100 text-red-700', label: 'Silenzio — reminder' },
-  SILENZIO_ESCALATION: { bg: 'bg-red-200 text-red-800', label: 'Silenzio — escalation' },
-  RIACQUISTO_IN_ATTESA_CHIAMATA: { bg: 'bg-purple-100 text-purple-700', label: 'Riacquisto — attesa chiamata' },
-  RIACQUISTO_IN_ATTESA_PAGAMENTO: { bg: 'bg-purple-100 text-purple-700', label: 'Riacquisto — attesa pagamento' },
-  RIACQUISTO_COMPLETATO: { bg: 'bg-purple-200 text-purple-800', label: 'Riacquisto completato' },
-  COMPLETATA: { bg: 'bg-green-200 text-green-800', label: 'Completata' },
+  LISTA_RICEVUTA: { bg: 'bg-paper text-stone', label: 'Lista ricevuta' },
+  COMUNICAZIONE_INVIATA: { bg: 'bg-flex-light text-flex-dark', label: 'Comunicazione inviata' },
+  IN_ATTESA_DECISIONE: { bg: 'bg-warn text-warn-text', label: 'In attesa decisione' },
+  DECISIONE_RINNOVO: { bg: 'bg-ok text-ok-text', label: 'Decisione: Rinnovo' },
+  DECISIONE_RIACQUISTO: { bg: 'bg-ok text-ok-text', label: 'Decisione: Riacquisto' },
+  DECISIONE_RESTITUZIONE: { bg: 'bg-warn text-warn-text', label: 'Decisione: Restituzione' },
+  DECISIONE_CONTATTO: { bg: 'bg-flex-light text-flex-dark', label: 'Decisione: Contatto' },
+  SILENZIO_REMINDER: { bg: 'bg-danger text-danger-text', label: 'Silenzio — reminder' },
+  SILENZIO_ESCALATION: { bg: 'bg-danger text-danger-text', label: 'Silenzio — escalation' },
+  RIACQUISTO_IN_ATTESA_CHIAMATA: { bg: 'bg-outlier text-outlier-text', label: 'Riacquisto — attesa chiamata' },
+  RIACQUISTO_IN_ATTESA_PAGAMENTO: { bg: 'bg-outlier text-outlier-text', label: 'Riacquisto — attesa pagamento' },
+  RIACQUISTO_COMPLETATO: { bg: 'bg-ok text-ok-text', label: 'Riacquisto completato' },
+  COMPLETATA: { bg: 'bg-ok text-ok-text', label: 'Completata' },
 };
 
 function statoBadge(stato: string) {
   const found = STATO_BADGE[stato];
   if (found) return found;
   return {
-    bg: 'bg-gray-100 text-gray-600',
+    bg: 'bg-paper text-stone',
     label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()),
   };
 }
@@ -202,30 +202,30 @@ function statoBadge(stato: string) {
 function timelineIcon(tipo: string) {
   switch (tipo) {
     case 'COMUNICAZIONE':
-      return <Mail className="w-4 h-4 text-blue-600" />;
+      return <Mail className="w-4 h-4 text-flex" />;
     case 'DECISIONE':
-      return <CheckCircle className="w-4 h-4 text-green-600" />;
+      return <CheckCircle className="w-4 h-4 text-ok-border" />;
     case 'ESCALATION':
-      return <Phone className="w-4 h-4 text-orange-600" />;
+      return <Phone className="w-4 h-4 text-warn-border" />;
     case 'PAGAMENTO':
-      return <CreditCard className="w-4 h-4 text-purple-600" />;
+      return <CreditCard className="w-4 h-4 text-outlier-text" />;
     default:
-      return <AlertCircle className="w-4 h-4 text-gray-400" />;
+      return <AlertCircle className="w-4 h-4 text-stone" />;
   }
 }
 
 function timelineColor(tipo: string) {
   switch (tipo) {
     case 'COMUNICAZIONE':
-      return 'border-blue-300 bg-blue-50';
+      return 'border-flex/30 bg-flex-light';
     case 'DECISIONE':
-      return 'border-green-300 bg-green-50';
+      return 'border-ok-border/30 bg-ok';
     case 'ESCALATION':
-      return 'border-orange-300 bg-orange-50';
+      return 'border-warn-border/30 bg-warn';
     case 'PAGAMENTO':
-      return 'border-purple-300 bg-purple-50';
+      return 'border-outlier-text/30 bg-outlier';
     default:
-      return 'border-gray-300 bg-gray-50';
+      return 'border-border bg-paper';
   }
 }
 
@@ -266,8 +266,8 @@ function Modal({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <h3 className="text-lg font-semibold text-graphite">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-stone">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -426,10 +426,10 @@ export default function PraticaDettaglio() {
       <div className="py-20 text-center">
         <Toaster position="top-right" richColors />
         <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-400" />
-        <p className="text-gray-600">{error || 'Pratica non trovata'}</p>
+        <p className="text-stone">{error || 'Pratica non trovata'}</p>
         <Link
           to="/backoffice/pratiche"
-          className="inline-flex items-center gap-1.5 mt-4 text-sm text-[#1a3a52] hover:underline"
+          className="inline-flex items-center gap-1.5 mt-4 text-sm text-graphite hover:underline"
         >
           <ArrowLeft className="w-4 h-4" /> Torna alla lista
         </Link>
@@ -460,16 +460,16 @@ export default function PraticaDettaglio() {
       {/* ---- Back + header ---- */}
       <Link
         to="/backoffice/pratiche"
-        className="inline-flex items-center gap-1.5 text-sm text-[#1a3a52] hover:underline mb-4"
+        className="inline-flex items-center gap-1.5 text-sm text-graphite hover:underline mb-4"
       >
         <ArrowLeft className="w-4 h-4" /> Torna alla lista
       </Link>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-graphite">
             {pratica.cliente.ragione_sociale}{' '}
-            <span className="text-base font-normal text-gray-500">
+            <span className="text-base font-normal text-stone font-mono">
               — {pratica.contratto_nsm_id}
             </span>
           </h1>
@@ -479,7 +479,7 @@ export default function PraticaDettaglio() {
             {badge.label}
           </span>
           <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${giornoColor(pratica.giorni_a_scadenza)}`}
+            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium font-mono ${giornoColor(pratica.giorni_a_scadenza)}`}
           >
             {pratica.giorni_a_scadenza} giorni alla scadenza
           </span>
@@ -491,7 +491,7 @@ export default function PraticaDettaglio() {
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Tabs */}
-          <div className="border-b border-gray-200 mb-6">
+          <div className="border-b border-border mb-6">
             <nav className="flex gap-6">
               {tabs.map((t) => (
                 <button
@@ -499,8 +499,8 @@ export default function PraticaDettaglio() {
                   onClick={() => setTab(t.key)}
                   className={`pb-2.5 text-sm transition-colors ${
                     tab === t.key
-                      ? 'border-b-2 border-[#1a3a52] font-medium text-[#1a3a52]'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'border-b-2 border-flex font-medium text-graphite'
+                      : 'text-stone hover:text-graphite'
                   }`}
                 >
                   {t.label}
@@ -525,8 +525,8 @@ export default function PraticaDettaglio() {
         {/* Sidebar */}
         <aside className="lg:w-72 shrink-0">
           <div className="lg:sticky lg:top-6">
-            <div className="bg-white rounded-xl border p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Azioni</h3>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <h3 className="text-sm font-semibold text-graphite mb-4">Azioni</h3>
               <div className="flex flex-col gap-2.5">
                 <ActionBtn
                   icon={<Send className="w-4 h-4" />}
@@ -558,7 +558,7 @@ export default function PraticaDettaglio() {
                 <div className="relative group">
                   <button
                     disabled
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border bg-paper text-gray-400 cursor-not-allowed"
                   >
                     <FileDown className="w-4 h-4" />
                     Esporta storico PDF
@@ -579,21 +579,21 @@ export default function PraticaDettaglio() {
 
       {/* Reinvia comunicazione */}
       <Modal open={modalOpen === 'reinvia'} title="Reinvia comunicazione" onClose={() => setModalOpen(null)}>
-        <p className="text-sm text-gray-600 mb-5">
+        <p className="text-sm text-stone mb-5">
           Vuoi reinviare la comunicazione EOL al cliente{' '}
           <strong>{pratica.cliente.ragione_sociale}</strong>?
         </p>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
             Annulla
           </button>
           <button
             disabled={actionLoading}
             onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/reinvia-comunicazione`)}
-            className="px-4 py-2 text-sm rounded-lg bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
@@ -604,11 +604,11 @@ export default function PraticaDettaglio() {
       {/* Cambia agente */}
       <Modal open={modalOpen === 'cambia-agente'} title="Cambia agente assegnato" onClose={() => setModalOpen(null)}>
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nuovo agente</label>
+          <label className="block text-sm font-medium text-graphite mb-1">Nuovo agente</label>
           <select
             value={selectedAgente}
             onChange={(e) => setSelectedAgente(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
           >
             <option value="">Seleziona agente...</option>
             {agenti.map((a) => (
@@ -621,14 +621,14 @@ export default function PraticaDettaglio() {
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
             Annulla
           </button>
           <button
             disabled={actionLoading || !selectedAgente}
             onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/cambia-agente`, { agente_id: selectedAgente })}
-            className="px-4 py-2 text-sm rounded-lg bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
@@ -640,29 +640,29 @@ export default function PraticaDettaglio() {
       <Modal open={modalOpen === 'modifica-deadline'} title="Modifica deadline" onClose={() => setModalOpen(null)}>
         <div className="space-y-3 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nuova data scadenza</label>
+            <label className="block text-sm font-medium text-graphite mb-1">Nuova data scadenza</label>
             <input
               type="date"
               value={nuovaData}
               onChange={(e) => setNuovaData(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Motivazione *</label>
+            <label className="block text-sm font-medium text-graphite mb-1">Motivazione *</label>
             <textarea
               value={motivazione}
               onChange={(e) => setMotivazione(e.target.value)}
               rows={3}
               placeholder="Indica il motivo della modifica..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 resize-none"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 resize-none"
             />
           </div>
         </div>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
             Annulla
           </button>
@@ -674,7 +674,7 @@ export default function PraticaDettaglio() {
                 motivazione: motivazione.trim(),
               })
             }
-            className="px-4 py-2 text-sm rounded-lg bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
@@ -684,21 +684,21 @@ export default function PraticaDettaglio() {
 
       {/* Sblocca pagamento */}
       <Modal open={modalOpen === 'sblocca'} title="Sblocca pagamento" onClose={() => setModalOpen(null)}>
-        <p className="text-sm text-gray-600 mb-5">
+        <p className="text-sm text-stone mb-5">
           Confermi di voler sbloccare il pagamento per il riacquisto di{' '}
           <strong>{pratica.cliente.ragione_sociale}</strong>?
         </p>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
             Annulla
           </button>
           <button
             disabled={actionLoading}
             onClick={() => doAction(`/api/backoffice/pratiche/${id}/sblocca-pagamento`)}
-            className="px-4 py-2 text-sm rounded-lg bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
@@ -710,13 +710,13 @@ export default function PraticaDettaglio() {
       <Modal open={modalOpen === 'decisione-manuale'} title="Decisione manuale" onClose={() => setModalOpen(null)}>
         <div className="space-y-3 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Opzione</label>
+            <label className="block text-sm font-medium text-graphite mb-2">Opzione</label>
             <div className="space-y-2">
               {(['RINNOVO', 'RIACQUISTO', 'CONTATTO', 'RESTITUZIONE'] as const).map((opt) => (
                 <label
                   key={opt}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                    decisioneScelta === opt ? 'border-[#1a3a52] bg-[#1a3a52]/5' : 'border-gray-200 hover:bg-gray-50'
+                    decisioneScelta === opt ? 'border-flex bg-flex/5' : 'border-border hover:bg-paper'
                   }`}
                 >
                   <input
@@ -725,7 +725,7 @@ export default function PraticaDettaglio() {
                     value={opt}
                     checked={decisioneScelta === opt}
                     onChange={() => setDecisioneScelta(opt)}
-                    className="accent-[#1a3a52]"
+                    className="accent-flex"
                   />
                   <span className="text-sm">{opt.charAt(0) + opt.slice(1).toLowerCase()}</span>
                 </label>
@@ -733,20 +733,20 @@ export default function PraticaDettaglio() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Note (facoltative)</label>
+            <label className="block text-sm font-medium text-graphite mb-1">Note (facoltative)</label>
             <textarea
               value={decisioneNote}
               onChange={(e) => setDecisioneNote(e.target.value)}
               rows={2}
               placeholder="Note aggiuntive..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/30 resize-none"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 resize-none"
             />
           </div>
         </div>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
             Annulla
           </button>
@@ -758,7 +758,7 @@ export default function PraticaDettaglio() {
                 ...(decisioneNote.trim() ? { note: decisioneNote.trim() } : {}),
               })
             }
-            className="px-4 py-2 text-sm rounded-lg bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
@@ -785,7 +785,7 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border bg-card hover:bg-paper text-graphite transition-colors"
     >
       {icon}
       {label}
@@ -809,8 +809,8 @@ function TabPanoramica({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {/* Dati cliente */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Dati cliente</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-semibold text-graphite mb-3">Dati cliente</h3>
         <dl className="space-y-2 text-sm">
           <Row label="Ragione sociale" value={pratica.cliente.ragione_sociale} />
           <Row label="P.IVA" value={pratica.cliente.piva} />
@@ -830,8 +830,8 @@ function TabPanoramica({
       </div>
 
       {/* Dati contratto */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Calcolo economico</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-semibold text-graphite mb-3">Calcolo economico</h3>
         <dl className="space-y-2 text-sm">
           <Row label="Pricing Grenke (5%)" value={formatEur(pratica.pricing_grenke)} />
           <Row label="Pricing riacquisto (8%)" value={formatEur(pratica.pricing_riacquisto)} />
@@ -842,8 +842,8 @@ function TabPanoramica({
       </div>
 
       {/* Contratto */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Dati contratto</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-semibold text-graphite mb-3">Dati contratto</h3>
         <dl className="space-y-2 text-sm">
           <Row label="Contratto NSM" value={pratica.contratto_nsm_id} mono />
           <Row label="Contratto Grenke" value={pratica.contratto_grenke_id} mono />
@@ -854,8 +854,8 @@ function TabPanoramica({
           <Row label="Monte canoni" value={formatEur(pratica.monte_canoni)} />
           {beni.length > 0 && (
             <div className="flex flex-col sm:flex-row sm:gap-3 pt-1">
-              <dt className="text-gray-500 sm:w-40 shrink-0">Beni</dt>
-              <dd className="text-gray-900">
+              <dt className="text-stone sm:w-40 shrink-0">Beni</dt>
+              <dd className="text-graphite">
                 <ul className="list-disc list-inside">
                   {beni.map((b, i) => (
                     <li key={i}>{b}</li>
@@ -868,11 +868,11 @@ function TabPanoramica({
       </div>
 
       {/* Stato corrente */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Stato corrente</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-semibold text-graphite mb-3">Stato corrente</h3>
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-gray-500 text-xs uppercase tracking-wide">Stato</span>
+            <span className="text-stone text-xs uppercase tracking-wide">Stato</span>
             <div className="mt-1">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${badge.bg}`}>
                 {badge.label}
@@ -880,24 +880,24 @@ function TabPanoramica({
             </div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs uppercase tracking-wide">Origine</span>
-            <p className="text-gray-900 mt-0.5">{pratica.origine || '—'}</p>
+            <span className="text-stone text-xs uppercase tracking-wide">Origine</span>
+            <p className="text-graphite mt-0.5">{pratica.origine || '—'}</p>
           </div>
           <div>
-            <span className="text-gray-500 text-xs uppercase tracking-wide">Agente assegnato</span>
-            <p className="text-gray-900 mt-0.5">
+            <span className="text-stone text-xs uppercase tracking-wide">Agente assegnato</span>
+            <p className="text-graphite mt-0.5">
               {pratica.agente_assegnato
                 ? `${pratica.agente_assegnato.nome} ${pratica.agente_assegnato.cognome}`
                 : '— Nessuno —'}
             </p>
             {pratica.agente_assegnato?.email && (
-              <p className="text-gray-500 text-xs">{pratica.agente_assegnato.email}</p>
+              <p className="text-stone text-xs">{pratica.agente_assegnato.email}</p>
             )}
           </div>
           {pratica.agente_originario && (
             <div>
-              <span className="text-gray-500 text-xs uppercase tracking-wide">Agente originario</span>
-              <p className="text-gray-900 mt-0.5">
+              <span className="text-stone text-xs uppercase tracking-wide">Agente originario</span>
+              <p className="text-graphite mt-0.5">
                 {pratica.agente_originario.nome} {pratica.agente_originario.cognome}
               </p>
             </div>
@@ -906,18 +906,18 @@ function TabPanoramica({
           {/* Decisioni */}
           {pratica.decisioni.length > 0 && (
             <div className="pt-2 border-t">
-              <span className="text-gray-500 text-xs uppercase tracking-wide">Decisioni registrate</span>
+              <span className="text-stone text-xs uppercase tracking-wide">Decisioni registrate</span>
               <div className="mt-2 space-y-2">
                 {pratica.decisioni.map((d, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 text-xs">
+                  <div key={i} className="bg-paper rounded-lg p-3 text-xs">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-900">{d.opzione_scelta}</span>
-                      <span className="text-gray-500">{formatDateTime(d.created_at)}</span>
+                      <span className="font-medium text-graphite">{d.opzione_scelta}</span>
+                      <span className="text-stone">{formatDateTime(d.created_at)}</span>
                     </div>
-                    <div className="text-gray-500 mt-1">
+                    <div className="text-stone mt-1">
                       OTP: {d.otp_verificato ? 'verificato' : 'non verificato'} ({d.otp_metodo})
                     </div>
-                    {d.note_cliente && <p className="text-gray-700 mt-1 italic">{d.note_cliente}</p>}
+                    {d.note_cliente && <p className="text-graphite mt-1 italic">{d.note_cliente}</p>}
                   </div>
                 ))}
               </div>
@@ -927,27 +927,27 @@ function TabPanoramica({
           {/* Pagamenti */}
           {pratica.pagamenti.length > 0 && (
             <div className="pt-2 border-t">
-              <span className="text-gray-500 text-xs uppercase tracking-wide">Pagamenti</span>
+              <span className="text-stone text-xs uppercase tracking-wide">Pagamenti</span>
               <div className="mt-2 space-y-2">
                 {pratica.pagamenti.map((p, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 text-xs flex justify-between items-center">
+                  <div key={i} className="bg-paper rounded-lg p-3 text-xs flex justify-between items-center">
                     <div>
-                      <span className="font-medium text-gray-900">{formatEur(p.importo_totale)}</span>
-                      <span className="text-gray-500 ml-2">{p.metodo}</span>
+                      <span className="font-medium text-graphite">{formatEur(p.importo_totale)}</span>
+                      <span className="text-stone ml-2">{p.metodo}</span>
                     </div>
                     <div className="text-right">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           p.stato === 'COMPLETATO'
-                            ? 'bg-green-100 text-green-700'
+                            ? 'bg-ok text-ok-text'
                             : p.stato === 'FALLITO'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-yellow-100 text-yellow-700'
+                            ? 'bg-danger text-danger-text'
+                            : 'bg-warn text-warn-text'
                         }`}
                       >
                         {p.stato}
                       </span>
-                      <div className="text-gray-500 mt-0.5">{formatDateTime(p.data_iniziato)}</div>
+                      <div className="text-stone mt-0.5">{formatDateTime(p.data_iniziato)}</div>
                     </div>
                   </div>
                 ))}
@@ -967,7 +967,7 @@ function TabPanoramica({
 function TabTimeline({ timeline }: { timeline: TimelineEntry[] }) {
   if (!timeline || timeline.length === 0) {
     return (
-      <div className="bg-white rounded-xl border p-8 text-center text-gray-500 text-sm">
+      <div className="bg-card rounded-xl border border-border p-8 text-center text-stone text-sm">
         Nessun evento nella timeline.
       </div>
     );
@@ -976,40 +976,40 @@ function TabTimeline({ timeline }: { timeline: TimelineEntry[] }) {
   return (
     <div className="relative">
       {/* Vertical line */}
-      <div className="absolute left-5 top-0 bottom-0 w-px bg-gray-200" />
+      <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
 
       <div className="space-y-4">
         {timeline.map((entry, i) => (
           <div key={i} className="relative pl-12">
             {/* Icon bubble */}
-            <div className="absolute left-2.5 top-3 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-gray-200">
+            <div className="absolute left-2.5 top-3 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-border">
               {timelineIcon(entry.tipo)}
             </div>
 
             <div className={`rounded-lg border p-4 ${timelineColor(entry.tipo)}`}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{entry.tipo}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-stone">{entry.tipo}</span>
                   {entry.sottotipo && (
-                    <span className="text-xs text-gray-500">/ {entry.sottotipo}</span>
+                    <span className="text-xs text-stone">/ {entry.sottotipo}</span>
                   )}
                 </div>
-                <span className="text-xs text-gray-500">{formatDateTime(entry.data)}</span>
+                <span className="text-xs text-stone">{formatDateTime(entry.data)}</span>
               </div>
-              <p className="text-sm text-gray-800">{entry.dettaglio}</p>
+              <p className="text-sm text-graphite">{entry.dettaglio}</p>
               {entry.canale && (
-                <p className="text-xs text-gray-500 mt-1">Canale: {entry.canale}</p>
+                <p className="text-xs text-stone mt-1">Canale: {entry.canale}</p>
               )}
               {entry.esito && (
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-stone mt-1">
                   <strong>Esito:</strong> {entry.esito}
                 </p>
               )}
               {entry.note && (
-                <p className="text-xs text-gray-500 mt-1 italic">Note: {entry.note}</p>
+                <p className="text-xs text-stone mt-1 italic">Note: {entry.note}</p>
               )}
               {entry.assegnato && (
-                <p className="text-xs text-gray-500 mt-1">Assegnato a: {entry.assegnato}</p>
+                <p className="text-xs text-stone mt-1">Assegnato a: {entry.assegnato}</p>
               )}
             </div>
           </div>
@@ -1034,7 +1034,7 @@ function TabRichieste({
 }) {
   if (!richieste || richieste.length === 0) {
     return (
-      <div className="bg-white rounded-xl border p-8 text-center text-gray-500 text-sm">
+      <div className="bg-card rounded-xl border border-border p-8 text-center text-stone text-sm">
         Nessuna richiesta di contatto.
       </div>
     );
@@ -1045,17 +1045,17 @@ function TabRichieste({
       {richieste.map((r) => {
         const isRichiamato = r.stato === 'RICHIAMATO';
         return (
-          <div key={r.id} className="bg-white rounded-xl border p-5">
+          <div key={r.id} className="bg-card rounded-xl border border-border p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-gray-400" />
-                <span className="font-medium text-gray-900">{r.nome_referente || 'Referente non specificato'}</span>
+                <span className="font-medium text-graphite">{r.nome_referente || 'Referente non specificato'}</span>
               </div>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   isRichiamato
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'
+                    ? 'bg-ok text-ok-text'
+                    : 'bg-warn text-warn-text'
                 }`}
               >
                 {r.stato}
@@ -1077,7 +1077,7 @@ function TabRichieste({
             </dl>
 
             {r.note && (
-              <p className="text-xs text-gray-500 italic mb-3">Note: {r.note}</p>
+              <p className="text-xs text-stone italic mb-3">Note: {r.note}</p>
             )}
 
             <button
@@ -1086,7 +1086,7 @@ function TabRichieste({
               className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 isRichiamato
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-[#1a3a52] text-white hover:bg-[#243f55] disabled:opacity-50'
+                  : 'bg-flex text-white hover:bg-flex-dark disabled:opacity-50'
               }`}
             >
               {richiamatoLoading === r.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -1111,12 +1111,12 @@ function TabAudit({ contrattoId }: { contrattoId: string }) {
 
   useEffect(() => {
     const headers: Record<string, string> = {};
-    const userId = sessionStorage.getItem('nsm_user_id');
-    if (userId) headers['x-user-id'] = userId;
+    const raw = localStorage.getItem('nsm_user');
+    if (raw) { try { headers['x-user-id'] = JSON.parse(raw).id; } catch {} }
 
     Promise.all([
-      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit`, { headers }).then(r => r.json()),
-      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit/verify`, { headers }).then(r => r.json()),
+      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit`, { headers, credentials: 'include' }).then(r => r.ok ? r.json() : []),
+      fetch(`/api/backoffice/pratiche-dettaglio/${contrattoId}/audit/verify`, { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
     ]).then(([ev, ver]) => {
       setEventi(ev);
       setVerifica(ver);
@@ -1132,15 +1132,15 @@ function TabAudit({ contrattoId }: { contrattoId: string }) {
     });
   };
 
-  if (loading) return <div className="text-center py-8 text-gray-500 text-sm">Caricamento audit log...</div>;
+  if (loading) return <div className="text-center py-8 text-stone text-sm">Caricamento audit log...</div>;
 
   return (
     <div className="space-y-4">
       {verifica && (
         <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
           verifica.integra
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-red-50 text-red-700 border border-red-200'
+            ? 'bg-ok text-ok-text border border-ok-border'
+            : 'bg-danger text-danger-text border border-danger-border'
         }`}>
           <span>{verifica.integra ? '✓' : '⚠'}</span>
           <span>
@@ -1152,14 +1152,14 @@ function TabAudit({ contrattoId }: { contrattoId: string }) {
       )}
 
       {eventi.length === 0 ? (
-        <div className="bg-gray-100 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-          <p className="text-gray-500 text-sm">Nessun evento audit registrato</p>
+        <div className="bg-paper rounded-xl border border-dashed border-border p-8 text-center">
+          <p className="text-stone text-sm">Nessun evento audit registrato</p>
         </div>
       ) : (
-        <div className="border rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b text-left text-gray-600">
+              <tr className="bg-paper border-b text-left text-stone">
                 <th className="px-4 py-2 font-medium">Timestamp</th>
                 <th className="px-4 py-2 font-medium">Attore</th>
                 <th className="px-4 py-2 font-medium">Azione</th>
@@ -1172,27 +1172,27 @@ function TabAudit({ contrattoId }: { contrattoId: string }) {
                 let dati: Record<string, unknown> = {};
                 try { dati = JSON.parse(ev.dati_json); } catch {}
                 return (
-                  <tr key={ev.id} className="border-b last:border-b-0 hover:bg-gray-50">
-                    <td className="px-4 py-2 text-gray-600 whitespace-nowrap font-mono text-xs">
+                  <tr key={ev.id} className="border-b last:border-b-0 hover:bg-paper">
+                    <td className="px-4 py-2 text-stone whitespace-nowrap font-mono text-xs">
                       {new Date(ev.timestamp).toLocaleString('it-IT')}
                     </td>
                     <td className="px-4 py-2">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        ev.attore_tipo === 'CLIENTE' ? 'bg-blue-100 text-blue-700' :
-                        ev.attore_tipo === 'BACKOFFICE' ? 'bg-purple-100 text-purple-700' :
-                        'bg-gray-100 text-gray-700'
+                        ev.attore_tipo === 'CLIENTE' ? 'bg-flex-light text-flex-dark' :
+                        ev.attore_tipo === 'BACKOFFICE' ? 'bg-outlier text-outlier-text' :
+                        'bg-paper text-stone'
                       }`}>{ev.attore_tipo}</span>
                     </td>
-                    <td className="px-4 py-2 font-medium text-gray-900">{ev.azione}</td>
+                    <td className="px-4 py-2 font-medium text-graphite">{ev.azione}</td>
                     <td className="px-4 py-2">
                       <button
                         onClick={() => toggleExpand(ev.id)}
-                        className="text-blue-600 hover:text-blue-800 text-xs underline"
+                        className="text-flex hover:text-flex-dark text-xs underline"
                       >
                         {isOpen ? 'Nascondi' : 'Mostra'}
                       </button>
                       {isOpen && (
-                        <pre className="mt-2 text-xs bg-gray-100 rounded p-2 max-w-md overflow-x-auto whitespace-pre-wrap">
+                        <pre className="mt-2 text-xs bg-paper rounded p-2 max-w-md overflow-x-auto whitespace-pre-wrap font-mono">
                           {JSON.stringify(dati, null, 2)}
                         </pre>
                       )}
@@ -1208,7 +1208,7 @@ function TabAudit({ contrattoId }: { contrattoId: string }) {
       <div className="flex justify-end">
         <a
           href={`/api/admin/audit/export/${contrattoId}`}
-          className="text-sm text-blue-600 hover:text-blue-800 underline"
+          className="text-sm text-flex hover:text-flex-dark underline"
           target="_blank"
           rel="noreferrer"
         >
@@ -1236,9 +1236,9 @@ function Row({
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:gap-3">
-      <dt className="text-gray-500 sm:w-40 shrink-0">{label}</dt>
+      <dt className="text-stone sm:w-40 shrink-0">{label}</dt>
       <dd
-        className={`text-gray-900 ${mono ? 'font-mono text-xs' : ''} ${highlight ? 'font-semibold text-green-700' : ''}`}
+        className={`text-graphite ${mono ? 'font-mono text-xs' : ''} ${highlight ? 'font-semibold text-ok-text' : ''}`}
       >
         {value || '—'}
       </dd>

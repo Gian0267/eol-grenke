@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Flowchart Processo EOL Grenke — Pagina 1</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #fff;
+    width: 297mm; height: 210mm;
+    overflow: hidden;
+    padding: 6mm 8mm 5mm 8mm;
+    display: flex; flex-direction: column;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2.5px solid #1a3a52; padding-bottom: 4px; margin-bottom: 5px;
+  }
+  .header h1 { font-size: 14px; color: #1a3a52; font-weight: 800; }
+  .header .sub { font-size: 8.5px; color: #64748b; }
+  .header .logo { font-size: 16px; font-weight: 900; color: #1a3a52; }
+  .header .page { font-size: 8px; color: #94a3b8; }
+  .main { flex: 1; display: flex; flex-direction: column; gap: 0; }
+
+  /* Swim lanes */
+  .swimlanes { flex: 1; display: flex; flex-direction: column; gap: 0; }
+  .lane { flex: 1; display: flex; position: relative; border-bottom: 1px solid #e2e8f0; }
+  .lane:last-child { border-bottom: none; }
+  .lane-header {
+    width: 68px; flex-shrink: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 4px; border-right: 2px solid;
+  }
+  .lane-header .actor-icon {
+    width: 30px; height: 30px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; font-size: 14px;
+    color: #fff; margin-bottom: 2px;
+  }
+  .lane-header .actor-name { font-size: 7.5px; font-weight: 800; text-align: center; }
+  .lane-header .actor-sub { font-size: 5px; color: #64748b; text-align: center; }
+
+  .lane-grenke .lane-header { border-color: #7c3aed; background: #faf5ff; }
+  .lane-grenke .actor-icon { background: #7c3aed; }
+  .lane-grenke .actor-name { color: #7c3aed; }
+  .lane-nsm .lane-header { border-color: #1a3a52; background: #f0f4f8; }
+  .lane-nsm .actor-icon { background: #1a3a52; }
+  .lane-nsm .actor-name { color: #1a3a52; }
+  .lane-cliente .lane-header { border-color: #16a34a; background: #f0fdf4; }
+  .lane-cliente .actor-icon { background: #16a34a; }
+  .lane-cliente .actor-name { color: #16a34a; }
+
+  .lane-body {
+    flex: 1; display: flex; align-items: center; padding: 5px 8px; gap: 0;
+    position: relative;
+  }
+  .flow-bg {
+    position: absolute; top: 50%; left: 74px; right: 10px;
+    height: 1px; background: #e2e8f0; z-index: 0;
+  }
+
+  /* Nodes */
+  .node {
+    display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+    position: relative; z-index: 2;
+  }
+  .node-ref {
+    font-size: 5.5px; font-weight: 700; color: #fff; background: #64748b;
+    border-radius: 2px; padding: 0.5px 3px; margin-bottom: 2px; white-space: nowrap;
+  }
+  .node-box {
+    border-radius: 7px; padding: 4px 7px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07); border: 1.5px solid;
+    min-width: 68px; max-width: 115px;
+  }
+  .node-title { font-size: 6.5px; font-weight: 700; line-height: 1.3; }
+  .node-desc { font-size: 5px; color: #64748b; line-height: 1.2; margin-top: 1px; }
+  .node-icon { font-size: 13px; margin-bottom: 1px; }
+
+  .node-purple .node-box { background: #faf5ff; border-color: #c4b5fd; }
+  .node-purple .node-title { color: #7c3aed; }
+  .node-purple .node-ref { background: #7c3aed; }
+  .node-navy .node-box { background: #f0f4f8; border-color: #94a3b8; }
+  .node-navy .node-title { color: #1a3a52; }
+  .node-navy .node-ref { background: #1a3a52; }
+  .node-blue .node-box { background: #eff6ff; border-color: #93c5fd; }
+  .node-blue .node-title { color: #2563eb; }
+  .node-blue .node-ref { background: #2563eb; }
+  .node-green .node-box { background: #f0fdf4; border-color: #86efac; }
+  .node-green .node-title { color: #16a34a; }
+  .node-green .node-ref { background: #16a34a; }
+  .node-amber .node-box { background: #fffbeb; border-color: #fcd34d; }
+  .node-amber .node-title { color: #b45309; }
+  .node-amber .node-ref { background: #b45309; }
+  .node-red .node-box { background: #fef2f2; border-color: #fca5a5; }
+  .node-red .node-title { color: #dc2626; }
+  .node-red .node-ref { background: #dc2626; }
+
+  .arrow { display: flex; align-items: center; color: #94a3b8; font-size: 15px; margin: 0 3px; flex-shrink: 0; z-index: 1; }
+  .spacer { flex: 1; }
+
+  /* Diamond */
+  .diamond-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; z-index: 2; }
+  .diamond {
+    width: 40px; height: 40px; transform: rotate(45deg); border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .diamond span { transform: rotate(-45deg); font-size: 6px; font-weight: 700; text-align: center; line-height: 1.2; color: #fff; }
+  .diamond-label { font-size: 5px; color: #64748b; margin-top: 4px; text-align: center; }
+
+  /* Outcomes */
+  .outcomes { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; z-index: 2; }
+  .outcome {
+    font-size: 5.5px; padding: 2px 5px; border-radius: 3px; border: 1px solid;
+    display: flex; align-items: center; gap: 2px; white-space: nowrap;
+  }
+  .outcome-green { background: #f0fdf4; border-color: #86efac; color: #166534; }
+  .outcome-blue { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+  .outcome-amber { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+  .outcome-red { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+
+  /* Ref box */
+  .ref-box {
+    border: 2px dashed; border-radius: 7px; padding: 3px 7px;
+    text-align: center; flex-shrink: 0; z-index: 2;
+  }
+  .ref-box .ref-title { font-size: 6.5px; font-weight: 700; }
+  .ref-box .ref-sub { font-size: 5px; }
+
+  /* Phase markers */
+  .phase-markers { display: flex; margin-bottom: 3px; padding-left: 68px; }
+  .phase {
+    flex: 1; text-align: center; font-size: 6px; font-weight: 700;
+    padding: 2px 0; border-radius: 3px; margin: 0 2px;
+  }
+  .phase-1 { background: #faf5ff; color: #7c3aed; }
+  .phase-2 { background: #eff6ff; color: #2563eb; }
+  .phase-3 { background: #f0fdf4; color: #16a34a; }
+  .phase-4 { background: #faf5ff; color: #7c3aed; }
+
+  .footer-note { font-size: 5.5px; color: #94a3b8; text-align: center; margin-top: 2px; }
+  .legend {
+    display: flex; gap: 10px; justify-content: center; align-items: center;
+    padding-top: 3px; border-top: 1px solid #e2e8f0; margin-top: 2px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 3px; font-size: 5.5px; color: #64748b; }
+  .legend-dot { width: 6px; height: 6px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Processo End-of-Lease — Vista d'insieme</h1>
+    <div class="sub">Ciclo completo: ricezione nominativi → gestione cliente → restituzione esiti a Grenke</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="logo">NSM</div>
+    <div class="page">Pagina 1 di 2</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="phase-markers">
+    <div class="phase phase-1">① RICEZIONE DA GRENKE</div>
+    <div class="phase phase-2">② COMUNICAZIONI AI CLIENTI</div>
+    <div class="phase phase-3">③ DECISIONE DEL CLIENTE</div>
+    <div class="phase phase-4">④ ESITI A GRENKE</div>
+  </div>
+
+  <div class="swimlanes">
+
+    <!-- GRENKE -->
+    <div class="lane lane-grenke">
+      <div class="lane-header">
+        <div class="actor-icon">G</div>
+        <div class="actor-name">GRENKE</div>
+        <div class="actor-sub">Società di leasing</div>
+      </div>
+      <div class="lane-body">
+        <div class="flow-bg"></div>
+        <div class="node node-purple">
+          <div class="node-box" style="min-width:88px;">
+            <div class="node-icon">📤</div>
+            <div class="node-title">Invio lista contratti<br>in scadenza</div>
+            <div class="node-desc">File Excel con dati<br>contratti FLEX</div>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="spacer"></div>
+        <div class="spacer"></div>
+        <div class="node node-purple" style="margin-left:auto;">
+          <div class="node-box" style="min-width:88px;">
+            <div class="node-icon">📥</div>
+            <div class="node-title">Ricezione esiti<br>da NSM</div>
+            <div class="node-desc">Report per contratto:<br>decisione + stato</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="outcomes">
+          <div class="outcome outcome-green">🔄 Rinnovo → nuovo contratto FLEX</div>
+          <div class="outcome outcome-blue">🛒 Riacquisto → trasferimento proprietà</div>
+          <div class="outcome outcome-amber">📦 Restituzione → ritiro beni</div>
+          <div class="outcome outcome-red">⏸ Silenzio → proroga 6 mesi</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NSM -->
+    <div class="lane lane-nsm" style="flex: 1.6;">
+      <div class="lane-header">
+        <div class="actor-icon" style="font-size:9px; font-weight:900;">NSM</div>
+        <div class="actor-name">NSM</div>
+        <div class="actor-sub">Smartcom Solutions<br>Backoffice</div>
+      </div>
+      <div class="lane-body">
+        <div class="flow-bg"></div>
+
+        <div class="node node-navy">
+          <div class="node-ref">Sez. 3</div>
+          <div class="node-box">
+            <div class="node-icon">📥</div>
+            <div class="node-title">Import Excel</div>
+            <div class="node-desc">Upload nel sistema</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-navy">
+          <div class="node-ref">Sez. 3</div>
+          <div class="node-box">
+            <div class="node-icon">🔄</div>
+            <div class="node-title">Riconciliazione</div>
+            <div class="node-desc">Match con DB<br>clienti esistenti</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-amber">
+          <div class="node-ref">Sez. 4</div>
+          <div class="node-box">
+            <div class="node-icon">⚠️</div>
+            <div class="node-title">Outlier</div>
+            <div class="node-desc">Associa / Crea<br>/ Scarta</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-blue">
+          <div class="node-ref">Sez. 6 + 7</div>
+          <div class="node-box" style="min-width:82px;">
+            <div class="node-icon">📧</div>
+            <div class="node-title">Comunicazione<br>iniziale</div>
+            <div class="node-desc">Email + PEC<br>con link area cliente</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-blue">
+          <div class="node-ref">Sez. 15</div>
+          <div class="node-box" style="min-width:72px;">
+            <div class="node-icon">🔁</div>
+            <div class="node-title">Solleciti email</div>
+            <div class="node-desc">Automatici<br>T-90, T-75, T-60, T-45</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-amber">
+          <div class="node-ref">Sez. 16</div>
+          <div class="node-box" style="min-width:78px;">
+            <div class="node-icon">☎️</div>
+            <div class="node-title">Escalation<br>telefoniche</div>
+            <div class="node-desc">Agenti chiamano<br>T-50, T-40, T-35</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="ref-box" style="border-color: #16a34a; min-width: 75px;">
+          <div class="ref-title" style="color:#16a34a;">Gestione esiti</div>
+          <div class="ref-sub" style="color:#64748b;">Assegnazione agente<br>Task, PDF, email<br>Pagamenti T-7</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-purple">
+          <div class="node-ref">Sez. 17</div>
+          <div class="node-box" style="min-width:75px;">
+            <div class="node-icon">📊</div>
+            <div class="node-title">Report &amp; Export</div>
+            <div class="node-desc">Audit trail<br>PDF + CSV</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTE -->
+    <div class="lane lane-cliente">
+      <div class="lane-header">
+        <div class="actor-icon">👤</div>
+        <div class="actor-name">CLIENTE</div>
+        <div class="actor-sub">Azienda con<br>contratto FLEX</div>
+      </div>
+      <div class="lane-body">
+        <div class="flow-bg"></div>
+        <div class="spacer"></div>
+        <div class="node node-blue" style="margin-left:auto;">
+          <div class="node-box">
+            <div class="node-icon">📬</div>
+            <div class="node-title">Riceve email</div>
+            <div class="node-desc">Notifica scadenza<br>+ link area cliente</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node node-green">
+          <div class="node-ref">Sez. 9</div>
+          <div class="node-box">
+            <div class="node-icon">🌐</div>
+            <div class="node-title">Area Cliente</div>
+            <div class="node-desc">Accesso via JWT<br>4 opzioni disponibili</div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="diamond-wrap">
+          <div class="diamond" style="background:#16a34a;">
+            <span>Scelta</span>
+          </div>
+          <div class="diamond-label">vedi pag. 2</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="outcomes">
+          <div class="outcome outcome-green">🔄 Rinnovo + scelta beni <b style="margin-left:2px; font-size:5px; color:#16a34a;">Sez. 11</b></div>
+          <div class="outcome outcome-blue">🛒 Riacquisto (pag. T-7) <b style="margin-left:2px; font-size:5px; color:#2563eb;">Sez. 10</b></div>
+          <div class="outcome outcome-amber">📦 Restituzione (OTP) <b style="margin-left:2px; font-size:5px; color:#92400e;">Sez. 13</b></div>
+          <div class="outcome outcome-red">💬 Contatto person. <b style="margin-left:2px; font-size:5px; color:#991b1b;">Sez. 12</b></div>
+        </div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#faf5ff; border:1px solid #c4b5fd;"></div> Grenke</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0f4f8; border:1px solid #94a3b8;"></div> NSM / Backoffice</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0fdf4; border:1px solid #86efac;"></div> Cliente</div>
+    <div style="font-size:5px; color:#94a3b8; margin-left:8px;">I riferimenti <b style="background:#64748b;color:#fff;padding:0 2px;border-radius:1px;font-size:5px;">Sez. N</b> rimandano alla sezione corrispondente del Manuale Operativo</div>
+  </div>
+</div>
+
+<div class="footer-note">Manuale Operativo NSM EOL Grenke — v1.0 — Smartcom Solutions Srl — Maggio 2026</div>
+</body>
+</html>

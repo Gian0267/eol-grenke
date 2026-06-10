@@ -1,12 +1,17 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
-import { createWriteStream, readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
+import { saveDocument } from './storage.service.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const storagePath = resolve(__dirname, '../../../backend/storage/pdfs');
+/** Raccoglie l'output di un documento PDFKit in un Buffer in memoria. */
+function collectPdf(doc: InstanceType<typeof PDFDocument>): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+  });
+}
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -71,15 +76,13 @@ export async function generaRicevutaPagamento(
   try { beni = JSON.parse(contratto.beni_json); } catch {}
 
   const filename = `ricevuta_pagamento_${contratto.id}_${Date.now()}.pdf`;
-  const pdfPath = resolve(storagePath, filename);
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: `Ricevuta di conferma pagamento ${fatturaNumero}`,
     Author: 'Noleggio Su Misura - Smartcom Solutions Srl',
   }});
 
-  const stream = createWriteStream(pdfPath);
-  doc.pipe(stream);
+  const pdfDone = collectPdf(doc);
 
   // Header
   doc.fontSize(16).font('Helvetica-Bold')
@@ -205,26 +208,24 @@ export async function generaRicevutaPagamento(
   doc.text('Documento generato automaticamente dalla piattaforma Noleggio Su Misura', { align: 'center' });
 
   doc.end();
-
-  await new Promise<void>((res, rej) => {
-    stream.on('finish', res);
-    stream.on('error', rej);
-  });
+  const pdfBuffer = await pdfDone;
 
   // Hash SHA-256
-  const pdfBuffer = readFileSync(pdfPath);
   const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+  // Salva su storage (Supabase o locale) e ottieni il riferimento
+  const pdfRef = await saveDocument(pdfBuffer, filename);
 
   // Aggiorna Pagamento
   await prisma.pagamento.update({
     where: { id: pagamentoId },
     data: {
       fattura_numero: fatturaNumero,
-      fattura_path: pdfPath,
+      fattura_path: pdfRef,
     },
   });
 
   console.log(`[Ricevuta] Generata: ${fatturaNumero} — ${filename} (hash: ${hash.substring(0, 16)}...)`);
 
-  return { pdfPath, fatturaNumero, hash };
+  return { pdfPath: pdfRef, fatturaNumero, hash };
 }

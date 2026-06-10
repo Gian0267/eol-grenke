@@ -1,13 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Gift, Shield, Mail, Smartphone, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import {
+  ArrowLeft, Gift, Shield, Mail, Smartphone, Loader2, CheckCircle2,
+  ArrowRight, ShoppingBag, Undo2, Package, AlertTriangle,
+} from 'lucide-react';
 
 const API_BASE = '';
 
 interface PraticaData {
   cliente: { ragione_sociale: string };
   contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[]; monte_canoni: number };
-  economica: { valore_gift_card: number; abilita_gift_card?: boolean };
+  economica: {
+    pricing_riacquisto: number;
+    pricing_riacquisto_iva: number;
+    pricing_riacquisto_totale: number;
+    valore_gift_card: number;
+    abilita_gift_card?: boolean;
+  };
 }
 
 interface ConfigPubblica {
@@ -16,6 +25,14 @@ interface ConfigPubblica {
 
 const TIPI_DEVICE = ['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro'] as const;
 const DURATE = ['24', '36', '48'] as const;
+
+const ISTRUZIONI_RESTITUZIONE = [
+  'Disabilita "Trova il mio iPhone" (Apple) o Samsung Knox / Google FRP su tutti i dispositivi.',
+  'Esegui il ripristino alle impostazioni di fabbrica (factory reset).',
+  'Verifica l\'integrità: il dispositivo deve essere funzionante, senza danni, con tutti gli accessori originali.',
+  'Imballa ogni dispositivo nel packaging originale o in un imballo adeguato.',
+  'Spedisci a: Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Spese a carico del cliente.',
+];
 
 function formatEur(n: number): string {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,23 +46,29 @@ export default function FlussoRinnovo() {
   const [errore, setErrore] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
+  // Step 1 — Goods choice
+  const [sceltaBeni, setSceltaBeni] = useState<'TENGO' | 'RESTITUISCO' | null>(null);
+  const [confermaRestituzione, setConfermaRestituzione] = useState(false);
+
+  // Step 2 — Renewal preferences
   const [tipoDevice, setTipoDevice] = useState<string>('Apple MacBook');
   const [numDevice, setNumDevice] = useState(1);
   const [durata, setDurata] = useState<string>('36');
   const [budget, setBudget] = useState<string>('');
   const [note, setNote] = useState('');
 
-  // OTP state
+  // Step 3 — OTP
   const [metodoOtp, setMetodoOtp] = useState<'SMS' | 'EMAIL' | null>(null);
   const [codiceOtp, setCodiceOtp] = useState('');
   const [countdown, setCountdown] = useState(600);
   const otpInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Conferma
+  // Step 4 — Confirmation
   const [valoreGiftCard, setValoreGiftCard] = useState(0);
   const [giftCardAbilitata, setGiftCardAbilitata] = useState(true);
+  const [risultatoSceltaBeni, setRisultatoSceltaBeni] = useState<'TENGO' | 'RESTITUISCO' | null>(null);
+  const [pagamentoDifferito, setPagamentoDifferito] = useState<{ differito: boolean; data?: string } | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -61,7 +84,6 @@ export default function FlussoRinnovo() {
       .then(([praticaData, configData]) => {
         setPratica(praticaData);
         setValoreGiftCard(praticaData.economica.valore_gift_card);
-        // Priorità: config endpoint > campo in pratica > default true
         const flagAbilitato = configData?.abilita_gift_card ?? praticaData.economica.abilita_gift_card ?? true;
         setGiftCardAbilitata(flagAbilitato);
       })
@@ -70,7 +92,7 @@ export default function FlussoRinnovo() {
   }, [token]);
 
   useEffect(() => {
-    if (step === 2 && metodoOtp) {
+    if (step === 3 && metodoOtp) {
       timerRef.current = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) { if (timerRef.current) clearInterval(timerRef.current); return 0; }
@@ -82,15 +104,16 @@ export default function FlussoRinnovo() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [step, metodoOtp]);
 
-  const inviaOtpERiepilogo = async (metodo: 'SMS' | 'EMAIL') => {
+  const inviaOtp = async (metodo: 'SMS' | 'EMAIL') => {
     setMetodoOtp(metodo);
     setErrore(null);
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/cliente/decisione/rinnovo/inizia`, {
+      const res = await fetch(`${API_BASE}/api/cliente/decisione/rinnovo-completo/inizia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
+          scelta_beni: sceltaBeni,
           tipo_device: tipoDevice,
           numero_device: numDevice,
           durata_desiderata: durata,
@@ -111,16 +134,17 @@ export default function FlussoRinnovo() {
   };
 
   const confermaRinnovo = async () => {
-    if (codiceOtp.length !== 6 || !metodoOtp) return;
+    if (codiceOtp.length !== 6 || !metodoOtp || !sceltaBeni) return;
     setErrore(null);
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/cliente/decisione/rinnovo/conferma`, {
+      const res = await fetch(`${API_BASE}/api/cliente/decisione/rinnovo-completo/conferma`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           codice: codiceOtp,
           metodo_otp: metodoOtp,
+          scelta_beni: sceltaBeni,
           tipo_device: tipoDevice,
           numero_device: numDevice,
           durata_desiderata: Number(durata),
@@ -131,8 +155,14 @@ export default function FlussoRinnovo() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.errore || 'Errore conferma');
       setValoreGiftCard(body.valore_gift_card || valoreGiftCard);
+      setRisultatoSceltaBeni(body.scelta_beni || sceltaBeni);
+      if (body.pagamento_differito) {
+        setPagamentoDifferito({ differito: true, data: body.data_pagamento });
+      } else if (body.pagamento_immediato) {
+        setPagamentoDifferito({ differito: false });
+      }
       if (timerRef.current) clearInterval(timerRef.current);
-      setStep(3);
+      setStep(4);
     } catch (err: any) {
       setErrore(err.message);
     } finally {
@@ -178,20 +208,160 @@ export default function FlussoRinnovo() {
         </div>
       </header>
 
-      {/* Progress */}
+      {/* Progress — 4 steps */}
       <div className="max-w-2xl mx-auto px-4 pt-6">
         <div className="flex items-center gap-1 mb-6">
-          {[1, 2, 3].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? 'bg-[#16a34a]' : 'bg-gray-200'}`} />
           ))}
         </div>
       </div>
 
       <main className="max-w-2xl mx-auto px-4 pb-12">
-        {/* STEP 1 — Pre-qualificazione */}
+
+        {/* ═══════════ STEP 1 — Scelta beni ═══════════ */}
         {step === 1 && (
           <div className="space-y-6">
-            {/* Banner gift card — visibile solo se flag abilitato */}
+            <div className="bg-white rounded-xl border p-6">
+              <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Cosa vuoi fare con i beni attuali?</h2>
+              <p className="text-sm text-gray-600 mb-5">
+                Prima di procedere con il rinnovo, scegli se tenere o restituire i dispositivi attualmente in uso.
+              </p>
+
+              {/* Elenco beni */}
+              {pratica.contratto.beni.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-3 mb-5">
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">Beni in locazione:</p>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    {pratica.contratto.beni.map((b, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <Package className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Card: Li tengo (recommended) */}
+              <div
+                onClick={() => { setSceltaBeni('TENGO'); setConfermaRestituzione(false); }}
+                className={`cursor-pointer border-2 rounded-xl p-5 mb-4 transition-all ${
+                  sceltaBeni === 'TENGO'
+                    ? 'border-[#16a34a] bg-green-50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    sceltaBeni === 'TENGO' ? 'bg-[#16a34a] text-white' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    <ShoppingBag className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-[#1a3a52]">Li tengo</h3>
+                      <span className="text-xs bg-[#16a34a] text-white px-2 py-0.5 rounded-full font-medium">Consigliato</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Acquista i beni attuali al prezzo di riacquisto e procedi con un nuovo contratto.
+                    </p>
+                    <div className="bg-white rounded-lg border border-green-200 p-3">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xs text-gray-500">Netto</p>
+                          <p className="font-bold text-[#1a3a52]">&euro; {formatEur(pratica.economica.pricing_riacquisto)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">IVA</p>
+                          <p className="font-bold text-[#1a3a52]">&euro; {formatEur(pratica.economica.pricing_riacquisto_iva)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Totale</p>
+                          <p className="font-bold text-[#16a34a]">&euro; {formatEur(pratica.economica.pricing_riacquisto_totale)}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-amber-700 bg-amber-50 rounded mt-2 px-2 py-1 text-center">
+                        <AlertTriangle className="w-3 h-3 inline mr-1" />
+                        NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card: Li restituisco */}
+              <div
+                onClick={() => setSceltaBeni('RESTITUISCO')}
+                className={`cursor-pointer border-2 rounded-xl p-5 transition-all ${
+                  sceltaBeni === 'RESTITUISCO'
+                    ? 'border-[#2563eb] bg-blue-50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    sceltaBeni === 'RESTITUISCO' ? 'bg-[#2563eb] text-white' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    <Undo2 className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-[#1a3a52] mb-1">Li restituisco</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Restituisci i beni attuali e procedi con un nuovo contratto con nuovi dispositivi.
+                    </p>
+
+                    {sceltaBeni === 'RESTITUISCO' && (
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-lg border border-blue-200 p-3">
+                          <p className="text-xs font-semibold text-[#1a3a52] mb-2">Procedura di restituzione:</p>
+                          <ol className="space-y-2">
+                            {ISTRUZIONI_RESTITUZIONE.map((istr, i) => (
+                              <li key={i} className="flex gap-2 text-xs text-gray-700">
+                                <span className="w-5 h-5 rounded-full bg-blue-100 text-[#2563eb] text-xs font-bold flex items-center justify-center flex-shrink-0">
+                                  {i + 1}
+                                </span>
+                                <span>{istr}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={confermaRestituzione}
+                            onChange={e => setConfermaRestituzione(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 text-[#2563eb] border-gray-300 rounded"
+                          />
+                          <span className="text-xs text-gray-700">
+                            Ho letto e accetto la procedura di restituzione. Mi impegno a completare tutti i passaggi entro la data di scadenza del contratto.
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {errore && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{errore}</div>
+            )}
+
+            <button
+              onClick={() => { setErrore(null); setStep(2); }}
+              disabled={!sceltaBeni || (sceltaBeni === 'RESTITUISCO' && !confermaRestituzione)}
+              className="w-full bg-[#16a34a] text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Procedi al rinnovo <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ═══════════ STEP 2 — Pre-qualificazione rinnovo ═══════════ */}
+        {step === 2 && (
+          <div className="space-y-6">
+            {/* Banner gift card */}
             {giftCardAbilitata && pratica.economica.valore_gift_card > 0 && (
               <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
                 <Gift className="w-10 h-10 text-[#16a34a] mx-auto mb-2" />
@@ -206,7 +376,7 @@ export default function FlussoRinnovo() {
             )}
 
             <div className="bg-white rounded-xl border p-6 space-y-5">
-              <h2 className="font-semibold text-[#1a3a52] text-lg">Dicci le tue esigenze</h2>
+              <h2 className="font-semibold text-[#1a3a52] text-lg">Dicci le tue esigenze per il nuovo contratto</h2>
 
               {/* Tipo device */}
               <div>
@@ -283,24 +453,52 @@ export default function FlussoRinnovo() {
             )}
 
             <button
-              onClick={() => setStep(2)}
+              onClick={() => { setErrore(null); setStep(3); }}
               className="w-full bg-[#16a34a] text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
             >
               Procedi <ArrowRight className="w-4 h-4" />
             </button>
+
+            <button
+              onClick={() => { setStep(1); setErrore(null); }}
+              className="w-full text-sm text-gray-500 hover:underline"
+            >
+              Torna indietro
+            </button>
           </div>
         )}
 
-        {/* STEP 2 — Riepilogo + OTP */}
-        {step === 2 && (
+        {/* ═══════════ STEP 3 — Riepilogo + OTP ═══════════ */}
+        {step === 3 && (
           <div className="space-y-6">
-            {/* Riepilogo scelte */}
+            {/* Riepilogo completo */}
             <div className="bg-white rounded-xl border p-6">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-4">Riepilogo richiesta</h2>
+
+              {/* Scelta beni */}
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <p className="text-xs font-medium text-gray-500 mb-1">Beni attuali</p>
+                <div className="flex items-center gap-2">
+                  {sceltaBeni === 'TENGO' ? (
+                    <>
+                      <ShoppingBag className="w-4 h-4 text-[#16a34a]" />
+                      <span className="font-medium text-[#16a34a]">Li tengo (acquisto a &euro; {formatEur(pratica.economica.pricing_riacquisto_totale)} IVA incl.)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Undo2 className="w-4 h-4 text-[#2563eb]" />
+                      <span className="font-medium text-[#2563eb]">Li restituisco</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Preferenze rinnovo */}
+              <p className="text-xs font-medium text-gray-500 mb-2">Nuovo contratto</p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="text-gray-500">Tipo device</div>
                 <div className="font-medium">{tipoDevice}</div>
-                <div className="text-gray-500">Quantita</div>
+                <div className="text-gray-500">Quantità</div>
                 <div className="font-medium">{numDevice}</div>
                 <div className="text-gray-500">Durata</div>
                 <div className="font-medium">{durata} mesi</div>
@@ -321,7 +519,7 @@ export default function FlussoRinnovo() {
                   <Shield className="w-12 h-12 text-[#16a34a] mx-auto mb-4" />
                   <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Conferma con OTP</h2>
                   <p className="text-sm text-gray-600">
-                    Per confermare la richiesta di rinnovo, inviamo un codice di verifica a 6 cifre.
+                    Per confermare la scelta e la richiesta di rinnovo, inviamo un codice di verifica a 6 cifre.
                   </p>
                 </div>
 
@@ -331,7 +529,7 @@ export default function FlussoRinnovo() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
-                    onClick={() => inviaOtpERiepilogo('EMAIL')}
+                    onClick={() => inviaOtp('EMAIL')}
                     disabled={submitting}
                     className="bg-white border-2 border-[#2563eb] rounded-xl p-5 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
                   >
@@ -339,7 +537,7 @@ export default function FlussoRinnovo() {
                     <p className="font-semibold text-[#2563eb]">Ricevi via Email</p>
                   </button>
                   <button
-                    onClick={() => inviaOtpERiepilogo('SMS')}
+                    onClick={() => inviaOtp('SMS')}
                     disabled={submitting}
                     className="bg-white border-2 border-[#16a34a] rounded-xl p-5 text-center hover:bg-green-50 transition-colors disabled:opacity-50"
                   >
@@ -372,7 +570,7 @@ export default function FlussoRinnovo() {
                     {countdown > 0 ? `Codice valido per ${formatCountdown()}` : 'Codice scaduto'}
                   </div>
                   <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
-                    Modalita test: usa il codice <strong>123456</strong>
+                    Modalità test: usa il codice <strong>123456</strong>
                   </div>
                 </div>
 
@@ -398,7 +596,7 @@ export default function FlussoRinnovo() {
             )}
 
             <button
-              onClick={() => { setStep(1); setMetodoOtp(null); setCodiceOtp(''); setErrore(null); }}
+              onClick={() => { setStep(2); setMetodoOtp(null); setCodiceOtp(''); setErrore(null); }}
               className="w-full text-sm text-gray-500 hover:underline"
             >
               Torna indietro
@@ -406,12 +604,12 @@ export default function FlussoRinnovo() {
           </div>
         )}
 
-        {/* STEP 3 — Conferma finale */}
-        {step === 3 && (
+        {/* ═══════════ STEP 4 — Conferma finale ═══════════ */}
+        {step === 4 && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border p-6 text-center">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Gift className="w-10 h-10 text-[#16a34a]" />
+                <CheckCircle2 className="w-10 h-10 text-[#16a34a]" />
               </div>
               <h2 className="font-semibold text-[#1a3a52] text-xl mb-2">Richiesta di rinnovo inviata!</h2>
               <p className="text-sm text-gray-600">
@@ -419,7 +617,56 @@ export default function FlussoRinnovo() {
               </p>
             </div>
 
-            {/* Gift card reminder — visibile solo se flag abilitato */}
+            {/* Riepilogo scelta beni */}
+            <div className="bg-white rounded-xl border p-5">
+              <h3 className="font-semibold text-[#1a3a52] mb-3 text-sm">Riepilogo delle tue scelte</h3>
+
+              <div className={`rounded-lg p-4 mb-3 ${
+                (risultatoSceltaBeni || sceltaBeni) === 'TENGO'
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-blue-50 border border-blue-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' ? (
+                    <>
+                      <ShoppingBag className="w-5 h-5 text-[#16a34a]" />
+                      <span className="font-semibold text-[#16a34a]">Beni attuali: li tengo</span>
+                    </>
+                  ) : (
+                    <>
+                      <Undo2 className="w-5 h-5 text-[#2563eb]" />
+                      <span className="font-semibold text-[#2563eb]">Beni attuali: li restituisco</span>
+                    </>
+                  )}
+                </div>
+                {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' && (
+                  <p className="text-xs text-gray-600 ml-7">
+                    Prezzo riacquisto: &euro; {formatEur(pratica.economica.pricing_riacquisto_totale)} IVA incl.
+                    {pagamentoDifferito?.differito && pagamentoDifferito.data && (
+                      <> — Pagamento previsto il <strong>{new Date(pagamentoDifferito.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong></>
+                    )}
+                  </p>
+                )}
+                {(risultatoSceltaBeni || sceltaBeni) === 'RESTITUISCO' && (
+                  <p className="text-xs text-gray-600 ml-7">
+                    Ricordati di seguire la procedura di restituzione entro la scadenza del contratto.
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Gift className="w-5 h-5 text-[#16a34a]" />
+                  <span className="font-semibold text-[#1a3a52]">Nuovo contratto FLEX</span>
+                </div>
+                <p className="text-xs text-gray-600 ml-7">
+                  {tipoDevice} × {numDevice} — {durata} mesi
+                  {budget ? ` — Budget: € ${budget}/mese` : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Gift card reminder */}
             {giftCardAbilitata && valoreGiftCard > 0 && (
               <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
                 <Gift className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
@@ -438,14 +685,28 @@ export default function FlussoRinnovo() {
               <ol className="space-y-3 text-sm text-gray-700">
                 <li className="flex gap-3">
                   <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-                  Un agente NSM ti contattera entro 5 giorni lavorativi
+                  Un agente NSM ti contatterà entro 5 giorni lavorativi
                 </li>
                 <li className="flex gap-3">
                   <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
                   Riceverai una proposta personalizzata per il nuovo contratto
                 </li>
+                {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' && (
+                  <li className="flex gap-3">
+                    <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                    Riceverai il link per il pagamento dei beni 7 giorni prima della scadenza
+                  </li>
+                )}
+                {(risultatoSceltaBeni || sceltaBeni) === 'RESTITUISCO' && (
+                  <li className="flex gap-3">
+                    <span className="w-6 h-6 rounded-full bg-blue-100 text-[#2563eb] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                    Completa la procedura di restituzione entro la data di scadenza
+                  </li>
+                )}
                 <li className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                  <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {(risultatoSceltaBeni || sceltaBeni) ? '4' : '3'}
+                  </span>
                   {giftCardAbilitata
                     ? 'Alla firma riceverai la gift card Smartcom Solutions'
                     : 'Alla firma del nuovo contratto sarai subito operativo'}

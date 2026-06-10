@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manuale Operativo — NSM EOL Grenke</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    color: #1e293b;
+    background: #f8fafc;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  .cover {
+    text-align: center;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #0f3460, #16537e);
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    page-break-after: always;
+  }
+  .cover h1 { font-size: 2.4em; margin-bottom: 12px; }
+  .cover .subtitle { font-size: 1.2em; opacity: 0.9; margin-bottom: 30px; }
+  .cover .meta { font-size: 0.95em; opacity: 0.7; }
+  .cover .logo {
+    display: inline-block;
+    width: 80px; height: 80px;
+    background: white;
+    color: #0f3460;
+    border-radius: 50%;
+    font-size: 32px;
+    font-weight: bold;
+    line-height: 80px;
+    margin-bottom: 20px;
+  }
+  .toc {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    page-break-after: always;
+  }
+  .toc h2 { font-size: 1.5em; margin-bottom: 20px; color: #0f3460; }
+  .toc ol { padding-left: 24px; }
+  .toc li { padding: 6px 0; }
+  .toc a { color: #16537e; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  h2 {
+    font-size: 1.6em;
+    color: #0f3460;
+    margin: 50px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #0f3460;
+  }
+  h3 { font-size: 1.2em; color: #334155; margin: 25px 0 10px; }
+  p { margin: 10px 0; }
+  .section {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin: 20px 0 30px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .screenshot {
+    margin: 20px 0;
+    text-align: center;
+  }
+  .screenshot img {
+    max-width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .screenshot .caption {
+    font-size: 0.85em;
+    color: #64748b;
+    margin-top: 8px;
+    font-style: italic;
+  }
+  .step-box {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .info-box {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  th { background: #f1f5f9; font-weight: 600; color: #334155; }
+  ul, ol { padding-left: 24px; margin: 10px 0; }
+  li { margin: 4px 0; }
+  code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-yellow { background: #fef9c3; color: #854d0e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+  @media print {
+    body { padding: 0; background: white; }
+    .section { box-shadow: none; border: 1px solid #e2e8f0; }
+    .cover { page-break-after: always; }
+    h2 { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COPERTINA -->
+<div class="cover">
+  <div class="logo">NSM</div>
+  <h1>Manuale Operativo</h1>
+  <div class="subtitle">Piattaforma EOL Grenke — Fine Noleggio</div>
+  <p class="meta">Noleggio Su Misura / Smartcom Solutions Srl</p>
+  <p class="meta">Versione 1.0 — Maggio 2026</p>
+</div>
+
+<!-- INDICE -->
+<div class="toc">
+  <h2>Indice</h2>
+  <p style="margin-bottom:0.5em;"><a href="#flowchart" style="font-size:1.1em;font-weight:600;color:#2563eb;">&#128204; Flowchart processo completo — Vista d'insieme</a></p>
+  <ol>
+    <li><a href="#login">Accesso al sistema</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#import">Importazione lista contratti</a></li>
+    <li><a href="#outlier">Gestione outlier</a></li>
+    <li><a href="#pratiche">Lista pratiche</a></li>
+    <li><a href="#comunicazioni">Invio comunicazioni</a></li>
+    <li><a href="#email">Template email</a></li>
+    <li><a href="#dettaglio">Dettaglio pratica</a></li>
+    <li><a href="#area-cliente">Area cliente</a></li>
+    <li><a href="#riacquisto">Flusso riacquisto</a></li>
+    <li><a href="#rinnovo">Flusso rinnovo contratto</a></li>
+    <li><a href="#contatto">Flusso contatto personalizzato</a></li>
+    <li><a href="#restituzione">Flusso restituzione beni</a></li>
+    <li><a href="#escalation">Task escalation telefonica</a></li>
+    <li><a href="#riacquisti-attesa">Riacquisti in attesa</a></li>
+    <li><a href="#reportistica">Reportistica</a></li>
+    <li><a href="#export">Export lista Grenke</a></li>
+    <li><a href="#ruoli">Ruoli e permessi</a></li>
+    <li><a href="#impostazioni">Impostazioni amministratore</a></li>
+    <li><a href="#utenti">Gestione utenti</a></li>
+  </ol>
+</div>
+
+<!-- FLOWCHART — VISTA D'INSIEME -->
+<h2 id="flowchart" style="page-break-before:always;">Flowchart — Processo End-of-Lease</h2>
+<div class="section">
+  <p>Prima di entrare nel dettaglio di ogni funzionalita, questo flowchart offre una <strong>vista d'insieme</strong> dell'intero processo End-of-Lease. I badge <span style="background:#2563eb;color:#fff;padding:1px 7px;border-radius:8px;font-size:0.85em;font-weight:600;">Sez. N</span> sopra ogni nodo rimandano alla sezione corrispondente del manuale.</p>
+
+  <h3>Tavola 1 — Vista d'insieme (swimlane)</h3>
+  <p>Mostra i tre attori principali (Grenke, NSM/Backoffice, Cliente) e le macro-fasi: ricezione nominativi, comunicazioni, decisione del cliente, restituzione esiti a Grenke.</p>
+  <div class="screenshot">
+    <img src="screenshots/flowchart_processo_eol_p2.png" alt="Flowchart — Vista d'insieme swimlane" style="width:100%;border:1px solid #e2e8f0;border-radius:8px;">
+    <div class="caption">Tavola 1 — Processo EOL: vista d'insieme con swimlane Grenke / NSM / Cliente</div>
+  </div>
+
+  <h3>Tavola 2 — Timeline e flussi decisionali</h3>
+  <p>Dettaglia la timeline (da T-145 a T0) e i 4 percorsi possibili dopo la decisione del cliente: Rinnovo, Riacquisto, Restituzione, Silenzio.</p>
+  <div class="screenshot">
+    <img src="screenshots/flowchart_processo_eol.png" alt="Flowchart — Timeline e flussi decisionali" style="width:100%;border:1px solid #e2e8f0;border-radius:8px;">
+    <div class="caption">Tavola 2 — Timeline comunicazioni (T-145 → T0) e i 4 flussi decisionali del cliente</div>
+  </div>
+
+  <div class="step-box">
+    <strong>Come leggere il flowchart:</strong>
+    <ul style="margin-top:0.3em;">
+      <li>I badge <strong>Sez. N</strong> indicano la sezione del manuale dove trovare la procedura operativa dettagliata</li>
+      <li><strong>Tavola 1</strong>: segui il flusso da sinistra a destra per capire chi fa cosa e quando</li>
+      <li><strong>Tavola 2</strong>: la timeline in alto mostra le scadenze automatiche; sotto, i 4 percorsi del cliente con tutti gli step</li>
+    </ul>
+  </div>
+
+  <p style="font-size:0.9em;color:#64748b;margin-top:1em;">Il flowchart completo in formato PDF ad alta risoluzione e disponibile nel file <code>Flowchart_EOL_Grenke_Completo.pdf</code> allegato a questo manuale.</p>
+</div>
+
+<!-- 1. LOGIN -->
+<h2 id="login">1. Accesso al sistema</h2>
+<div class="section">
+  <p>Per accedere al backoffice, navigare all'indirizzo del portale e inserire le proprie credenziali (email e password).</p>
+
+  <div class="screenshot">
+    <img src="screenshots/01_login.png" alt="Pagina di login">
+    <div class="caption">Fig. 1 — Schermata di login del Backoffice NSM</div>
+  </div>
+
+  <h3>Credenziali</h3>
+  <p>Le credenziali vengono fornite dall'amministratore. Ogni utente ha un ruolo assegnato che determina le funzionalita accessibili.</p>
+
+  <table>
+    <tr><th>Ruolo</th><th>Descrizione</th><th>Accesso</th></tr>
+    <tr><td>ADMIN</td><td>Amministratore di sistema</td><td>Tutte le funzionalita</td></tr>
+    <tr><td>BACKOFFICE_INTERNO</td><td>Operatore backoffice</td><td>Import, Outlier, Comunicazioni, Report</td></tr>
+    <tr><td>CAPO_AREA</td><td>Responsabile area</td><td>Dashboard, Pratiche, Report, Escalation</td></tr>
+    <tr><td>AGENTE</td><td>Agente commerciale</td><td>I miei task, Pratiche assegnate</td></tr>
+    <tr><td>JUNIOR_AGENT</td><td>Agente junior</td><td>I miei task, Pratiche assegnate</td></tr>
+  </table>
+
+  <div class="step-box">
+    <strong>Procedura:</strong> Inserire email e password, poi cliccare "Accedi". Dopo il login si viene reindirizzati alla Dashboard.
+  </div>
+</div>
+
+<!-- 2. DASHBOARD -->
+<h2 id="dashboard">2. Dashboard</h2>
+<div class="section">
+  <p>La Dashboard e la schermata principale che fornisce una visione d'insieme sullo stato delle pratiche EOL.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/02_dashboard.png" alt="Dashboard">
+    <div class="caption">Fig. 2 — Dashboard con KPI e pratiche a rischio silenzio</div>
+  </div>
+
+  <h3>Pratiche a rischio silenzio</h3>
+  <p>Nella parte superiore, tre card colorate mostrano le pratiche che richiedono intervento telefonico urgente:</p>
+  <table>
+    <tr><th>Fascia</th><th>Giorni alla scadenza</th><th>Azione</th><th>Colore</th></tr>
+    <tr><td><strong>T-50</strong></td><td>41-50 giorni</td><td>Chiamata 1a</td><td><span class="badge badge-blue">Blu</span></td></tr>
+    <tr><td><strong>T-40</strong></td><td>36-40 giorni</td><td>Chiamata 2a</td><td><span class="badge badge-yellow">Giallo</span></td></tr>
+    <tr><td><strong>T-35</strong></td><td>31-35 giorni</td><td>ULTIMA CHANCE</td><td><span class="badge badge-red">Rosso</span></td></tr>
+  </table>
+
+  <h3>KPI Anno Corrente</h3>
+  <p>Sei indicatori chiave di performance:</p>
+  <ul>
+    <li><strong>Tasso non-silenzio</strong> — percentuale di pratiche che hanno ricevuto una risposta dal cliente (obiettivo: &gt; 85%)</li>
+    <li><strong>Tasso rinnovo</strong> — percentuale di clienti che rinnovano il contratto</li>
+    <li><strong>Tasso riacquisto</strong> — percentuale di clienti che acquistano il bene</li>
+    <li><strong>Margine medio</strong> — margine lordo medio per pratica</li>
+    <li><strong>Tempo medio decisione</strong> — giorni medi tra comunicazione e decisione</li>
+    <li><strong>Tasso intervento manuale</strong> — percentuale di decisioni registrate manualmente dall'operatore</li>
+  </ul>
+
+  <h3>Pratiche recenti</h3>
+  <p>Tabella con le ultime pratiche aggiornate, incluso stato corrente e decisione.</p>
+</div>
+
+<!-- 3. IMPORT -->
+<h2 id="import">3. Importazione lista contratti</h2>
+<div class="section">
+  <p>L'importazione e il punto di partenza del workflow. Si carica il file Excel ricevuto da Grenke contenente la lista dei contratti in scadenza.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/03_import_pagina.png" alt="Pagina import">
+    <div class="caption">Fig. 3 — Pagina di importazione lista Excel</div>
+  </div>
+
+  <h3>Procedura</h3>
+  <div class="step-box">
+    <ol>
+      <li>Cliccare su "Seleziona file" o trascinare il file Excel nell'area tratteggiata</li>
+      <li>Il sistema analizza il file e mostra un'anteprima dei dati trovati</li>
+      <li>Viene eseguita la <strong>riconciliazione automatica</strong>: ogni riga viene confrontata con i clienti esistenti nel database tramite il codice contratto Grenke</li>
+      <li>I risultati vengono mostrati in tre categorie:
+        <ul>
+          <li><span class="badge badge-green">Riconciliati</span> — contratti abbinati a clienti esistenti</li>
+          <li><span class="badge badge-yellow">Outlier</span> — contratti senza corrispondenza (da gestire manualmente)</li>
+          <li><span class="badge badge-red">Errori</span> — righe con dati mancanti o non validi</li>
+        </ul>
+      </li>
+      <li>Per gli <strong>outlier</strong>, inserire una motivazione per ogni riga (campo obbligatorio)</li>
+      <li>Cliccare "Conferma importazione" per salvare i contratti riconciliati nel database</li>
+    </ol>
+  </div>
+
+  <div class="warning-box">
+    <strong>Formato file:</strong> Il file Excel deve contenere le colonne mappate nella configurazione (<code>excel_mapping.json</code>). Le colonne obbligatorie sono: codice contratto Grenke, ragione sociale, P.IVA, data scadenza, canone mensile, numero mesi, beni.
+  </div>
+
+  <h3>Riconciliazione automatica</h3>
+  <p>Il sistema cerca corrispondenze nel database per ogni riga del file:</p>
+  <ul>
+    <li><strong>Match esatto</strong>: il codice contratto Grenke corrisponde a un contratto esistente</li>
+    <li><strong>Outlier con suggerimenti</strong>: nessun match esatto, ma il sistema propone clienti simili per P.IVA o ragione sociale (fuzzy matching)</li>
+    <li><strong>Outlier senza suggerimenti</strong>: nessuna corrispondenza trovata</li>
+  </ul>
+
+  <h3>Anteprima importazione</h3>
+  <p>Dopo il caricamento del file, il sistema mostra un'anteprima con il riepilogo della riconciliazione. Ogni riga riporta lo stato assegnato, i dati economici calcolati (monte canoni, prezzo riacquisto, gift card) e la ragione sociale del cliente.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/03b_import_preview.png" alt="Anteprima importazione">
+    <div class="caption">Fig. 3b — Anteprima importazione: 30 contratti analizzati, 28 riconciliati, 2 outlier, 0 errori</div>
+  </div>
+</div>
+
+<!-- 4. OUTLIER -->
+<h2 id="outlier">4. Gestione outlier</h2>
+<div class="section">
+  <p>Gli outlier sono contratti importati che non hanno trovato corrispondenza automatica nel database. Devono essere gestiti manualmente.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/07_outlier.png" alt="Gestione outlier">
+    <div class="caption">Fig. 4 — Pagina gestione outlier</div>
+  </div>
+
+  <h3>Azioni disponibili</h3>
+  <table>
+    <tr><th>Azione</th><th>Descrizione</th><th>Quando usarla</th></tr>
+    <tr>
+      <td><span class="badge badge-green">ASSOCIA</span></td>
+      <td>Collega l'outlier a un cliente esistente nel database</td>
+      <td>Il cliente esiste ma con dati leggermente diversi (es. ragione sociale variata)</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-blue">CREA</span></td>
+      <td>Crea un nuovo cliente e contratto nel database</td>
+      <td>Il cliente e completamente nuovo, mai importato prima</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-red">SCARTA</span></td>
+      <td>Ignora l'outlier con motivazione obbligatoria</td>
+      <td>Errore nel file Excel, contratto gia gestito, duplicato</td>
+    </tr>
+  </table>
+
+  <div class="warning-box">
+    <strong>Attenzione:</strong> Per ogni azione e obbligatorio inserire una motivazione che viene registrata nell'audit log. Questa sezione e accessibile solo ai ruoli BACKOFFICE_INTERNO e ADMIN.
+  </div>
+</div>
+
+<!-- 5. LISTA PRATICHE -->
+<h2 id="pratiche">5. Lista pratiche</h2>
+<div class="section">
+  <p>La lista pratiche e il cuore operativo del sistema. Mostra tutti i contratti EOL con filtri avanzati, ordinamento e paginazione.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/04_lista_pratiche.png" alt="Lista pratiche">
+    <div class="caption">Fig. 5 — Lista pratiche con filtri e stato comunicazione</div>
+  </div>
+
+  <h3>Filtri disponibili</h3>
+  <ul>
+    <li><strong>Stato</strong> — filtra per stato della pratica (es. Lista ricevuta, Comunicazione inviata, Decisione riacquisto in corso, ecc.)</li>
+    <li><strong>Agente</strong> — filtra per agente assegnato</li>
+    <li><strong>Scadenza da/a</strong> — intervallo date di scadenza</li>
+    <li><strong>Origine</strong> — Smartcom o altra origine</li>
+    <li><strong>Decisione</strong> — tipo di decisione presa dal cliente</li>
+    <li><strong>Rischio silenzio</strong> — mostra solo le pratiche senza risposta</li>
+  </ul>
+
+  <h3>Colonne della tabella</h3>
+  <table>
+    <tr><th>Colonna</th><th>Descrizione</th></tr>
+    <tr><td>Contr. NSM</td><td>Codice interno NSM del contratto</td></tr>
+    <tr><td>Contr. Grenke</td><td>Codice contratto Grenke originale</td></tr>
+    <tr><td>Cliente</td><td>Ragione sociale del cliente</td></tr>
+    <tr><td>Scadenza</td><td>Data di scadenza del contratto</td></tr>
+    <tr><td>Stato</td><td>Stato corrente della pratica (con badge colorato)</td></tr>
+    <tr><td>Agente</td><td>Agente assegnato alla pratica</td></tr>
+    <tr><td>Pricing riacquisto</td><td>Prezzo di riacquisto calcolato (8% del monte canoni)</td></tr>
+    <tr><td>Decisione</td><td>Decisione del cliente (se registrata)</td></tr>
+    <tr><td>Azioni</td><td>Icona per accedere al dettaglio pratica</td></tr>
+  </table>
+
+  <h3>Azioni di massa</h3>
+  <ul>
+    <li><strong>Invia comunicazioni</strong> — invia la comunicazione iniziale a tutti i clienti con stato "Lista ricevuta" che non hanno ancora ricevuto email</li>
+    <li><strong>Esporta CSV</strong> — scarica la lista filtrata in formato CSV</li>
+  </ul>
+</div>
+
+<!-- 6. COMUNICAZIONI -->
+<h2 id="comunicazioni">6. Invio comunicazioni</h2>
+<div class="section">
+  <p>Il sistema invia automaticamente la comunicazione iniziale a tutti i clienti, su due canali: <strong>email ordinaria</strong> e <strong>PEC</strong>.</p>
+
+  <h3>Procedura</h3>
+  <div class="step-box">
+    <ol>
+      <li>Dalla lista pratiche, cliccare il bottone <strong>"Invia comunicazioni"</strong></li>
+      <li>Il sistema invia in batch le email a tutte le pratiche in stato "Lista ricevuta"</li>
+      <li>Al termine, un banner mostra il riepilogo: inviati / saltati / errori</li>
+      <li>Lo stato di ogni pratica aggiornata passa a <span class="badge badge-green">Comunicazione inviata</span></li>
+    </ol>
+  </div>
+
+  <h3>Contenuto della comunicazione</h3>
+  <p>Ogni email contiene:</p>
+  <ul>
+    <li>Dati del contratto (codice, scadenza, beni in locazione)</li>
+    <li>Le 4 opzioni disponibili per il cliente (rinnovo, riacquisto, contatto personalizzato, restituzione)</li>
+    <li>Un link univoco (JWT) per accedere all'area cliente</li>
+    <li>La deadline per comunicare la scelta</li>
+    <li>Un avviso che in assenza di risposta il contratto andra in proroga automatica</li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Canali di invio:</strong> Ogni cliente riceve la comunicazione sia via email ordinaria sia via PEC (2 email per pratica). Entrambi gli invii vengono tracciati nella timeline della pratica.
+  </div>
+</div>
+
+<!-- 7. EMAIL TEMPLATE -->
+<h2 id="email">7. Template email</h2>
+<div class="section">
+  <p>Le email inviate ai clienti utilizzano template HTML professionali con il branding NSM/Smartcom.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/15_email_template.png" alt="Template email">
+    <div class="caption">Fig. 6 — Email comunicazione iniziale visualizzata in Mailpit</div>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/14_mailpit_inbox.png" alt="Mailpit inbox">
+    <div class="caption">Fig. 7 — Inbox Mailpit con tutte le email inviate (66 totali: 33 email + 33 PEC)</div>
+  </div>
+
+  <h3>Struttura dell'email</h3>
+  <ul>
+    <li><strong>Header</strong> — Logo e nome "Noleggio Su Misura - Smartcom Solutions Srl"</li>
+    <li><strong>Oggetto</strong> — "Comunicazione relativa al Suo contratto di locazione operativa n. [codice] in scadenza"</li>
+    <li><strong>Corpo</strong> — Saluto personalizzato, dati contratto, beni, 4 opzioni con colori diversi</li>
+    <li><strong>CTA</strong> — Bottone "Scegli la tua opzione" che rimanda all'area cliente</li>
+    <li><strong>Footer</strong> — Deadline, avviso proroga, dati aziendali, link opt-out GDPR</li>
+  </ul>
+
+  <h3>Le 4 opzioni presentate</h3>
+  <table>
+    <tr><th>Opzione</th><th>Colore</th><th>Descrizione</th></tr>
+    <tr><td>1. Rinnova il contratto</td><td><span class="badge badge-green">Verde</span></td><td>Nuovo contratto FLEX + Gift Card fedelta (scelta consigliata)</td></tr>
+    <tr><td>2. Prenota l'acquisto del bene</td><td><span class="badge badge-blue">Blu</span></td><td>Riacquisto al prezzo indicato (8% monte canoni + IVA a margine)</td></tr>
+    <tr><td>3. Contatto personalizzato</td><td><span class="badge badge-yellow">Giallo</span></td><td>Richiesta di essere ricontattati da un consulente</td></tr>
+    <tr><td>4. Restituisci il bene</td><td><span class="badge badge-red">Rosso</span></td><td>Reso con procedura di disattivazione e spedizione</td></tr>
+  </table>
+</div>
+
+<!-- 8. DETTAGLIO PRATICA -->
+<h2 id="dettaglio">8. Dettaglio pratica</h2>
+<div class="section">
+  <p>Il dettaglio pratica mostra tutte le informazioni relative a un singolo contratto, organizzate in 4 tab.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/05_pratica_panoramica.png" alt="Pratica panoramica">
+    <div class="caption">Fig. 8 — Tab Panoramica con dati cliente, contratto, calcolo economico e stato</div>
+  </div>
+
+  <h3>Tab Panoramica</h3>
+  <ul>
+    <li><strong>Dati cliente</strong> — Ragione sociale, P.IVA, email, PEC, telefono, indirizzo</li>
+    <li><strong>Calcolo economico</strong> — Pricing Grenke (5%), pricing riacquisto (8%), margine lordo (3%), IVA a margine (22% sul margine lordo, non sul prezzo pieno), valore gift card, valore originario</li>
+    <li><strong>Dati contratto</strong> — Codice NSM, codice Grenke, date, canone, mesi, monte canoni, beni</li>
+    <li><strong>Stato corrente</strong> — Stato, origine, agente assegnato, decisioni registrate</li>
+  </ul>
+
+  <h3>Tab Timeline</h3>
+  <div class="screenshot">
+    <img src="screenshots/06_pratica_timeline.png" alt="Timeline">
+    <div class="caption">Fig. 9 — Tab Timeline con storico di tutte le comunicazioni ed eventi</div>
+  </div>
+  <p>La timeline mostra tutti gli eventi in ordine cronologico: invio comunicazioni (con canale ed esito), decisioni del cliente, interventi manuali dell'operatore, escalation telefoniche.</p>
+
+  <h3>Tab Richieste contatto</h3>
+  <p>Lista delle richieste di contatto inviate dal cliente tramite l'area pubblica.</p>
+
+  <h3>Tab Audit log</h3>
+  <p>Registro completo di tutte le azioni eseguite sulla pratica, con timestamp e operatore.</p>
+
+  <h3>Azioni disponibili (sidebar destra)</h3>
+  <table>
+    <tr><th>Azione</th><th>Descrizione</th></tr>
+    <tr><td>Reinvia comunicazione</td><td>Invia nuovamente l'email al cliente</td></tr>
+    <tr><td>Cambia agente</td><td>Riassegna la pratica a un altro agente</td></tr>
+    <tr><td>Modifica deadline</td><td>Sposta la deadline di risposta del cliente</td></tr>
+    <tr><td>Decisione manuale</td><td>Registra manualmente una decisione (es. comunicata per telefono)</td></tr>
+    <tr><td>Esporta storico PDF</td><td>Scarica un PDF con lo storico completo della pratica</td></tr>
+  </table>
+</div>
+
+<!-- 9. AREA CLIENTE -->
+<h2 id="area-cliente">9. Area cliente</h2>
+<div class="section">
+  <p>L'area cliente e la pagina pubblica accessibile dal link contenuto nell'email. Non richiede login: l'autenticazione avviene tramite token JWT nell'URL.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/13_area_cliente.png" alt="Area cliente">
+    <div class="caption">Fig. 10 — Area cliente con le 4 opzioni di scelta</div>
+  </div>
+
+  <h3>Cosa vede il cliente</h3>
+  <ul>
+    <li><strong>Dati del contratto</strong> — Codice NSM, codice Grenke, scadenza, monte canoni, beni</li>
+    <li><strong>Countdown</strong> — Giorni rimanenti alla deadline con data esatta</li>
+    <li><strong>4 opzioni di scelta</strong> — Ciascuna con bottone "Scegli"</li>
+  </ul>
+
+  <h3>Sicurezza</h3>
+  <ul>
+    <li>Accesso tramite token JWT con scadenza</li>
+    <li>Verifica OTP a 6 cifre (via email o SMS) prima di confermare decisioni</li>
+    <li>Se il token e scaduto, viene mostrata la pagina "Termine scaduto" con numero di telefono per contattare NSM</li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Link opt-out:</strong> Nel footer dell'email e presente un link per disattivare le comunicazioni automatiche future (GDPR compliance). Il flag viene registrato nel database e blocca ogni invio successivo.
+  </div>
+</div>
+
+<!-- 10. FLUSSO RIACQUISTO -->
+<h2 id="riacquisto">10. Flusso riacquisto (esempio completo)</h2>
+<div class="section">
+  <p>Quando il cliente sceglie "Prenota l'acquisto del bene", viene guidato attraverso un flusso in piu step.</p>
+
+  <h3>Step 1 — Riepilogo prezzo</h3>
+  <p>Il cliente vede il dettaglio del costo del bene: prezzo netto (8% del monte canoni), IVA a margine (22% calcolata sulla differenza tra prezzo di vendita e prezzo di acquisto Grenke) e totale. Può scegliere se farsi contattare prima oppure procedere direttamente.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/19_riacquisto_step1_prezzo.png" alt="Riacquisto step 1">
+    <div class="caption">Fig. 10a — Step 1: riepilogo prezzo e scelta se procedere o richiedere contatto</div>
+  </div>
+
+  <h3>Step 2 — Termini e condizioni</h3>
+  <p>Il cliente deve leggere e accettare le condizioni generali di riacquisto, che specificano:</p>
+  <ul>
+    <li>Il pagamento dell'acconto non comporta trasferimento immediato di proprieta</li>
+    <li>Il trasferimento avverra alla data T+11 dalla scadenza del contratto Grenke</li>
+    <li>La fattura verra emessa tramite Sistema di Interscambio (SDI)</li>
+  </ul>
+  <p>Dopo aver spuntato la casella di accettazione, appaiono i pulsanti per ricevere il codice OTP via Email o SMS.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/20_riacquisto_step2_tc.png" alt="Riacquisto step 2 - T&C">
+    <div class="caption">Fig. 10b — Step 2: termini e condizioni con checkbox di accettazione</div>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/20b_riacquisto_step2_otp_scelta.png" alt="Riacquisto step 2 - scelta OTP">
+    <div class="caption">Fig. 10c — Step 2 (dopo accettazione): scelta del canale OTP (Email o SMS)</div>
+  </div>
+
+  <h3>Step 3 — Verifica identita (OTP)</h3>
+  <p>Il sistema invia un codice di verifica a 6 cifre via email o SMS. Il cliente inserisce il codice entro 10 minuti per confermare la decisione.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/21_riacquisto_step3_otp.png" alt="Riacquisto step 3 - OTP">
+    <div class="caption">Fig. 10d — Step 3: inserimento codice OTP a 6 cifre</div>
+  </div>
+
+  <h3>Step 4 — Conferma e pagamento differito</h3>
+  <p>La decisione viene registrata. Il pagamento NON e immediato: il cliente ricevera il link per pagare a <strong>T-7</strong> (7 giorni prima della scadenza del contratto), insieme alla data esatta indicata a schermo.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/22_riacquisto_step4_conferma.png" alt="Riacquisto step 4 - conferma differita">
+    <div class="caption">Fig. 10e — Step 4: scelta confermata con data di pagamento T-7 e riepilogo importo</div>
+  </div>
+
+  <div class="info-box">
+    <strong>Pagamento differito T-7:</strong> Per comodita del cliente, il pagamento viene richiesto solo 7 giorni prima della scadenza del contratto. Questo riduce l'attrito e aumenta il tasso di conversione.
+  </div>
+
+  <h3>Cosa succede nel backoffice</h3>
+  <p>Dopo la conferma del cliente:</p>
+  <ul>
+    <li>Lo stato della pratica cambia in <span class="badge badge-blue">Decisione riacquisto in corso</span></li>
+    <li>La decisione viene registrata con timestamp e metodo di verifica OTP</li>
+    <li>La pratica appare nella sezione "Riacquisti in attesa" quando si avvicina la data di pagamento</li>
+  </ul>
+</div>
+
+<!-- 11. FLUSSO RINNOVO -->
+<h2 id="rinnovo">11. Flusso rinnovo contratto</h2>
+<div class="section">
+  <p>Quando il cliente sceglie "Rinnova il contratto", viene guidato in un wizard a <strong>4 step</strong> che comprende la scelta relativa ai beni attuali, le preferenze per il nuovo contratto e la conferma via OTP. Un singolo codice OTP conferma entrambe le decisioni (beni + rinnovo).</p>
+
+  <h3>Step 1 — Scelta beni attuali</h3>
+  <p>Il primo step chiede al cliente cosa fare con i dispositivi attualmente in locazione. Sono disponibili due opzioni:</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16a_rinnovo_step1_scelta_beni.png" alt="Step 1 scelta beni">
+    <div class="caption">Fig. 11a — Step 1: il cliente sceglie se tenere o restituire i beni attuali</div>
+  </div>
+
+  <h4>"Li tengo" (consigliato)</h4>
+  <p>Il cliente acquista i beni al prezzo di riacquisto indicato. La card mostra il dettaglio economico (netto, IVA a margine, totale) e un avviso chiaro: il pagamento non è immediato ma verrà richiesto 7 giorni prima della scadenza del contratto. L'IVA è calcolata solo sul margine (differenza tra prezzo di vendita e prezzo di acquisto Grenke), come previsto dal regime del margine.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16b_rinnovo_step1_tengo_selected.png" alt="Li tengo selezionato">
+    <div class="caption">Fig. 11b — Opzione "Li tengo" selezionata con dettaglio prezzi e avviso pagamento differito</div>
+  </div>
+
+  <h4>"Li restituisco"</h4>
+  <p>Se il cliente preferisce restituire i beni, vengono mostrate le 5 istruzioni operative per la restituzione. È richiesta una checkbox di conferma per procedere.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16c_rinnovo_step1_restituisco.png" alt="Li restituisco con istruzioni">
+    <div class="caption">Fig. 11c — Opzione "Li restituisco" con procedura di restituzione in 5 step e checkbox obbligatoria</div>
+  </div>
+
+  <h3>Step 2 — Preferenze nuovo contratto</h3>
+  <p>Il cliente indica le sue esigenze per il nuovo contratto FLEX. In cima alla pagina viene mostrato il banner con la gift card Smartcom Solutions come incentivo al rinnovo.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16d_rinnovo_step2_preferenze.png" alt="Step 2 preferenze rinnovo">
+    <div class="caption">Fig. 11d — Step 2: il cliente indica tipo device, quantità, durata e budget desiderati</div>
+  </div>
+
+  <h4>Campi del form</h4>
+  <ul>
+    <li><strong>Tipo device desiderato</strong> — Apple MacBook, iPad, PC Windows, Smartphone, Altro</li>
+    <li><strong>Numero device desiderati</strong> — quantità</li>
+    <li><strong>Durata desiderata</strong> — 24, 36 o 48 mesi</li>
+    <li><strong>Budget orientativo mensile</strong> (opzionale)</li>
+    <li><strong>Note</strong> (opzionale) — richieste particolari</li>
+  </ul>
+
+  <h3>Step 3 — Riepilogo e conferma OTP</h3>
+  <p>Viene mostrato un riepilogo completo con la scelta sui beni e le preferenze per il nuovo contratto. Il cliente conferma inviando un codice OTP a 6 cifre (via Email o SMS).</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16e_rinnovo_step3_riepilogo_otp.png" alt="Step 3 riepilogo e OTP">
+    <div class="caption">Fig. 11e — Step 3: riepilogo completo (scelta beni + preferenze rinnovo) e scelta canale OTP</div>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/16f_rinnovo_step3_otp_input.png" alt="Step 3 inserimento OTP">
+    <div class="caption">Fig. 11f — Step 3: inserimento del codice OTP a 6 cifre per confermare entrambe le decisioni</div>
+  </div>
+
+  <div class="info-box">
+    <strong>Nota importante:</strong> Un singolo codice OTP conferma contemporaneamente sia la scelta relativa ai beni (tenere/restituire) sia la richiesta di rinnovo. Il sistema registra due decisioni distinte in un'unica transazione.
+  </div>
+
+  <h3>Step 4 — Conferma finale</h3>
+  <p>La schermata di conferma mostra il riepilogo delle scelte effettuate, la gift card prevista e i prossimi passi.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/16g_rinnovo_step4_conferma.png" alt="Step 4 conferma finale">
+    <div class="caption">Fig. 11g — Step 4: conferma finale con riepilogo scelte, data pagamento (se "Li tengo"), gift card e prossimi passi</div>
+  </div>
+
+  <h4>Prossimi passi mostrati al cliente</h4>
+  <ol>
+    <li>Un agente NSM lo contatterà entro 5 giorni lavorativi</li>
+    <li>Riceverà una proposta personalizzata per il nuovo contratto</li>
+    <li>Se ha scelto "Li tengo": riceverà il link per il pagamento dei beni 7 giorni prima della scadenza</li>
+    <li>Se ha scelto "Li restituisco": dovrà completare la procedura di restituzione entro la data di scadenza</li>
+    <li>Alla firma del nuovo contratto riceverà la gift card Smartcom Solutions</li>
+  </ol>
+
+  <h3>Cosa succede nel backoffice</h3>
+  <p>Il sistema registra <strong>due decisioni</strong> nella pratica:</p>
+  <ul>
+    <li><strong>Decisione beni</strong> — <code>RINNOVO_RIACQUISTO_BENI</code> (se "Li tengo") o <code>RINNOVO_RESTITUZIONE_BENI</code> (se "Li restituisco")</li>
+    <li><strong>Decisione rinnovo</strong> — <code>RINNOVO</code> con i dettagli della prequalificazione</li>
+  </ul>
+  <p>L'agente assegnato riceve una notifica email con tutti i dettagli (scelta beni, preferenze rinnovo, prezzo riacquisto se applicabile). La pratica passa in stato <code>DECISIONE_RINNOVO</code>.</p>
+
+  <div class="info-box">
+    <strong>Pagamento differito (se "Li tengo"):</strong> Il pagamento per l'acquisto dei beni viene gestito con la stessa logica del flusso riacquisto: il link di pagamento viene inviato automaticamente 7 giorni prima della scadenza del contratto (T-7).
+  </div>
+</div>
+
+<!-- 12. FLUSSO CONTATTO PERSONALIZZATO -->
+<h2 id="contatto">12. Flusso contatto personalizzato</h2>
+<div class="section">
+  <p>Quando il cliente non è sicuro su cosa fare o vuole valutare più opzioni insieme a un consulente, sceglie "Contatto personalizzato". Il sistema raccoglie le sue preferenze di contatto.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/17_flusso_contatto.png" alt="Flusso contatto personalizzato">
+    <div class="caption">Fig. 12 — Flusso contatto personalizzato: il cliente indica disponibilità oraria e modalità preferita</div>
+  </div>
+
+  <h3>Cosa compila il cliente</h3>
+  <ul>
+    <li><strong>Disponibilità oraria</strong> — Mattina (9:00–12:30), Pomeriggio (14:00–18:00), Indifferente</li>
+    <li><strong>Modalità di contatto preferita</strong> — Telefono, Email, Videocall</li>
+    <li><strong>Note</strong> (opzionale) — es. "vorrei valutare un mix di rinnovo e riacquisto"</li>
+  </ul>
+
+  <h3>Cosa succede nel backoffice</h3>
+  <p>La richiesta viene registrata nella sezione "Richieste contatto" della pratica. L'agente assegnato riceve il task di richiamare il cliente nella fascia oraria indicata. Dopo la chiamata, l'esito viene registrato con il bottone "Segna richiamato".</p>
+
+  <div class="info-box">
+    <strong>Nota:</strong> Il flusso contatto personalizzato è pensato per clienti indecisi o con situazioni particolari (es. dispositivi danneggiati, richieste fuori standard, necessità di trattativa). Non blocca le altre opzioni: il cliente potrà comunque scegliere rinnovo o riacquisto in seguito.
+  </div>
+</div>
+
+<!-- 13. FLUSSO RESTITUZIONE -->
+<h2 id="restituzione">13. Flusso restituzione beni</h2>
+<div class="section">
+  <p>Quando il cliente sceglie di restituire i beni a fine contratto, viene guidato attraverso le istruzioni operative obbligatorie e deve confermare di averle lette prima di procedere.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/18_flusso_restituzione_step1.png" alt="Flusso restituzione - istruzioni">
+    <div class="caption">Fig. 13 — Flusso restituzione: istruzioni operative da seguire prima della spedizione</div>
+  </div>
+
+  <h3>Istruzioni operative (5 step obbligatori)</h3>
+  <ol>
+    <li><strong>Disabilita Find My / Knox</strong> — Disabilita "Trova il mio iPhone" (Apple) o Samsung Knox / Google FRP su tutti i dispositivi</li>
+    <li><strong>Factory reset</strong> — Esegui il ripristino alle impostazioni di fabbrica di ogni dispositivo</li>
+    <li><strong>Verifica integrità</strong> — Il dispositivo deve essere funzionante, privo di danni evidenti e comprensivo di tutti gli accessori originali</li>
+    <li><strong>Imballa adeguatamente</strong> — Usa il packaging originale o, in assenza, un imballo adeguato</li>
+    <li><strong>Spedisci a Collegno</strong> — Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Le spese di spedizione sono a carico del cliente</li>
+  </ol>
+
+  <h3>Conferma e OTP</h3>
+  <p>Il cliente deve spuntare la casella di presa visione delle istruzioni e cliccare "Procedi". Come per il riacquisto, viene richiesta una verifica OTP (codice a 6 cifre via email o SMS) per confermare la decisione.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/18b_restituzione_otp_scelta.png" alt="Restituzione - scelta canale OTP">
+    <div class="caption">Fig. 13b — Selezione canale OTP: il cliente sceglie se ricevere il codice via Email o via SMS</div>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/18c_restituzione_otp_inserimento.png" alt="Restituzione - inserimento codice OTP">
+    <div class="caption">Fig. 13c — Inserimento del codice OTP a 6 cifre per confermare la restituzione</div>
+  </div>
+
+  <h3>Cosa succede nel backoffice</h3>
+  <p>La decisione di restituzione viene registrata nella timeline. Lo stato della pratica aggiornato riflette la scelta del cliente. L'agente monitora l'arrivo della spedizione e chiude la pratica a ricezione confermata.</p>
+
+  <div class="warning-box">
+    <strong>Attenzione:</strong> I costi di spedizione sono sempre a carico del cliente. In caso di danni al dispositivo non dichiarati, Grenke può applicare penali contrattuali. L'integrity check pre-spedizione è fondamentale per evitare contestazioni.
+  </div>
+</div>
+
+<!-- 14. ESCALATION -->
+<h2 id="escalation">14. Task escalation telefonica</h2>
+<div class="section">
+  <p>Le escalation telefoniche sono il sistema di follow-up per i clienti che non rispondono alle email. Si attivano automaticamente in base alla vicinanza alla scadenza.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/08_task_escalation.png" alt="Task escalation">
+    <div class="caption">Fig. 14 — Pagina task escalation telefonica</div>
+  </div>
+
+  <h3>Fasce di escalation</h3>
+  <table>
+    <tr><th>Fascia</th><th>Quando</th><th>Chi chiama</th><th>Obiettivo</th></tr>
+    <tr><td><strong>T-50</strong></td><td>41-50 giorni prima della scadenza</td><td>Agente assegnato</td><td>Primo contatto telefonico, sollecitare risposta</td></tr>
+    <tr><td><strong>T-40</strong></td><td>36-40 giorni prima</td><td>Agente / Capo area</td><td>Secondo tentativo, sottolineare urgenza</td></tr>
+    <tr><td><strong>T-35</strong></td><td>31-35 giorni prima</td><td>Capo area / Manager</td><td>ULTIMA CHANCE — avvisare delle conseguenze del silenzio</td></tr>
+  </table>
+
+  <h3>Script telefonici</h3>
+  <p>Per ogni fascia di escalation, l'operatore dispone di uno script guidato che include:</p>
+  <ul>
+    <li>Presentazione e riferimento al contratto</li>
+    <li>Riepilogo delle opzioni disponibili</li>
+    <li>Enfasi sulla gift card fedelta (per il rinnovo)</li>
+    <li>Avviso sulla proroga automatica in caso di silenzio</li>
+    <li>Campi per annotare l'esito della chiamata</li>
+  </ul>
+
+  <div class="warning-box">
+    <strong>Target KPI:</strong> Il tasso di non-silenzio deve rimanere sopra l'85%. Ogni pratica che va in silenzio (nessuna risposta entro la deadline) rappresenta un margine perso.
+  </div>
+</div>
+
+<!-- 15. RIACQUISTI IN ATTESA -->
+<h2 id="riacquisti-attesa">15. Riacquisti in attesa</h2>
+<div class="section">
+  <p>Questa sezione mostra le pratiche con decisione di riacquisto che sono in attesa di contatto prima del pagamento.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/09_riacquisti_attesa.png" alt="Riacquisti in attesa">
+    <div class="caption">Fig. 15 — Pagina riacquisti in attesa di chiamata</div>
+  </div>
+
+  <p>Si popola quando un cliente, durante il flusso di riacquisto, sceglie "Si, contattatemi prima" invece di procedere direttamente al pagamento. L'operatore deve:</p>
+  <ol>
+    <li>Chiamare il cliente per chiarire eventuali dubbi</li>
+    <li>Registrare l'esito della chiamata</li>
+    <li>Sbloccare il pagamento se il cliente conferma</li>
+  </ol>
+</div>
+
+<!-- 16. REPORTISTICA -->
+<h2 id="reportistica">16. Reportistica</h2>
+<div class="section">
+  <p>La sezione reportistica offre analisi complete sull'andamento delle pratiche EOL.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/10_reportistica.png" alt="Reportistica">
+    <div class="caption">Fig. 16 — Reportistica con grafici KPI e composizione decisioni</div>
+  </div>
+
+  <h3>Selettore periodo</h3>
+  <p>Tre opzioni: Mese corrente, Trimestre corrente, Anno corrente.</p>
+
+  <h3>Sintesi KPI</h3>
+  <p>Card con i numeri chiave: totale pratiche, rinnovi, riacquisti, restituzioni, silenzi, tasso non-silenzio.</p>
+
+  <h3>Grafici</h3>
+  <ul>
+    <li><strong>Andamento tasso non-silenzio (%)</strong> — Grafico a linea con obiettivo 85% come reference line tratteggiata</li>
+    <li><strong>Composizione decisioni per mese</strong> — Grafico a barre impilate (restituzioni, riacquisti, rinnovi, silenzi)</li>
+  </ul>
+
+  <div class="screenshot">
+    <img src="screenshots/11_reportistica_bottom.png" alt="Reportistica perdite e performance">
+    <div class="caption">Fig. 17 — Perdite da silenzio e performance agenti</div>
+  </div>
+
+  <h3>Perdite da silenzio</h3>
+  <p>Tabella dettagliata con il margine perso per ogni pratica andata in silenzio.</p>
+
+  <h3>Performance agenti</h3>
+  <p>Classifica degli agenti con: pratiche totali, tasso non-silenzio, margine generato, numero di silenzi.</p>
+
+  <h3>Export</h3>
+  <p>Il bottone "Esporta Report" genera un file CSV con tutti i dati del periodo selezionato.</p>
+</div>
+
+<!-- 17. EXPORT GRENKE -->
+<h2 id="export">17. Export lista Grenke</h2>
+<div class="section">
+  <p>Funzionalita per generare la lista di riepilogo da inviare a Grenke con lo stato di tutti i contratti.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/12_export_grenke.png" alt="Export Grenke">
+    <div class="caption">Fig. 18 — Pagina export lista Grenke</div>
+  </div>
+
+  <p>L'export include per ogni contratto: codice Grenke, ragione sociale, stato finale, decisione del cliente, data della decisione, note.</p>
+</div>
+
+<!-- 18. RUOLI E PERMESSI -->
+<h2 id="ruoli">18. Ruoli e permessi</h2>
+<div class="section">
+  <h3>Matrice di accesso</h3>
+  <table>
+    <tr>
+      <th>Funzionalita</th>
+      <th>ADMIN</th>
+      <th>BACKOFFICE</th>
+      <th>CAPO AREA</th>
+      <th>AGENTE</th>
+    </tr>
+    <tr><td>Dashboard</td><td>Si</td><td>Si</td><td>Si</td><td>Si</td></tr>
+    <tr><td>Lista pratiche</td><td>Si</td><td>Si</td><td>Si</td><td>Si</td></tr>
+    <tr><td>Dettaglio pratica</td><td>Si</td><td>Si</td><td>Si</td><td>Solo assegnate</td></tr>
+    <tr><td>I miei task</td><td>—</td><td>—</td><td>—</td><td>Si</td></tr>
+    <tr><td>Task escalation</td><td>Si</td><td>Si</td><td>Si</td><td>Solo assegnati</td></tr>
+    <tr><td>Riacquisti in attesa</td><td>Si</td><td>Si</td><td>Si</td><td>Solo assegnati</td></tr>
+    <tr><td>Importa lista</td><td>Si</td><td>Si</td><td>—</td><td>—</td></tr>
+    <tr><td>Gestione outlier</td><td>Si</td><td>Si</td><td>—</td><td>—</td></tr>
+    <tr><td>Invia comunicazioni</td><td>Si</td><td>Si</td><td>—</td><td>—</td></tr>
+    <tr><td>Reportistica</td><td>Si</td><td>Si</td><td>Si</td><td>—</td></tr>
+    <tr><td>Export Grenke</td><td>Si</td><td>Si</td><td>Si</td><td>—</td></tr>
+    <tr><td>Impostazioni</td><td>Si</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>Gestione utenti</td><td>Si</td><td>—</td><td>—</td><td>—</td></tr>
+  </table>
+
+  <h3>Sidebar dinamica</h3>
+  <p>Le voci del menu laterale vengono mostrate/nascoste automaticamente in base al ruolo dell'utente loggato. Ad esempio, un agente vede solo Dashboard, Pratiche, I miei task, Task escalation e Riacquisti in attesa.</p>
+</div>
+
+<!-- 19. IMPOSTAZIONI AMMINISTRATORE -->
+<h2 id="impostazioni">19. Impostazioni amministratore</h2>
+<div class="section">
+  <p>La sezione Impostazioni (accessibile solo agli utenti con ruolo <strong>ADMIN</strong>) permette di configurare tutti i parametri operativi della piattaforma senza toccare il codice. Le modifiche sono attive in tempo reale. È divisa in 7 tab.</p>
+
+  <!-- TAB 1: TIMELINE -->
+  <h3>19.1 Timeline</h3>
+  <p>Configura i giorni esatti in cui vengono inviate le comunicazioni email e attivate le escalation telefoniche, contati a ritroso dalla data di scadenza del contratto (T0). La visualizzazione grafica mostra in tempo reale la posizione di ogni evento sulla linea del tempo.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_01_timeline.png" alt="Impostazioni - Timeline">
+    <div class="caption">Fig. 19.1 — Tab Timeline: visualizzazione grafica degli eventi e configurazione dei giorni (T-145, T-90, T-60, ecc.)</div>
+  </div>
+
+  <table>
+    <tr><th>Evento</th><th>Default</th><th>Tipo</th></tr>
+    <tr><td>Comunicazione iniziale</td><td>T-145</td><td>Email</td></tr>
+    <tr><td>Sollecito 1</td><td>T-90</td><td>Email</td></tr>
+    <tr><td>Sollecito 2</td><td>T-60</td><td>Email</td></tr>
+    <tr><td>Escalation 1</td><td>T-50</td><td>Telefonica</td></tr>
+    <tr><td>Sollecito 3</td><td>T-45</td><td>Email</td></tr>
+    <tr><td>Escalation 2</td><td>T-40</td><td>Telefonica</td></tr>
+    <tr><td>Sollecito 4</td><td>T-35</td><td>Email</td></tr>
+    <tr><td>Escalation 3</td><td>T-30</td><td>Telefonica</td></tr>
+    <tr><td>Ultimo sollecito</td><td>T-20</td><td>Email</td></tr>
+  </table>
+  <p>Il pulsante <em>Ripristina default timeline</em> reimposta tutti i valori ai default di sistema in un click.</p>
+
+  <!-- TAB 2: PRICING -->
+  <h3>19.2 Pricing</h3>
+  <p>Gestisce le percentuali usate per calcolare i prezzi di riacquisto e la commissione Grenke, più i tagli disponibili per le gift card. Un pannello di calcolo live mostra l'impatto delle modifiche su un contratto di esempio (canone 70 € × 36 mesi).</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_02_pricing.png" alt="Impostazioni - Pricing">
+    <div class="caption">Fig. 19.2 — Tab Pricing: percentuali di calcolo e gestione dei tagli gift card con anteprima live</div>
+  </div>
+
+  <table>
+    <tr><th>Parametro</th><th>Default</th><th>Descrizione</th></tr>
+    <tr><td>Percentuale Grenke</td><td>5%</td><td>Quota riconosciuta a Grenke sul monte canoni</td></tr>
+    <tr><td>Percentuale riacquisto</td><td>8%</td><td>Prezzo di riacquisto espresso come % del monte canoni</td></tr>
+    <tr><td>IVA</td><td>22%</td><td>Aliquota IVA a margine: applicata solo sulla differenza tra prezzo di riacquisto (8%) e prezzo Grenke (5%), non sul prezzo pieno</td></tr>
+    <tr><td>Tagli gift card</td><td>25, 50, 75, 100…</td><td>Valori disponibili; viene assegnato il taglio più alto ≤ al margine lordo</td></tr>
+  </table>
+
+  <!-- TAB 3: EMAIL -->
+  <h3>19.3 Email</h3>
+  <p>Editor rich-text per modificare il corpo HTML di ogni template email inviato ai clienti. Ogni template supporta variabili dinamiche (es. <code>{{ragione_sociale}}</code>, <code>{{link_area_cliente}}</code>) che vengono sostituite automaticamente al momento dell'invio. Il pulsante <em>Anteprima</em> mostra l'email renderizzata prima del salvataggio.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_03_email.png" alt="Impostazioni - Email">
+    <div class="caption">Fig. 19.3 — Tab Email: editor rich-text con lista template, barra variabili e anteprima HTML</div>
+  </div>
+
+  <p>Template disponibili: comunicazione iniziale, sollecito 1–4, ultimo sollecito, conferma riacquisto, conferma rinnovo, conferma restituzione, conferma contatto.</p>
+  <div class="info-box">
+    <strong>Variabili supportate:</strong> <code>{{ragione_sociale}}</code>, <code>{{data_scadenza}}</code>, <code>{{beni}}</code>, <code>{{pricing_riacquisto}}</code>, <code>{{valore_gift_card}}</code>, <code>{{link_area_cliente}}</code>, <code>{{deadline_decisione}}</code>
+  </div>
+
+  <!-- TAB 4: AREA CLIENTE -->
+  <h3>19.4 Area Cliente</h3>
+  <p>Personalizza i testi mostrati nell'area cliente: titoli e descrizioni delle 4 card di scelta (Rinnova, Riacquisto, Contatto, Restituzione). Un'anteprima live mostra come le card appariranno al cliente prima di salvare.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_04_area_cliente.png" alt="Impostazioni - Area Cliente">
+    <div class="caption">Fig. 19.4 — Tab Area Cliente: anteprima delle card cliente e editor dei testi</div>
+  </div>
+
+  <!-- TAB 5: RECAPITI -->
+  <h3>19.5 Recapiti</h3>
+  <p>Inserisce i dati aziendali che compaiono nei PDF e nelle email inviate ai clienti: ragione sociale, indirizzo, telefono, email di assistenza, sito web. Ogni campo ha un pulsante <em>Default</em> per ripristinare il valore di sistema.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_05_recapiti.png" alt="Impostazioni - Recapiti">
+    <div class="caption">Fig. 19.5 — Tab Recapiti: dati aziendali visualizzati in PDF ed email</div>
+  </div>
+
+  <!-- TAB 6: FEATURE FLAGS -->
+  <h3>19.6 Feature Flags</h3>
+  <p>Toggle on/off per abilitare o disabilitare funzionalità operative in produzione senza rilasci. I flag contrassegnati come <em>Critico</em> mostrano un avviso di conferma prima della disattivazione per evitare interruzioni accidentali del servizio.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_06_feature_flags.png" alt="Impostazioni - Feature Flags">
+    <div class="caption">Fig. 19.6 — Tab Feature Flags: toggle on/off con avviso per i flag critici</div>
+  </div>
+
+  <table>
+    <tr><th>Flag</th><th>Effetto</th></tr>
+    <tr><td>Escalation telefonica</td><td>Abilita la generazione automatica dei task telefonici agli agenti</td></tr>
+    <tr><td>Solleciti automatici</td><td>Abilita l'invio automatico delle email di sollecito secondo la timeline</td></tr>
+    <tr><td>Modalità manutenzione</td><td>Mostra un banner di manutenzione nell'area cliente</td></tr>
+    <tr><td>OTP obbligatorio</td><td>Richiede verifica OTP per tutte le decisioni cliente</td></tr>
+  </table>
+
+  <!-- TAB 7: SCRIPT TELEFONICI -->
+  <h3>19.7 Script Telefonici</h3>
+  <p>Editor markdown per gli script di chiamata usati dagli agenti durante le escalation telefoniche (T-50, T-40, T-30). Ogni script include apertura, corpo della conversazione e gestione delle obiezioni più frequenti. Il pulsante <em>Preview</em> mostra lo script formattato prima del salvataggio.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_07_script_telefonici.png" alt="Impostazioni - Script Telefonici">
+    <div class="caption">Fig. 19.7 — Tab Script Telefonici: editor markdown con preview degli script di chiamata</div>
+  </div>
+
+  <div class="warning-box">
+    <strong>Compliance:</strong> gli script devono riguardare esclusivamente le opzioni di fine contratto (rinnovo, riacquisto, restituzione, contatto). Non inserire proposte commerciali non attinenti al contratto in scadenza.
+  </div>
+</div>
+
+<!-- 20. GESTIONE UTENTI -->
+<h2 id="utenti">20. Gestione utenti</h2>
+<div class="section">
+  <p>La sezione Gestione Utenti (accessibile solo agli utenti con ruolo <strong>ADMIN</strong>) permette di creare, modificare, attivare e disattivare gli account degli operatori del backoffice.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_08_gestione_utenti.png" alt="Gestione utenti">
+    <div class="caption">Fig. 20.1 — Tabella utenti con badge ruolo, stato attivo/disattivo e azioni rapide</div>
+  </div>
+
+  <h3>Funzionalità</h3>
+  <ul>
+    <li><strong>Lista utenti</strong> — Tabella con nome, email, ruolo (badge colorato), stato e data di creazione</li>
+    <li><strong>Filtri</strong> — Per ruolo (Admin, Backoffice, Capo Area, Agente, ecc.) e per stato (attivi / disattivati)</li>
+    <li><strong>Crea utente</strong> — Modale con nome, cognome, email, selezione ruolo e password (minimo 8 caratteri)</li>
+    <li><strong>Modifica utente</strong> — Cambia nome, cognome, email, ruolo oppure resetta la password</li>
+    <li><strong>Attiva / Disattiva</strong> — Un utente disattivato non può più accedere al sistema ma i suoi dati storici (assegnazioni, timeline) vengono preservati</li>
+  </ul>
+
+  <div class="screenshot">
+    <img src="screenshots/admin_09_nuovo_utente_modal.png" alt="Modale nuovo utente">
+    <div class="caption">Fig. 20.2 — Form di creazione nuovo utente con selezione ruolo e password</div>
+  </div>
+
+  <h3>Gerarchia agenti</h3>
+  <p>I ruoli operativi seguono una gerarchia a cascata. Ogni livello ha visibilità su tutti i livelli sottostanti assegnati:</p>
+
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 12px 0; text-align: center; font-size: 0.95em;">
+    <span style="background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 12px; font-weight: 600;">Agenzia</span>
+    &nbsp;→&nbsp;
+    <span style="background: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 12px; font-weight: 600;">Capo Area</span>
+    &nbsp;→&nbsp;
+    <span style="background: #cffafe; color: #155e75; padding: 3px 10px; border-radius: 12px; font-weight: 600;">Group Manager</span>
+    &nbsp;→&nbsp;
+    <span style="background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 12px; font-weight: 600;">Agente</span>
+    &nbsp;/&nbsp;
+    <span style="background: #ccfbf1; color: #115e59; padding: 3px 10px; border-radius: 12px; font-weight: 600;">Junior Agent</span>
+  </div>
+
+  <table>
+    <tr><th>Ruolo</th><th>Visibilità</th><th>Superiore diretto</th></tr>
+    <tr><td>Agenzia</td><td>Vede tutto di tutti i Capi Area, Group Manager e Agenti assegnati</td><td>—</td></tr>
+    <tr><td>Capo Area</td><td>Vede tutto dei Group Manager assegnati e dei loro agenti</td><td>Agenzia</td></tr>
+    <tr><td>Group Manager</td><td>Vede tutto degli Agenti e Junior Agent assegnati</td><td>Capo Area</td></tr>
+    <tr><td>Agente</td><td>Vede solo le proprie pratiche</td><td>Group Manager</td></tr>
+    <tr><td>Junior Agent</td><td>Vede solo le proprie pratiche</td><td>Group Manager</td></tr>
+  </table>
+
+  <h3>Ruoli di sistema (non gerarchici)</h3>
+  <table>
+    <tr><th>Ruolo</th><th>Descrizione</th></tr>
+    <tr><td>ADMIN</td><td>Accesso completo: impostazioni, gestione utenti, tutte le funzionalità</td></tr>
+    <tr><td>BACKOFFICE INTERNO</td><td>Import liste, gestione outlier, invio comunicazioni, reportistica</td></tr>
+  </table>
+
+  <h3>Assegnazione del superiore</h3>
+  <p>Alla creazione o modifica di un utente, il sistema mostra automaticamente il campo "Superiore" con la lista dei possibili superiori in base al ruolo selezionato. Ad esempio, un Agente può avere come superiore solo un Group Manager; un Capo Area solo un'Agenzia.</p>
+
+  <div class="info-box">
+    <strong>Nota:</strong> La disattivazione di un utente è reversibile. Se necessario riattivare un account, è sufficiente cliccare l'icona di riattivazione dalla stessa pagina. I dati storici (assegnazioni, timeline) vengono sempre preservati.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="text-align: center; padding: 40px 0; color: #94a3b8; font-size: 0.9em; border-top: 1px solid #e2e8f0; margin-top: 50px;">
+  <p>Manuale Operativo — NSM EOL Grenke v1.0</p>
+  <p>Noleggio Su Misura / Smartcom Solutions Srl — 2026</p>
+  <p>Generato automaticamente dal sistema di documentazione</p>
+</div>
+
+</body>
+</html>

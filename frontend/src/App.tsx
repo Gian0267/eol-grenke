@@ -12,6 +12,7 @@ import GestioneOutlier from './pages/backoffice/GestioneOutlier'
 import Reportistica from './pages/backoffice/Reportistica'
 import EsportaListaGrenke from './pages/backoffice/EsportaListaGrenke'
 import Impostazioni from './pages/backoffice/Impostazioni'
+import GestioneUtenti from './pages/backoffice/GestioneUtenti'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="reportistica" element={<Reportistica />} />
           <Route path="export-grenke" element={<EsportaListaGrenke />} />
           <Route path="impostazioni" element={<Impostazioni />} />
+          <Route path="utenti" element={<GestioneUtenti />} />
         </Route>
         <Route path="/pratica/scaduta" element={<PraticaScaduta />} />
         <Route path="/pratica/:token" element={<ClienteLayout />}>

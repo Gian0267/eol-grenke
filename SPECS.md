@@ -110,13 +110,14 @@ Il flusso operativo è scandito da date relative alla scadenza del contratto Gre
 | **Escalation telefonica 3** (Capo Area per contratti >5.000€) | T-35 | Capo Area → Cliente |
 | **Deadline decisione cliente** | **T-30** | Cliente |
 | NSM consolida lista riacquisti | T-30 → T-20 | NSM |
+| **Invio link pagamento riacquisto** (per chi ha deciso prima) | **T-7** | NSM → Cliente |
 | NSM invia lista riacquisti a Grenke | T-20 | NSM → Grenke |
 | Scadenza contratto Grenke | T0 | — |
 | Termine consegna bene per restituzione (10 gg da scadenza) | T+10 | Cliente |
 | Trasferimento automatico proprietà a Smartcom (Art. 5.7) | T+11 | — |
 | Termine pagamento Smartcom a Grenke (30 gg da scadenza) | T+30 | NSM → Grenke |
 
-**Nota:** la timeline è configurabile. I valori T-150, T-90, T-60, T-50, T-45, T-40, T-35, T-30, T-20 sono parametri modificabili tramite il file `config/timeline.json`.
+**Nota:** la timeline è configurabile. I valori T-150, T-90, T-60, T-50, T-45, T-40, T-35, T-30, T-20, T-7 sono parametri modificabili tramite il file `config/timeline.json`.
 
 ---
 
@@ -663,11 +664,18 @@ Si prosegue con i passi normali.
    - Modalità di pagamento disponibili
    - Termini e condizioni del riacquisto (PDF visualizzabile)
 2. Cliente accetta T&C e conferma con FES (OTP)
-3. Sistema mostra schermata di pagamento con due opzioni:
+3. **Pagamento differito o immediato** (in base alla distanza dalla scadenza):
+   - Se mancano **più di 7 giorni** alla scadenza (parametro `pagamento_riacquisto` in `config/timeline.json`):
+     - La decisione viene registrata, la pratica passa a `DECISIONE_RIACQUISTO_IN_CORSO`
+     - Il sistema mostra al cliente una conferma: "Scelta confermata. Riceverai il link per il pagamento il [data T-7]"
+     - A **T-7** lo scheduler invia automaticamente un'email con il link per completare il pagamento
+     - Il cliente accede al link e procede con il pagamento (passo 4)
+   - Se mancano **7 giorni o meno**: il pagamento procede immediatamente (passo 4)
+4. Sistema mostra schermata di pagamento con due opzioni:
    - **Fabrick** (open banking, bonifico istantaneo) — placeholder mock
    - **Stripe** (carta di credito/debito) — placeholder mock
-4. Cliente sceglie metodo e completa il pagamento (mockato nel template)
-5. Al pagamento confermato:
+5. Cliente sceglie metodo e completa il pagamento (mockato nel template)
+6. Al pagamento confermato:
    - Sistema registra `Pagamento` con stato `COMPLETATO`
    - Registra `Decisione_Cliente` con `opzione_scelta = RIACQUISTO`
    - Aggiorna stato pratica a `RIACQUISTO_PAGATO`
@@ -1237,7 +1245,8 @@ Per garantire massima flessibilità nei test e nelle simulazioni, tutte le regol
     "sollecito_email_4": 35,
     "escalation_telefonica_3": 35,
     "deadline_decisione": 30,
-    "consolidamento_lista": 20
+    "consolidamento_lista": 20,
+    "pagamento_riacquisto": 7
   },
   "giorni_post_scadenza": {
     "termine_consegna_bene": 10,

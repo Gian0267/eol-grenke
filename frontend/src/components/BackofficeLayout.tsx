@@ -11,7 +11,7 @@ export default function BackofficeLayout() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-paper">
       <BackofficeSidebar />
       <main className="flex-1 min-w-0 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:pl-6">

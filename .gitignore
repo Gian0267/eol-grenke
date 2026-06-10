@@ -30,5 +30,8 @@ backend/storage/grenke-exports/
 # Vite
 frontend/.vite/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Claude
 .claude/

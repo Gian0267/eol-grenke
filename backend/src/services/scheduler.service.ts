@@ -4,13 +4,13 @@ import jwt from 'jsonwebtoken';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const emailProvider = new SmtpEmailProvider();
+const emailProvider = createEmailProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -76,6 +76,7 @@ export interface SchedulerReport {
   escalation_creati: number;
   escalation_skippati: number;
   silenzio_marcati: number;
+  inviti_pagamento_inviati: number;
   errori: string[];
 }
 
@@ -91,6 +92,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     escalation_creati: 0,
     escalation_skippati: 0,
     silenzio_marcati: 0,
+    inviti_pagamento_inviati: 0,
     errori: [],
   };
 
@@ -217,7 +219,42 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     }
   }
 
-  console.log(`[Scheduler] Completato: ${report.solleciti_inviati} solleciti, ${report.escalation_creati} escalation, ${report.silenzio_marcati} silenzio, ${report.errori.length} errori`);
+  // --- INVITI PAGAMENTO RIACQUISTO (T-7) ---
+  try {
+    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+    const praticheRiacquisto = await prisma.contratto_EOL.findMany({
+      where: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
+      include: { cliente: true },
+    });
+
+    for (const pratica of praticheRiacquisto) {
+      const giorniMancanti = diffDays(pratica.data_scadenza, oggi);
+      if (giorniMancanti <= giorniPagamento) {
+        const giàInviato = await prisma.comunicazione.findFirst({
+          where: {
+            contratto_eol_id: pratica.id,
+            tipo: 'INVITO_PAGAMENTO',
+          },
+        });
+        if (giàInviato) continue;
+
+        try {
+          await inviaInvitoPagamento(pratica);
+          report.inviti_pagamento_inviati++;
+        } catch (err) {
+          const msg = `Errore invito pagamento per ${pratica.contratto_nsm_id}: ${err instanceof Error ? err.message : String(err)}`;
+          report.errori.push(msg);
+          console.error(`[Scheduler] ${msg}`);
+        }
+      }
+    }
+  } catch (err) {
+    const msg = `Errore fase inviti pagamento: ${err instanceof Error ? err.message : String(err)}`;
+    report.errori.push(msg);
+    console.error(`[Scheduler] ${msg}`);
+  }
+
+  console.log(`[Scheduler] Completato: ${report.solleciti_inviati} solleciti, ${report.escalation_creati} escalation, ${report.silenzio_marcati} silenzio, ${report.inviti_pagamento_inviati} inviti pagamento, ${report.errori.length} errori`);
   return report;
 }
 
@@ -446,6 +483,66 @@ async function marcaSilenzio(pratica: any): Promise<void> {
   }
 
   console.log(`[Scheduler] Pratica ${pratica.contratto_nsm_id} marcata SILENZIO_PERDITA_DEFINITIVA`);
+}
+
+async function inviaInvitoPagamento(pratica: any): Promise<void> {
+  const invitoPagamentoTemplate = await loadTemplateFromDb('email.invito_pagamento');
+
+  const beni = pratica.beni_json ? JSON.parse(pratica.beni_json) : [];
+  const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
+
+  const pricingRules = JSON.parse(readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'));
+  const netto = Number(pratica.pricing_riacquisto);
+  const centNetto = Math.round(netto * 100);
+  const centIva = Math.round(centNetto * pricingRules.iva_percentuale);
+  const iva = centIva / 100;
+  const totale = (centNetto + centIva) / 100;
+
+  const linkPagamento = pratica.token_accesso_cliente
+    ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}/riacquisto`
+    : FRONTEND_URL;
+
+  const templateVars = {
+    ragione_sociale: pratica.cliente.ragione_sociale,
+    numero_contratto_nsm: pratica.contratto_nsm_id,
+    numero_contratto_grenke: pratica.contratto_grenke_id,
+    data_scadenza: formatDate(new Date(pratica.data_scadenza)),
+    beni: beniFormatted || 'Beni come da contratto',
+    pricing_netto: formatEur(netto),
+    pricing_iva: formatEur(iva),
+    pricing_totale: formatEur(totale),
+    link_pagamento: linkPagamento,
+  };
+
+  const html = invitoPagamentoTemplate(templateVars);
+  const oggetto = `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_nsm_id})`;
+
+  const sendResult = await emailProvider.send(pratica.cliente.email, oggetto, html);
+
+  await prisma.comunicazione.create({
+    data: {
+      contratto_eol_id: pratica.id,
+      tipo: 'INVITO_PAGAMENTO',
+      canale: 'EMAIL',
+      destinatario: pratica.cliente.email,
+      oggetto,
+      corpo_html: html,
+      data_invio: new Date(),
+      esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
+    },
+  });
+
+  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', 'INVITO_PAGAMENTO_INVIATO', {
+    canale: 'EMAIL',
+    destinatario: pratica.cliente.email,
+    esito: sendResult.success ? 'INVIATO' : 'ERRORE',
+  });
+
+  if (sendResult.success) {
+    console.log(`[Scheduler] Invito pagamento inviato a ${pratica.cliente.email} per ${pratica.contratto_nsm_id}`);
+  } else {
+    console.warn(`[Scheduler] Invito pagamento ERRORE SMTP per ${pratica.contratto_nsm_id}: ${sendResult.error}`);
+  }
 }
 
 export function startSchedulerCron(): void {

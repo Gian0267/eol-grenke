@@ -164,17 +164,17 @@ export default function ImportLista() {
 
   const statusIcon = (status: RowStatus) => {
     switch (status) {
-      case 'RICONCILIATO_AUTO': return <CheckCircle2 className="w-5 h-5 text-green-600" />
-      case 'OUTLIER_DA_GESTIRE': return <AlertTriangle className="w-5 h-5 text-amber-500" />
-      case 'ERRORE': return <XCircle className="w-5 h-5 text-red-500" />
+      case 'RICONCILIATO_AUTO': return <CheckCircle2 className="w-5 h-5 text-ok-text" />
+      case 'OUTLIER_DA_GESTIRE': return <AlertTriangle className="w-5 h-5 text-warn-text" />
+      case 'ERRORE': return <XCircle className="w-5 h-5 text-danger-text" />
     }
   }
 
   const statusBg = (status: RowStatus) => {
     switch (status) {
-      case 'RICONCILIATO_AUTO': return 'bg-green-50 border-green-200'
-      case 'OUTLIER_DA_GESTIRE': return 'bg-amber-50 border-amber-200'
-      case 'ERRORE': return 'bg-red-50 border-red-200'
+      case 'RICONCILIATO_AUTO': return 'bg-ok border-ok-border'
+      case 'OUTLIER_DA_GESTIRE': return 'bg-warn border-warn-border'
+      case 'ERRORE': return 'bg-danger border-danger-border'
     }
   }
 
@@ -196,8 +196,8 @@ export default function ImportLista() {
         {/* Step: Upload */}
         {step === 'upload' && (
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-[#1a3a52] mb-2">Importa lista Grenke</h2>
-            <p className="text-[#64748b] mb-8">
+            <h2 className="text-2xl font-bold text-graphite mb-2">Importa lista Grenke</h2>
+            <p className="text-stone mb-8">
               Carica il file Excel ricevuto da Grenke con la lista dei contratti in scadenza.
               Il sistema effettuerà la riconciliazione automatica con i contratti NSM.
             </p>
@@ -209,7 +209,7 @@ export default function ImportLista() {
               onClick={() => fileInputRef.current?.click()}
               className={`
                 border-2 border-dashed rounded-xl p-16 text-center cursor-pointer transition-all
-                ${dragOver ? 'border-[#16a34a] bg-green-50' : 'border-[#e2e8f0] hover:border-[#1a3a52] hover:bg-[#f1f5f9]'}
+                ${dragOver ? 'border-ok-border bg-ok' : 'border-border hover:border-flex hover:bg-paper'}
                 ${loading ? 'pointer-events-none opacity-60' : ''}
               `}
             >
@@ -222,22 +222,22 @@ export default function ImportLista() {
               />
               {loading ? (
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-12 h-12 text-[#1a3a52] animate-spin" />
-                  <p className="text-[#1a3a52] font-medium">Analisi in corso...</p>
+                  <Loader2 className="w-12 h-12 text-flex animate-spin" />
+                  <p className="text-flex font-medium">Analisi in corso...</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 rounded-full bg-[#f1f5f9] flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-paper flex items-center justify-center">
                     {dragOver ? (
-                      <FileSpreadsheet className="w-8 h-8 text-[#16a34a]" />
+                      <FileSpreadsheet className="w-8 h-8 text-ok-text" />
                     ) : (
-                      <Upload className="w-8 h-8 text-[#64748b]" />
+                      <Upload className="w-8 h-8 text-stone" />
                     )}
                   </div>
-                  <p className="text-[#1a3a52] font-medium">
+                  <p className="text-graphite font-medium">
                     Trascina qui il file Excel oppure clicca per selezionarlo
                   </p>
-                  <p className="text-sm text-[#64748b]">Formato supportato: .xlsx</p>
+                  <p className="text-sm text-stone">Formato supportato: .xlsx</p>
                 </div>
               )}
             </div>
@@ -249,12 +249,12 @@ export default function ImportLista() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-[#1a3a52]">Anteprima importazione</h2>
-                <p className="text-[#64748b]">{preview.totalRows} contratti analizzati</p>
+                <h2 className="text-2xl font-bold text-graphite">Anteprima importazione</h2>
+                <p className="text-stone">{preview.totalRows} contratti analizzati</p>
               </div>
               <button
                 onClick={() => { setStep('upload'); setPreview(null) }}
-                className="text-sm text-[#64748b] hover:text-[#1a3a52] underline"
+                className="text-sm text-stone hover:text-graphite underline"
               >
                 Carica un altro file
               </button>
@@ -262,51 +262,51 @@ export default function ImportLista() {
 
             {/* Summary cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="bg-ok border border-ok-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Riconciliati</span>
+                  <CheckCircle2 className="w-5 h-5 text-ok-text" />
+                  <span className="text-sm font-medium text-ok-text">Riconciliati</span>
                 </div>
-                <p className="text-3xl font-bold text-green-700">{preview.riconciliatiAuto}</p>
+                <p className="text-3xl font-bold text-ok-text">{preview.riconciliatiAuto}</p>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="bg-warn border border-warn-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-800">Outlier</span>
+                  <AlertTriangle className="w-5 h-5 text-warn-text" />
+                  <span className="text-sm font-medium text-warn-text">Outlier</span>
                 </div>
-                <p className="text-3xl font-bold text-amber-700">{preview.outlier}</p>
+                <p className="text-3xl font-bold text-warn-text">{preview.outlier}</p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="bg-danger border border-danger-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="w-5 h-5 text-red-500" />
-                  <span className="text-sm font-medium text-red-800">Errori</span>
+                  <XCircle className="w-5 h-5 text-danger-text" />
+                  <span className="text-sm font-medium text-danger-text">Errori</span>
                 </div>
-                <p className="text-3xl font-bold text-red-700">{preview.errori}</p>
+                <p className="text-3xl font-bold text-danger-text">{preview.errori}</p>
               </div>
             </div>
 
             {/* Table */}
-            <div className="bg-white border border-[#e2e8f0] rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                      <th className="text-left px-4 py-3 font-medium text-[#64748b]">#</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#64748b]">Stato</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#64748b]">Contratto Grenke</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#64748b]">Ragione Sociale</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#64748b]">P.IVA</th>
-                      <th className="text-right px-4 py-3 font-medium text-[#64748b]">Canone</th>
-                      <th className="text-right px-4 py-3 font-medium text-[#64748b]">Mesi</th>
-                      <th className="text-right px-4 py-3 font-medium text-[#64748b]">Monte Canoni</th>
-                      <th className="text-right px-4 py-3 font-medium text-[#64748b]">Riacquisto</th>
-                      <th className="text-right px-4 py-3 font-medium text-[#64748b]">Gift Card</th>
+                    <tr className="bg-paper border-b border-border">
+                      <th className="text-left px-4 py-3 font-medium text-stone">#</th>
+                      <th className="text-left px-4 py-3 font-medium text-stone">Stato</th>
+                      <th className="text-left px-4 py-3 font-medium text-stone">Contratto Grenke</th>
+                      <th className="text-left px-4 py-3 font-medium text-stone">Ragione Sociale</th>
+                      <th className="text-left px-4 py-3 font-medium text-stone">P.IVA</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Canone</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Mesi</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Monte Canoni</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Riacquisto</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Gift Card</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.rows.map((row) => (
-                      <tr key={row.index} className={`border-b border-[#e2e8f0] ${statusBg(row.status)}`}>
-                        <td className="px-4 py-3 text-[#64748b]">{row.index + 1}</td>
+                      <tr key={row.index} className={`border-b border-border ${statusBg(row.status)}`}>
+                        <td className="px-4 py-3 text-stone">{row.index + 1}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {statusIcon(row.status)}
@@ -322,7 +322,7 @@ export default function ImportLista() {
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_riacquisto) : '—'}</td>
                         <td className="px-4 py-3 text-right">
                           {row.pricing ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ok text-ok-text">
                               {fmt(row.pricing.valore_gift_card)}
                             </span>
                           ) : '—'}
@@ -337,7 +337,7 @@ export default function ImportLista() {
             {/* Outlier management */}
             {preview.outlier > 0 && (
               <div className="mt-8">
-                <h3 className="text-lg font-bold text-[#1a3a52] mb-4">
+                <h3 className="text-lg font-bold text-graphite mb-4">
                   Gestione Outlier ({preview.outlier})
                 </h3>
                 <div className="space-y-4">
@@ -346,19 +346,19 @@ export default function ImportLista() {
                     .map(row => {
                       const decision = decisions.get(row.index)
                       return (
-                        <div key={row.index} className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                        <div key={row.index} className="bg-warn border border-warn-border rounded-xl p-5">
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <p className="font-medium text-[#1a3a52]">
+                              <p className="font-medium text-graphite">
                                 {row.raw['cliente.ragione_sociale']}
-                                <span className="ml-2 text-sm text-[#64748b]">P.IVA {row.raw['cliente.piva']}</span>
+                                <span className="ml-2 text-sm text-stone">P.IVA {row.raw['cliente.piva']}</span>
                               </p>
-                              <p className="text-sm text-[#64748b]">
+                              <p className="text-sm text-stone">
                                 Contratto: {row.raw.contratto_grenke_id} — Canone {fmt(row.raw.canone_mensile)}/mese × {row.raw.numero_mesi} mesi
                               </p>
                             </div>
                             {row.pricing && (
-                              <span className="text-sm font-medium text-amber-700">
+                              <span className="text-sm font-medium text-warn-text">
                                 Monte canoni: {fmt(row.pricing.monte_canoni)}
                               </span>
                             )}
@@ -366,13 +366,13 @@ export default function ImportLista() {
 
                           {row.suggestedMatches && row.suggestedMatches.length > 0 && (
                             <div className="mb-3 p-3 bg-white/50 rounded-lg">
-                              <p className="text-xs font-medium text-amber-700 mb-1">Suggerimenti di matching:</p>
+                              <p className="text-xs font-medium text-warn-text mb-1">Suggerimenti di matching:</p>
                               {row.suggestedMatches.map((s, si) => (
-                                <p key={si} className="text-xs text-[#64748b]">
+                                <p key={si} className="text-xs text-stone">
                                   {s.ragioneSociale} (P.IVA {s.piva})
                                   <button
                                     onClick={() => updateDecision(row.index, { action: 'ASSOCIA', clienteId: s.clienteId })}
-                                    className="ml-2 text-[#1a3a52] underline"
+                                    className="ml-2 text-flex underline"
                                   >
                                     Associa
                                   </button>
@@ -390,13 +390,13 @@ export default function ImportLista() {
                                   clienteId: undefined,
                                   motivazione: '',
                                 })}
-                                className="appearance-none bg-white border border-[#e2e8f0] rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/20"
+                                className="appearance-none bg-card border border-border rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-flex/20"
                               >
                                 <option value="SCARTA">Scarta</option>
                                 <option value="CREA">Crea nuovo</option>
                                 <option value="ASSOCIA">Associa esistente</option>
                               </select>
-                              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b] pointer-events-none" />
+                              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-stone pointer-events-none" />
                             </div>
 
                             {(decision?.action === 'SCARTA' || decision?.action === 'CREA') && (
@@ -405,12 +405,12 @@ export default function ImportLista() {
                                 placeholder="Motivazione (obbligatoria)"
                                 value={decision?.motivazione || ''}
                                 onChange={(e) => updateDecision(row.index, { motivazione: e.target.value })}
-                                className="flex-1 bg-white border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a52]/20 placeholder:text-[#94a3b8]"
+                                className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/20 placeholder:text-stone"
                               />
                             )}
 
                             {decision?.action === 'ASSOCIA' && decision.clienteId && (
-                              <span className="text-sm text-green-700 font-medium">
+                              <span className="text-sm text-ok-text font-medium">
                                 Associato a cliente {decision.clienteId.slice(0, 8)}...
                               </span>
                             )}
@@ -423,8 +423,8 @@ export default function ImportLista() {
             )}
 
             {/* Confirm button */}
-            <div className="mt-8 flex items-center justify-between border-t border-[#e2e8f0] pt-6">
-              <p className="text-sm text-[#64748b]">
+            <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
+              <p className="text-sm text-stone">
                 Verranno creati <strong>{preview.riconciliatiAuto + Array.from(decisions.values()).filter(d => d.action !== 'SCARTA').length}</strong> contratti EOL
               </p>
               <button
@@ -433,8 +433,8 @@ export default function ImportLista() {
                 className={`
                   px-6 py-3 rounded-xl font-medium text-white transition-all
                   ${loading || !canConfirm()
-                    ? 'bg-[#94a3b8] cursor-not-allowed'
-                    : 'bg-[#16a34a] hover:bg-[#15803d] shadow-md hover:shadow-lg'}
+                    ? 'bg-stone cursor-not-allowed'
+                    : 'bg-ok-text hover:bg-ok-text/80 shadow-md hover:shadow-lg'}
                 `}
               >
                 {loading ? (
@@ -453,30 +453,30 @@ export default function ImportLista() {
         {/* Step: Confirmed */}
         {step === 'confirmed' && confirmResult && (
           <div className="max-w-2xl mx-auto text-center">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            <div className="w-20 h-20 rounded-full bg-ok flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-ok-text" />
             </div>
-            <h2 className="text-2xl font-bold text-[#1a3a52] mb-2">Importazione completata</h2>
-            <p className="text-[#64748b] mb-8">{confirmResult.message}</p>
+            <h2 className="text-2xl font-bold text-graphite mb-2">Importazione completata</h2>
+            <p className="text-stone mb-8">{confirmResult.message}</p>
 
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-sm text-green-700 font-medium">Creati</p>
-                <p className="text-3xl font-bold text-green-800">{confirmResult.creati}</p>
+              <div className="bg-ok border border-ok-border rounded-xl p-4">
+                <p className="text-sm text-ok-text font-medium">Creati</p>
+                <p className="text-3xl font-bold text-ok-text">{confirmResult.creati}</p>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-sm text-amber-700 font-medium">Scartati</p>
-                <p className="text-3xl font-bold text-amber-800">{confirmResult.scartati}</p>
+              <div className="bg-warn border border-warn-border rounded-xl p-4">
+                <p className="text-sm text-warn-text font-medium">Scartati</p>
+                <p className="text-3xl font-bold text-warn-text">{confirmResult.scartati}</p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-sm text-red-700 font-medium">Errori</p>
-                <p className="text-3xl font-bold text-red-800">{confirmResult.errori}</p>
+              <div className="bg-danger border border-danger-border rounded-xl p-4">
+                <p className="text-sm text-danger-text font-medium">Errori</p>
+                <p className="text-3xl font-bold text-danger-text">{confirmResult.errori}</p>
               </div>
             </div>
 
             <button
               onClick={() => { setStep('upload'); setPreview(null); setConfirmResult(null) }}
-              className="px-6 py-3 rounded-xl font-medium text-white bg-[#1a3a52] hover:bg-[#0f2a3d] transition-all shadow-md"
+              className="px-6 py-3 rounded-xl font-medium text-white bg-flex hover:bg-flex-dark transition-all shadow-md"
             >
               Nuova importazione
             </button>

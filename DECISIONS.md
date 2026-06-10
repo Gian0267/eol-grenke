@@ -17,6 +17,7 @@
 7. [Calcolo gift card](#7-calcolo-gift-card)
 8. [Inquadramento privacy](#8-inquadramento-privacy)
 9. [Note di hardening pre-consegna](#9-note-di-hardening-pre-consegna-review-security)
+10. [Pagamento riacquisto differito a T-7](#10-pagamento-riacquisto-differito-a-t-7)
 
 > Aggiungi nuove voci numerate progressivamente. Le voci qui sotto sono pre-popolate con le decisioni prese durante la stesura di SPECS.md v1.1.
 
@@ -285,3 +286,42 @@ Quando aggiungi una nuova decisione, usa questo template:
 
 [Eventuali dettagli tecnici utili]
 ```
+
+---
+
+## 10. Pagamento riacquisto differito a T-7
+
+**Data decisione:** 16 maggio 2026
+**Stato:** ✅ Implementata
+
+### Decisione
+
+Il pagamento del riacquisto non avviene più immediatamente dopo la conferma OTP del cliente. La decisione di riacquisto e il pagamento sono separati:
+
+- Il cliente **conferma la decisione** in qualsiasi momento (T&C + OTP)
+- Il **pagamento** viene richiesto solo **7 giorni prima della scadenza** (T-7)
+- Se il cliente decide quando mancano già meno di 7 giorni, il pagamento procede immediatamente come prima
+
+### Contesto
+
+Il workflow precedente richiedeva il pagamento contestuale alla decisione. Un cliente che decideva di riacquistare a T-90 (al primo sollecito) si trovava a pagare con 3 mesi di anticipo rispetto al trasferimento di proprietà (T+11). Questo creava un freno psicologico all'azione anticipata.
+
+### Alternative considerate
+
+- **Pagamento immediato (status quo)**: scartata perché disincentiva la decisione anticipata
+- **Pagamento libero senza deadline**: scartata perché rischia di non avere il pagamento entro T-20 per la lista riacquisti Grenke
+
+### Conseguenze
+
+- Il parametro `pagamento_riacquisto` (default: 7 giorni) è configurabile in `config/timeline.json`
+- Lo scheduler invia automaticamente una email "invito al pagamento" a T-7 alle pratiche in stato `DECISIONE_RIACQUISTO_IN_CORSO`
+- Il cliente che torna sulla pagina riacquisto vede lo stato corrente (differito o pagamento disponibile) senza dover ripetere il flusso
+- Il backoffice vede la pratica in stato `DECISIONE_RIACQUISTO_IN_CORSO` fino al completamento del pagamento
+
+### Note implementative
+
+- Backend: endpoint `GET /api/cliente/decisione/riacquisto/stato` per verificare disponibilità pagamento
+- Backend: `POST conferma-tc` ora restituisce `pagamento_differito: true` + `data_pagamento` se oltre T-7
+- Scheduler: nuova sezione "inviti pagamento" in `runScheduler()` con tipo comunicazione `INVITO_PAGAMENTO`
+- Frontend: nuovo step `STEP_DIFFERITO` nel reducer + auto-detect stato al caricamento pagina
+- Template email: `templates/email/invito_pagamento.html`

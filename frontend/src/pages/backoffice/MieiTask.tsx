@@ -92,18 +92,18 @@ export default function MieiTask() {
     <div>
         {/* Filtri */}
         <div className="flex items-center gap-3 mb-6">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <span className="text-sm text-gray-500">Filtra per tipo:</span>
+          <Filter className="w-4 h-4 text-stone" />
+          <span className="text-sm text-stone">Filtra per tipo:</span>
           {['TUTTI', 'RINNOVO', 'CONTATTO'].map(f => (
             <button
               key={f}
               onClick={() => setFiltroTipo(f)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 filtroTipo === f
-                  ? f === 'RINNOVO' ? 'bg-green-100 text-green-800'
-                    : f === 'CONTATTO' ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-[#1a3a52] text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? f === 'RINNOVO' ? 'bg-ok text-ok-text'
+                    : f === 'CONTATTO' ? 'bg-warn text-warn-text'
+                    : 'bg-flex text-white'
+                  : 'bg-paper text-stone hover:bg-border'
               }`}
             >
               {f === 'TUTTI' ? 'Tutti' : f === 'RINNOVO' ? 'Rinnovi' : 'Contatti'}
@@ -113,38 +113,38 @@ export default function MieiTask() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-stone" />
           </div>
         ) : errore ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{errore}</div>
+          <div className="bg-danger border border-danger-border/30 text-danger-text rounded-lg p-4">{errore}</div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-stone">
             <p className="text-lg font-medium">Nessun task assegnato</p>
             <p className="text-sm mt-1">I task appariranno quando un cliente sceglie rinnovo o contatto personalizzato</p>
           </div>
         ) : (
           <div className="space-y-4">
             {tasks.map(task => (
-              <div key={task.contratto_id} className="bg-white rounded-xl border p-5">
+              <div key={task.contratto_id} className="bg-card rounded-xl border border-border p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      task.tipo === 'RINNOVO' ? 'bg-green-100' : 'bg-yellow-100'
+                      task.tipo === 'RINNOVO' ? 'bg-ok' : 'bg-warn'
                     }`}>
                       {task.tipo === 'RINNOVO'
-                        ? <Gift className="w-5 h-5 text-green-700" />
-                        : <Phone className="w-5 h-5 text-yellow-700" />
+                        ? <Gift className="w-5 h-5 text-ok-text" />
+                        : <Phone className="w-5 h-5 text-warn-text" />
                       }
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[#1a3a52]">{task.cliente.ragione_sociale}</h3>
-                      <p className="text-xs text-gray-500">
+                      <h3 className="font-semibold text-graphite">{task.cliente.ragione_sociale}</h3>
+                      <p className="text-xs text-stone">
                         {task.contratto_nsm} | {task.contratto_grenke}
                       </p>
                     </div>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                    task.tipo === 'RINNOVO' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    task.tipo === 'RINNOVO' ? 'bg-ok text-ok-text' : 'bg-warn text-warn-text'
                   }`}>
                     {task.tipo === 'RINNOVO' ? 'Rinnovo' : 'Contatto'}
                   </span>
@@ -152,28 +152,28 @@ export default function MieiTask() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
                   <div>
-                    <span className="text-gray-500 text-xs">Email</span>
+                    <span className="text-stone text-xs">Email</span>
                     <p className="font-medium truncate">{task.cliente.email}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500 text-xs">Telefono</span>
+                    <span className="text-stone text-xs">Telefono</span>
                     <p className="font-medium">{task.cliente.telefono || 'N/D'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500 text-xs">Data</span>
+                    <span className="text-stone text-xs">Data</span>
                     <p className="font-medium">{formatData(task.data_creazione)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500 text-xs">Stato</span>
+                    <span className="text-stone text-xs">Stato</span>
                     <p className="font-medium">{task.stato_pratica.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
 
                 {/* Dettagli rinnovo */}
                 {task.prequalificazione && (
-                  <div className="bg-green-50 rounded-lg p-3 text-sm mb-3">
-                    <p className="font-medium text-green-800 mb-1">Pre-qualificazione rinnovo:</p>
-                    <div className="grid grid-cols-2 gap-2 text-green-700 text-xs">
+                  <div className="bg-ok rounded-lg p-3 text-sm mb-3">
+                    <p className="font-medium text-ok-text mb-1">Pre-qualificazione rinnovo:</p>
+                    <div className="grid grid-cols-2 gap-2 text-ok-text text-xs">
                       <span>Device: {task.prequalificazione.tipo_device}</span>
                       <span>Quantita: {task.prequalificazione.numero_device}</span>
                       <span>Durata: {task.prequalificazione.durata_desiderata} mesi</span>
@@ -182,16 +182,16 @@ export default function MieiTask() {
                       )}
                     </div>
                     {task.prequalificazione.note && (
-                      <p className="text-xs text-green-700 mt-1">Note: {task.prequalificazione.note}</p>
+                      <p className="text-xs text-ok-text mt-1">Note: {task.prequalificazione.note}</p>
                     )}
                   </div>
                 )}
 
                 {/* Dettagli contatto */}
                 {task.richiesta_contatto && (
-                  <div className="bg-yellow-50 rounded-lg p-3 text-sm mb-3">
-                    <p className="font-medium text-yellow-800 mb-1">Preferenze contatto:</p>
-                    <div className="text-yellow-700 text-xs space-y-0.5">
+                  <div className="bg-warn rounded-lg p-3 text-sm mb-3">
+                    <p className="font-medium text-warn-text mb-1">Preferenze contatto:</p>
+                    <div className="text-warn-text text-xs space-y-0.5">
                       <p>Fascia oraria: {task.richiesta_contatto.fascia_oraria}</p>
                       <p>Modalita: {task.richiesta_contatto.modalita_preferita}</p>
                     </div>
@@ -199,12 +199,12 @@ export default function MieiTask() {
                 )}
 
                 {task.note_cliente && !task.prequalificazione && (
-                  <p className="text-sm text-gray-600 italic">"{task.note_cliente}"</p>
+                  <p className="text-sm text-stone italic">"{task.note_cliente}"</p>
                 )}
 
                 <div className="mt-3 pt-3 border-t flex justify-end">
                   <button
-                    className="bg-[#1a3a52] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#15304a] transition-colors"
+                    className="bg-flex text-white text-sm px-4 py-2 rounded-lg hover:bg-flex-dark transition-colors"
                     onClick={() => {/* placeholder */}}
                   >
                     Apri pratica

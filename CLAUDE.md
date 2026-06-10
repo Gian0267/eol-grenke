@@ -37,14 +37,16 @@ npx tsx data-samples/generate-sample.ts
 
 ### Backend (`@nsm-eol/backend`)
 - **Runtime**: Express 5, TypeScript (ESM via tsx), Node ≥ 20
-- **ORM**: Prisma with SQLite (dev) — schema at `backend/prisma/schema.prisma`
+- **ORM**: Prisma with **PostgreSQL on Supabase** (eu-west-1) — schema at `backend/prisma/schema.prisma`. Datasource uses `DATABASE_URL` (pooled, port 6543, `?pgbouncer=true`) + `directUrl`/`DIRECT_URL` (port 5432, for migrations). RLS enabled deny-by-default on all tables (Prisma connects as owner, bypasses RLS). Migrated from SQLite; old SQLite migrations archived in `backend/prisma/_migrations_sqlite_backup/`.
 - **8 entities**: Contratto_EOL, Cliente, Decisione_Cliente, Pagamento, Comunicazione, Richiesta_Contatto, Audit_Event, Utente_NSM
 - **Routes**: `/api/backoffice` (import, pratiche, invio comunicazioni, dashboard, advanced queries, outlier, reports), `/api/clienti` (opt-out)
 - **Dashboard routes** (`backoffice-dashboard.routes.ts`): risk-silence-counts, KPI, pratiche-recenti
 - **Advanced routes** (`backoffice-advanced.routes.ts`): paginated pratiche list with filters, CSV export, pratica detail with timeline, actions (cambia-agente, modifica-deadline, decisione-manuale, reinvia-comunicazione, segna-richiamato, sblocca-pagamento), outlier management, reporting (sintesi, perdite-silenzio, performance-agenti)
 - **Auth**: `x-user-id` header middleware checking Utente_NSM. `verifyBackofficeToken` allows all backoffice roles: AGENTE, JUNIOR_AGENT, CAPO_AREA, GROUP_MANAGER, AGENZIA, BACKOFFICE_INTERNO, ADMIN.
-- **Services**: `reconciliation.service.ts` (Excel parsing + DB matching), `pricing.service.ts` (canone calculations + gift card), `email.service.ts` (comunicazione iniziale via SMTP)
-- **Providers**: `providers/notification/email.provider.ts` — SMTP via nodemailer (Mailpit in dev)
+- **Services**: `reconciliation.service.ts` (Excel parsing + DB matching), `pricing.service.ts` (canone calculations + gift card), `email.service.ts` (comunicazione iniziale via SMTP), `storage.service.ts` (document storage abstraction)
+- **Document storage** (`storage.service.ts`): PDFs (verbale restituzione, conferma rinnovo, ricevuta pagamento, audit export) are generated in-memory as Buffers and saved via `saveDocument(buffer, filename)`. Backend auto-selected: **Supabase Storage** when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` set (private bucket `SUPABASE_BUCKET`, default `documenti`; DB ref stored as `supabase:<key>`), else **local disk** fallback (`backend/storage/pdfs/`, ref = absolute path). `loadDocument(ref)` auto-detects ref type, so legacy local paths still resolve. PDF gen functions return `{ pdfPath, hash, buffer }` — callers use the returned `buffer` directly. The mock FEA signature provider takes a Buffer (not a path).
+- **Providers**: `providers/notification/email.provider.ts` — email via `createEmailProvider()` factory: **Resend** (`ResendEmailProvider`) when `RESEND_API_KEY` set, else **SMTP/nodemailer** (`SmtpEmailProvider`, Mailpit in dev). Both implement the same `EmailProvider` interface (`send`, `sendWithAttachment`). Sender = `RESEND_FROM` (verified domain `noreply@smartcomgroup.it`). Instantiate via `createEmailProvider()`, never `new SmtpEmailProvider()` directly.
+- **PEC** (`PecEmailProvider` + `createPecProvider()`): Posta Elettronica Certificata via Aruba SMTP (`smtps.pec.aruba.it:465`). Used in `email.service.ts` only for the `PEC` channel of the comunicazione iniziale (sent to `cliente.pec`); the `EMAIL` channel still uses the normal provider. `createPecProvider()` returns the provider when `PEC_USER` + `PEC_PASSWORD` set, else `null` (PEC channel falls back to the email provider — no legal value). Legal value only PEC→PEC. Sender (`PEC_FROM`) must include the authenticated PEC address.
 - **Email templates**: `templates/email/` — Handlebars HTML templates with inline CSS
 - **Excel parsing**: SheetJS (xlsx) with `{ cellDates: true }` — Italian DD/MM/YYYY dates handled by custom `parseDate()`
 
@@ -90,7 +92,9 @@ JSON-driven business rules read at startup by backend services:
 - **Italian dates**: JS `new Date("17/06/2023")` is invalid. Always use the custom DD/MM/YYYY regex parser.
 - **Prisma dangerous actions under Claude Code**: requires `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="si"` env var for `migrate reset`.
 - **Backend port**: use `BACKEND_PORT` env var (not `PORT`) — `PORT` can conflict with Vite when started via concurrently. Dotenv loads from `backend/.env` using explicit path.
-- **Email service env vars**: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `JWT_SECRET`, `JWT_EXPIRES_OFFSET_DAYS`, `FRONTEND_URL` — all in `backend/.env`.
+- **Email service env vars**: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` (Mailpit fallback), `RESEND_API_KEY` + `RESEND_FROM` (Resend, production), `JWT_SECRET`, `JWT_EXPIRES_OFFSET_DAYS`, `FRONTEND_URL` — all in `backend/.env`. With `RESEND_API_KEY` empty, emails go through Mailpit; set it to activate real sending via Resend.
+- **PEC env vars**: `PEC_SMTP_HOST` (default `smtps.pec.aruba.it`), `PEC_SMTP_PORT` (465), `PEC_USER`, `PEC_PASSWORD`, `PEC_FROM`. **Aruba PEC 2FA gotcha**: if the mailbox has 2-step verification, normal SMTP login fails with `535 Authentication failed` — you must generate an app-specific password ("password per email clients" in the Aruba panel) and use it as `PEC_PASSWORD`. Repeated failed logins can temporarily lock SMTP access.
+- **Storage env vars**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET` — when set, PDFs go to Supabase Storage; else local disk. The service-role key is admin-level (bypasses RLS) — backend-only, never expose to frontend.
 
 ## Regole di business — Fine Noleggio Grenke (FLEX)
 

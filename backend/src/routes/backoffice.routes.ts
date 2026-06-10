@@ -8,7 +8,7 @@ import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.
 import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
-import { SmtpEmailProvider } from '../providers/notification/email.provider.js';
+import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from '../services/audit.service.js';
 import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templateDir = resolve(__dirname, '../../../templates/email');
-const boEmailProvider = new SmtpEmailProvider();
+const boEmailProvider = createEmailProvider();
 
 const router = Router();
 import { prisma } from '../lib/db.js';
@@ -145,9 +145,11 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             clienteId = decision.clienteId;
             await tx.cliente.update({ where: { id: clienteId }, data: clienteData });
           } else {
-            // CREA nuovo cliente
-            const newCliente = await tx.cliente.create({
-              data: { piva: raw['cliente.piva'], ...clienteData },
+            // CREA nuovo cliente (o aggiorna se piva già esiste)
+            const newCliente = await tx.cliente.upsert({
+              where: { piva: raw['cliente.piva'] },
+              update: clienteData,
+              create: { piva: raw['cliente.piva'], ...clienteData },
             });
             clienteId = newCliente.id;
           }

@@ -220,20 +220,20 @@ export default function Reportistica() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1a3a52]" />
-        <span className="ml-3 text-lg text-gray-500">Caricamento report...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-flex" />
+        <span className="ml-3 text-lg text-stone">Caricamento report...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-red-600">
+      <div className="flex flex-col items-center justify-center py-32 text-danger-text">
         <AlertTriangle className="h-10 w-10 mb-3" />
         <p className="text-lg font-medium">{error}</p>
         <button
           onClick={() => utente && fetchReports(utente, periodo)}
-          className="mt-4 rounded-lg bg-[#1a3a52] px-5 py-2 text-white hover:bg-[#15304a] transition-colors"
+          className="mt-4 rounded-lg bg-flex px-5 py-2 text-white hover:bg-flex-dark transition-colors"
         >
           Riprova
         </button>
@@ -245,15 +245,15 @@ export default function Reportistica() {
     <div className="space-y-8">
       {/* Period selector */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm font-medium text-gray-500 mr-1">Periodo:</span>
+        <span className="text-sm font-medium text-stone mr-1">Periodo:</span>
         {(['mese', 'trimestre', 'anno'] as Periodo[]).map((p) => (
           <button
             key={p}
             onClick={() => setPeriodo(p)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               periodo === p
-                ? 'bg-[#1a3a52] text-white'
-                : 'bg-white border text-gray-600 hover:bg-gray-50'
+                ? 'bg-flex text-white'
+                : 'bg-card border text-stone hover:bg-paper'
             }`}
           >
             {PERIODO_LABELS[p]}
@@ -261,7 +261,7 @@ export default function Reportistica() {
         ))}
         <button
           onClick={() => utente && fetchReports(utente, periodo)}
-          className="ml-auto rounded-lg border px-3 py-2 text-gray-500 hover:bg-gray-50 transition-colors"
+          className="ml-auto rounded-lg border border-border px-3 py-2 text-stone hover:bg-paper transition-colors"
           title="Aggiorna"
         >
           <RefreshCw className="h-4 w-4" />
@@ -273,35 +273,35 @@ export default function Reportistica() {
       {/* ============================================================ */}
       {sintesi && (
         <section>
-          <h2 className="text-xl font-bold text-[#1a3a52] mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-graphite mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
             Sintesi KPI
           </h2>
 
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Totale pratiche</p>
-              <p className="text-2xl font-bold text-[#1a3a52] mt-1">{sintesi.totale.toLocaleString('it-IT')}</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Totale pratiche</p>
+              <p className="text-2xl font-bold text-graphite mt-1">{sintesi.totale.toLocaleString('it-IT')}</p>
             </div>
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rinnovi</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Rinnovi</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{sintesi.rinnovi.toLocaleString('it-IT')}</p>
             </div>
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Riacquisti</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{sintesi.riacquisti.toLocaleString('it-IT')}</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Riacquisti</p>
+              <p className="text-2xl font-bold text-flex mt-1">{sintesi.riacquisti.toLocaleString('it-IT')}</p>
             </div>
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Restituzioni</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Restituzioni</p>
               <p className="text-2xl font-bold text-orange-500 mt-1">{sintesi.restituzioni.toLocaleString('it-IT')}</p>
             </div>
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Silenzi</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Silenzi</p>
               <p className="text-2xl font-bold text-red-600 mt-1">{sintesi.silenzi.toLocaleString('it-IT')}</p>
             </div>
-            <div className="bg-white rounded-xl border p-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tasso non-silenzio</p>
+            <div className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs font-medium text-stone uppercase tracking-wide">Tasso non-silenzio</p>
               <p className={`text-2xl font-bold mt-1 ${
                 sintesi.tasso_non_silenzio > 85 ? 'text-green-600' : 'text-red-600'
               }`}>
@@ -311,8 +311,8 @@ export default function Reportistica() {
           </div>
 
           {/* Line chart: Tasso non-silenzio */}
-          <div className="bg-white rounded-xl border p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-600 mb-4">Andamento tasso non-silenzio (%)</h3>
+          <div className="bg-card rounded-xl border border-border p-5 mb-6">
+            <h3 className="text-sm font-semibold text-stone mb-4">Andamento tasso non-silenzio (%)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={sintesi.per_mese}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -336,9 +336,9 @@ export default function Reportistica() {
                   type="monotone"
                   dataKey="tasso_non_silenzio"
                   name="Tasso non-silenzio"
-                  stroke="#1a3a52"
+                  stroke="#185FA5"
                   strokeWidth={2}
-                  dot={{ r: 4, fill: '#1a3a52' }}
+                  dot={{ r: 4, fill: '#185FA5' }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -346,8 +346,8 @@ export default function Reportistica() {
           </div>
 
           {/* Bar chart: Composizione decisioni */}
-          <div className="bg-white rounded-xl border p-5">
-            <h3 className="text-sm font-semibold text-gray-600 mb-4">Composizione decisioni per mese</h3>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-stone mb-4">Composizione decisioni per mese</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sintesi.per_mese}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -370,49 +370,49 @@ export default function Reportistica() {
       {/* ============================================================ */}
       {perdite && (
         <section>
-          <h2 className="text-xl font-bold text-[#1a3a52] mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-graphite mb-4 flex items-center gap-2">
             <Euro className="h-5 w-5" />
             Perdite da silenzio
           </h2>
 
           {/* Big number card */}
-          <div className="bg-white rounded-xl border p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="bg-card rounded-xl border border-border p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Margine totale perso</p>
+              <p className="text-xs font-medium text-stone uppercase tracking-wide mb-1">Margine totale perso</p>
               <p className="text-4xl font-bold text-red-600">{formatCurrency(perdite.totale_perso)}</p>
             </div>
             <div className="sm:ml-8">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Pratiche in silenzio</p>
-              <p className="text-4xl font-bold text-[#1a3a52]">{perdite.numero_pratiche}</p>
+              <p className="text-xs font-medium text-stone uppercase tracking-wide mb-1">Pratiche in silenzio</p>
+              <p className="text-4xl font-bold text-graphite">{perdite.numero_pratiche}</p>
             </div>
           </div>
 
           {/* Detail table */}
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50 text-left">
-                    <th className="px-5 py-3 font-semibold text-gray-600">Contratto NSM</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Cliente</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Margine perso</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Data scadenza</th>
+                  <tr className="border-b bg-paper text-left">
+                    <th className="px-5 py-3 font-semibold text-stone">Contratto NSM</th>
+                    <th className="px-5 py-3 font-semibold text-stone">Cliente</th>
+                    <th className="px-5 py-3 font-semibold text-stone text-right">Margine perso</th>
+                    <th className="px-5 py-3 font-semibold text-stone">Data scadenza</th>
                   </tr>
                 </thead>
                 <tbody>
                   {perdite.dettaglio.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
+                      <td colSpan={4} className="px-5 py-8 text-center text-stone">
                         Nessuna perdita nel periodo
                       </td>
                     </tr>
                   ) : (
                     perdite.dettaglio.map((d) => (
-                      <tr key={d.id} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-3 font-medium text-gray-800">{d.contratto_nsm}</td>
-                        <td className="px-5 py-3 text-gray-600">{d.cliente}</td>
+                      <tr key={d.id} className="border-b last:border-b-0 hover:bg-paper transition-colors">
+                        <td className="px-5 py-3 font-medium text-graphite">{d.contratto_nsm}</td>
+                        <td className="px-5 py-3 text-stone">{d.cliente}</td>
                         <td className="px-5 py-3 text-right font-medium text-red-600">{formatCurrency(d.margine_perso)}</td>
-                        <td className="px-5 py-3 text-gray-600">{formatDate(d.data_scadenza)}</td>
+                        <td className="px-5 py-3 text-stone">{formatDate(d.data_scadenza)}</td>
                       </tr>
                     ))
                   )}
@@ -428,40 +428,40 @@ export default function Reportistica() {
       {/* ============================================================ */}
       {performance.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold text-[#1a3a52] mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-graphite mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
             Performance agenti
           </h2>
 
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50 text-left">
-                    <th className="px-5 py-3 font-semibold text-gray-600">Agente</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Ruolo</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Pratiche totali</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Tasso non-silenzio</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Margine generato</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Silenzi</th>
+                  <tr className="border-b bg-paper text-left">
+                    <th className="px-5 py-3 font-semibold text-stone">Agente</th>
+                    <th className="px-5 py-3 font-semibold text-stone">Ruolo</th>
+                    <th className="px-5 py-3 font-semibold text-stone text-right">Pratiche totali</th>
+                    <th className="px-5 py-3 font-semibold text-stone text-right">Tasso non-silenzio</th>
+                    <th className="px-5 py-3 font-semibold text-stone text-right">Margine generato</th>
+                    <th className="px-5 py-3 font-semibold text-stone text-right">Silenzi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {performance.map((a, idx) => (
-                    <tr key={idx} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-gray-800">{a.agente}</td>
-                      <td className="px-5 py-3 text-gray-600">{a.ruolo}</td>
-                      <td className="px-5 py-3 text-right text-gray-800">{a.pratiche_totali.toLocaleString('it-IT')}</td>
+                    <tr key={idx} className="border-b last:border-b-0 hover:bg-paper transition-colors">
+                      <td className="px-5 py-3 font-medium text-graphite">{a.agente}</td>
+                      <td className="px-5 py-3 text-stone">{a.ruolo}</td>
+                      <td className="px-5 py-3 text-right text-graphite">{a.pratiche_totali.toLocaleString('it-IT')}</td>
                       <td className="px-5 py-3 text-right">
                         <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
                           a.tasso_non_silenzio > 85
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bg-ok text-ok-text'
+                            : 'bg-danger text-danger-text'
                         }`}>
                           {a.tasso_non_silenzio.toFixed(1)}%
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right font-medium text-[#1a3a52]">{formatCurrency(a.margine_generato)}</td>
+                      <td className="px-5 py-3 text-right font-medium text-graphite">{formatCurrency(a.margine_generato)}</td>
                       <td className="px-5 py-3 text-right text-red-600 font-medium">{a.silenzi}</td>
                     </tr>
                   ))}
@@ -479,7 +479,7 @@ export default function Reportistica() {
         <button
           onClick={handleExport}
           disabled={!sintesi}
-          className="flex items-center gap-2 rounded-lg bg-[#1a3a52] px-6 py-3 text-white font-medium hover:bg-[#15304a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 rounded-lg bg-flex px-6 py-3 text-white font-medium hover:bg-flex-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className="h-4 w-4" />
           Esporta Report

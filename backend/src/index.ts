@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: resolve(__dirname, '../../.env') });
+dotenv.config({ path: resolve(__dirname, '../.env') });
 
 import express from 'express';
 import cors from 'cors';
@@ -16,12 +17,17 @@ import clientRoutes from './routes/client.routes.js';
 import clienteRoutes from './routes/cliente.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import { handlePaymentCallback } from './services/payment.service.js';
-import { startSchedulerCron } from './services/scheduler.service.js';
+import { startSchedulerCron, runScheduler } from './services/scheduler.service.js';
 import adminRoutes from './routes/admin.routes.js';
 import impostazioniRoutes from './routes/impostazioni.routes.js';
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? process.env.PORT ?? 3001);
+
+// Dietro il reverse proxy di Hostinger (LiteSpeed) la connessione arriva come HTTP
+// ma l'utente è su HTTPS. 'trust proxy' fa sì che Express riconosca la connessione
+// come sicura (via X-Forwarded-Proto) così express-session imposta il cookie Secure.
+app.set('trust proxy', 1);
 
 if (!process.env.SESSION_SECRET) {
   console.error('FATAL: SESSION_SECRET non configurato');
@@ -88,7 +94,56 @@ app.post('/api/pagamenti/callback/:provider/:session_id', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`NSM EOL Backend listening on port ${port}`);
-  startSchedulerCron();
+// Trigger dello scheduler da cron esterno (per hosting che sospende l'app quando inattiva).
+// GET /api/admin/run-scheduler?secret=...  — protetto da SCHEDULER_TRIGGER_SECRET
+app.get('/api/admin/run-scheduler', async (req, res) => {
+  const expected = process.env.SCHEDULER_TRIGGER_SECRET;
+  if (!expected) {
+    res.status(503).json({ errore: 'SCHEDULER_TRIGGER_SECRET non configurato' });
+    return;
+  }
+  if (req.query.secret !== expected) {
+    res.status(401).json({ errore: 'Secret non valido' });
+    return;
+  }
+  try {
+    const report = await runScheduler();
+    res.json({ ok: true, report });
+  } catch (err) {
+    console.error('[run-scheduler] Errore:', err);
+    res.status(500).json({ errore: err instanceof Error ? err.message : 'Errore interno' });
+  }
 });
+
+// In produzione il backend serve anche il frontend buildato (single deploy, stesso
+// origine → niente CORS, le chiamate relative /api restano sullo stesso host).
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = process.env.FRONTEND_DIST || resolve(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendDist));
+  // SPA fallback: ogni GET non-API restituisce index.html (routing lato client)
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api/')) {
+      res.sendFile(resolve(frontendDist, 'index.html'));
+    } else {
+      next();
+    }
+  });
+  console.log(`[Frontend] Servito staticamente da ${frontendDist}`);
+}
+
+// Avvio: socket LiteSpeed (Hostinger) se presente, altrimenti porta TCP.
+const socket = process.env.LSNODE_SOCKET;
+function onListen() {
+  console.log(`NSM EOL Backend in ascolto${socket ? ` su socket ${socket}` : ` su porta ${port}`}`);
+  startSchedulerCron();
+}
+if (socket) {
+  try {
+    if (fs.existsSync(socket)) fs.unlinkSync(socket);
+  } catch (e) {
+    console.log('[socket] cleanup:', e);
+  }
+  app.listen(socket, onListen);
+} else {
+  app.listen(port, onListen);
+}

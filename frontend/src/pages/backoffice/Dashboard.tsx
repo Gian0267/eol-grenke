@@ -37,13 +37,13 @@ interface PraticaRecente {
 
 function getStatoBadge(stato: string): { bg: string; text: string; label: string } {
   const s = stato?.toUpperCase() ?? ''
-  if (s === 'LISTA_RICEVUTA') return { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Lista ricevuta' }
-  if (s === 'COMUNICAZIONE_INVIATA') return { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Comunicazione inviata' }
-  if (s === 'IN_ATTESA_DECISIONE') return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'In attesa decisione' }
-  if (s.startsWith('DECISIONE_')) return { bg: 'bg-green-100', text: 'text-green-700', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
-  if (s.startsWith('SILENZIO_')) return { bg: 'bg-red-100', text: 'text-red-700', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
-  if (s.startsWith('RIACQUISTO_')) return { bg: 'bg-purple-100', text: 'text-purple-700', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
-  return { bg: 'bg-gray-100', text: 'text-gray-600', label: stato }
+  if (s === 'LISTA_RICEVUTA') return { bg: 'bg-paper', text: 'text-stone', label: 'Lista ricevuta' }
+  if (s === 'COMUNICAZIONE_INVIATA') return { bg: 'bg-flex-light', text: 'text-flex-dark', label: 'Comunicazione inviata' }
+  if (s === 'IN_ATTESA_DECISIONE') return { bg: 'bg-warn', text: 'text-warn-text', label: 'In attesa decisione' }
+  if (s.startsWith('DECISIONE_')) return { bg: 'bg-ok', text: 'text-ok-text', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
+  if (s.startsWith('SILENZIO_')) return { bg: 'bg-danger', text: 'text-danger-text', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
+  if (s.startsWith('RIACQUISTO_')) return { bg: 'bg-outlier', text: 'text-outlier-text', label: stato.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) }
+  return { bg: 'bg-paper', text: 'text-stone', label: stato }
 }
 
 function formatDate(d: string): string {
@@ -120,8 +120,8 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1a3a52]" />
-        <span className="ml-3 text-lg text-gray-500">Caricamento dashboard...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-flex" />
+        <span className="ml-3 text-lg text-stone">Caricamento dashboard...</span>
       </div>
     )
   }
@@ -133,7 +133,7 @@ export default function Dashboard() {
         <p className="text-lg font-medium">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 rounded-lg bg-[#1a3a52] px-5 py-2 text-white hover:bg-[#15304a] transition-colors"
+          className="mt-4 rounded-lg bg-flex px-5 py-2 text-white hover:bg-flex-dark transition-colors"
         >
           Riprova
         </button>
@@ -145,121 +145,121 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Sezione 1: Pratiche a rischio silenzio */}
       <section>
-        <h2 className="text-xl font-bold text-[#1a3a52] mb-4">Pratiche a rischio silenzio</h2>
+        <h2 className="text-xl font-medium text-graphite mb-4">Pratiche a rischio silenzio</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* T-50 */}
           <button
             onClick={() => navigate('/backoffice/pratiche?rischio_silenzio=true')}
-            className="bg-green-50 border border-green-200 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-ok border border-ok-border/30 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Phone className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-semibold text-green-800 uppercase tracking-wide">T-50</span>
+              <Phone className="h-5 w-5 text-ok-border" />
+              <span className="text-sm font-medium text-ok-text uppercase tracking-wide font-mono">T-50</span>
             </div>
-            <p className="text-4xl font-bold text-green-700">{riskCounts?.t50 ?? 0}</p>
-            <p className="text-sm text-green-600 mt-1">Chiamata 1ª</p>
-            <p className="text-xs text-green-500 mt-0.5">Scadenza tra 41-50 giorni</p>
+            <p className="text-4xl font-medium text-ok-text font-mono">{riskCounts?.t50 ?? 0}</p>
+            <p className="text-sm text-ok-text/80 mt-1">Chiamata 1ª</p>
+            <p className="text-xs text-ok-text/60 mt-0.5">Scadenza tra 41-50 giorni</p>
           </button>
 
           {/* T-40 */}
           <button
             onClick={() => navigate('/backoffice/pratiche?rischio_silenzio=true')}
-            className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-warn border border-warn-border/30 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
           >
             <div className="flex items-center gap-3 mb-2">
-              <PhoneCall className="h-5 w-5 text-yellow-600" />
-              <span className="text-sm font-semibold text-yellow-800 uppercase tracking-wide">T-40</span>
+              <PhoneCall className="h-5 w-5 text-warn-border" />
+              <span className="text-sm font-medium text-warn-text uppercase tracking-wide font-mono">T-40</span>
             </div>
-            <p className="text-4xl font-bold text-yellow-700">{riskCounts?.t40 ?? 0}</p>
-            <p className="text-sm text-yellow-600 mt-1">Chiamata 2ª</p>
-            <p className="text-xs text-yellow-500 mt-0.5">Scadenza tra 36-40 giorni</p>
+            <p className="text-4xl font-medium text-warn-text font-mono">{riskCounts?.t40 ?? 0}</p>
+            <p className="text-sm text-warn-text/80 mt-1">Chiamata 2ª</p>
+            <p className="text-xs text-warn-text/60 mt-0.5">Scadenza tra 36-40 giorni</p>
           </button>
 
           {/* T-35 */}
           <button
             onClick={() => navigate('/backoffice/pratiche?rischio_silenzio=true')}
-            className="bg-red-50 border border-red-200 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-danger border border-danger-border/30 rounded-xl p-5 text-left hover:shadow-md transition-shadow cursor-pointer"
           >
             <div className="flex items-center gap-3 mb-2">
-              <PhoneOff className="h-5 w-5 text-red-600" />
-              <span className="text-sm font-semibold text-red-800 uppercase tracking-wide">T-35</span>
+              <PhoneOff className="h-5 w-5 text-danger-border" />
+              <span className="text-sm font-medium text-danger-text uppercase tracking-wide font-mono">T-35</span>
             </div>
-            <p className="text-4xl font-bold text-red-700">{riskCounts?.t35 ?? 0}</p>
-            <p className="text-sm font-semibold text-red-600 mt-1">ULTIMA CHANCE</p>
-            <p className="text-xs text-red-500 mt-0.5">Scadenza tra 31-35 giorni</p>
+            <p className="text-4xl font-medium text-danger-text font-mono">{riskCounts?.t35 ?? 0}</p>
+            <p className="text-sm font-medium text-danger-text mt-1">ULTIMA CHANCE</p>
+            <p className="text-xs text-danger-text/60 mt-0.5">Scadenza tra 31-35 giorni</p>
           </button>
         </div>
       </section>
 
       {/* Sezione 2: KPI Anno Corrente */}
       <section>
-        <h2 className="text-xl font-bold text-[#1a3a52] mb-4">KPI Anno Corrente</h2>
+        <h2 className="text-xl font-medium text-graphite mb-4">KPI Anno Corrente</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {/* Tasso non silenzio */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Tasso non silenzio</h3>
+              <TrendingUp className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Tasso non silenzio</h3>
             </div>
-            <p className={`text-3xl font-bold ${
-              (kpi?.tasso_non_silenzio ?? 0) > 85 ? 'text-green-600' : 'text-red-600'
+            <p className={`text-3xl font-medium font-mono ${
+              (kpi?.tasso_non_silenzio ?? 0) > 85 ? 'text-ok-text' : 'text-danger-text'
             }`}>
               {kpi?.tasso_non_silenzio?.toFixed(1) ?? '—'}%
             </p>
-            <p className="text-xs text-gray-400 mt-1">Obiettivo: &gt; 85%</p>
+            <p className="text-xs text-stone mt-1">Obiettivo: &gt; 85%</p>
           </div>
 
           {/* Tasso rinnovo */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Percent className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Tasso rinnovo</h3>
+              <Percent className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Tasso rinnovo</h3>
             </div>
-            <p className="text-3xl font-bold text-[#1a3a52]">
+            <p className="text-3xl font-medium font-mono text-graphite">
               {kpi?.tasso_rinnovo?.toFixed(1) ?? '—'}%
             </p>
           </div>
 
           {/* Tasso riacquisto */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Percent className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Tasso riacquisto</h3>
+              <Percent className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Tasso riacquisto</h3>
             </div>
-            <p className="text-3xl font-bold text-[#1a3a52]">
+            <p className="text-3xl font-medium font-mono text-graphite">
               {kpi?.tasso_riacquisto?.toFixed(1) ?? '—'}%
             </p>
           </div>
 
           {/* Margine medio */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Euro className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Margine medio</h3>
+              <Euro className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Margine medio</h3>
             </div>
-            <p className="text-3xl font-bold text-[#1a3a52]">
-              € {kpi?.margine_medio?.toFixed(2) ?? '—'}
+            <p className="text-3xl font-medium font-mono text-graphite">
+              &euro; {kpi?.margine_medio?.toFixed(2) ?? '—'}
             </p>
           </div>
 
           {/* Tempo medio decisione */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Tempo medio decisione</h3>
+              <Clock className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Tempo medio decisione</h3>
             </div>
-            <p className="text-3xl font-bold text-[#1a3a52]">
-              {kpi?.tempo_medio_decisione ?? '—'} <span className="text-lg font-normal text-gray-500">giorni</span>
+            <p className="text-3xl font-medium font-mono text-graphite">
+              {kpi?.tempo_medio_decisione ?? '—'} <span className="text-lg font-normal font-sans text-stone">giorni</span>
             </p>
           </div>
 
           {/* Tasso intervento manuale */}
-          <div className="bg-white rounded-xl border p-5">
+          <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">
-              <UserCheck className="h-5 w-5 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-500">Tasso intervento manuale</h3>
+              <UserCheck className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Tasso intervento manuale</h3>
             </div>
-            <p className="text-3xl font-bold text-[#1a3a52]">
+            <p className="text-3xl font-medium font-mono text-graphite">
               {kpi?.tasso_intervento_manuale?.toFixed(1) ?? '—'}%
             </p>
           </div>
@@ -267,26 +267,26 @@ export default function Dashboard() {
 
         {/* Totale pratiche */}
         {kpi?.totale_pratiche != null && (
-          <p className="text-sm text-gray-500 mt-3">
+          <p className="text-sm text-stone mt-3">
             <FileText className="inline h-4 w-4 mr-1 -mt-0.5" />
-            Totale pratiche elaborate: <span className="font-semibold text-[#1a3a52]">{kpi.totale_pratiche.toLocaleString('it-IT')}</span>
+            Totale pratiche elaborate: <span className="font-medium text-graphite font-mono">{kpi.totale_pratiche.toLocaleString('it-IT')}</span>
           </p>
         )}
       </section>
 
       {/* Sezione 3: Pratiche recenti */}
       <section>
-        <h2 className="text-xl font-bold text-[#1a3a52] mb-4">Pratiche recenti</h2>
-        <div className="bg-white rounded-xl border overflow-hidden">
+        <h2 className="text-xl font-medium text-graphite mb-4">Pratiche recenti</h2>
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-gray-50 text-left">
-                  <th className="px-5 py-3 font-semibold text-gray-600">Cliente</th>
-                  <th className="px-5 py-3 font-semibold text-gray-600">Contratto NSM</th>
-                  <th className="px-5 py-3 font-semibold text-gray-600">Scadenza</th>
-                  <th className="px-5 py-3 font-semibold text-gray-600">Stato</th>
-                  <th className="px-5 py-3 font-semibold text-gray-600">Decisione</th>
+                <tr className="border-b border-border bg-paper text-left">
+                  <th className="px-5 py-3 font-medium text-stone">Cliente</th>
+                  <th className="px-5 py-3 font-medium text-stone">Contratto NSM</th>
+                  <th className="px-5 py-3 font-medium text-stone">Scadenza</th>
+                  <th className="px-5 py-3 font-medium text-stone">Stato</th>
+                  <th className="px-5 py-3 font-medium text-stone">Decisione</th>
                 </tr>
               </thead>
               <tbody>
@@ -303,17 +303,17 @@ export default function Dashboard() {
                       <tr
                         key={p.id}
                         onClick={() => navigate(`/backoffice/pratiche/${p.id}`)}
-                        className="border-b last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="border-b border-border last:border-b-0 hover:bg-paper/60 cursor-pointer transition-colors"
                       >
-                        <td className="px-5 py-3 font-medium text-gray-800">{p.cliente}</td>
-                        <td className="px-5 py-3 text-gray-600">{p.contratto_nsm}</td>
-                        <td className="px-5 py-3 text-gray-600">{formatDate(p.data_scadenza)}</td>
+                        <td className="px-5 py-3 font-medium text-graphite">{p.cliente}</td>
+                        <td className="px-5 py-3 text-stone font-mono text-xs">{p.contratto_nsm}</td>
+                        <td className="px-5 py-3 text-stone font-mono text-xs">{formatDate(p.data_scadenza)}</td>
                         <td className="px-5 py-3">
                           <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${badge.bg} ${badge.text}`}>
                             {badge.label}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-gray-600">{p.decisione || '—'}</td>
+                        <td className="px-5 py-3 text-stone">{p.decisione || '—'}</td>
                       </tr>
                     )
                   })

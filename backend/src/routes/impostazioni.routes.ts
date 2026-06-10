@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import Handlebars from 'handlebars';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import * as impostazioniService from '../services/impostazioni.service.js';
 import { invalidateCache } from '../services/config.service.js';
@@ -123,12 +123,18 @@ router.put('/:chiave', async (req: AuthenticatedRequest, res: Response) => {
         }
         break;
       case 'HTML':
-        valoreValidato = DOMPurify.sanitize(valoreValidato, {
-          ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'ul', 'ol', 'li',
+        valoreValidato = sanitizeHtml(valoreValidato, {
+          allowedTags: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'ul', 'ol', 'li',
             'a', 'b', 'strong', 'i', 'em', 'u', 'span', 'div', 'table', 'thead', 'tbody',
             'tr', 'th', 'td', 'img', 'blockquote', 'pre', 'code', 'center'],
-          ALLOWED_ATTR: ['href', 'src', 'alt', 'style', 'class', 'width', 'height', 'align',
-            'valign', 'border', 'cellpadding', 'cellspacing', 'bgcolor', 'target'],
+          allowedAttributes: {
+            '*': ['style', 'class', 'align', 'valign'],
+            'a': ['href', 'target'],
+            'img': ['src', 'alt', 'width', 'height'],
+            'table': ['border', 'cellpadding', 'cellspacing', 'bgcolor', 'width'],
+            'td': ['width', 'bgcolor'],
+            'th': ['width', 'bgcolor'],
+          },
         });
         break;
     }

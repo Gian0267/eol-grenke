@@ -30,5 +30,6 @@
     "canone_mensile",
     "numero_mesi"
   ],
-  "_note": "Il formato esatto del file Excel deve essere concordato con Grenke (vedi Tornata 1 punto B.2 nelle lettere di negoziazione)."
+  "_note": "Il formato esatto del file Excel deve essere concordato con Grenke (vedi Tornata 1 punto B.2 nelle lettere di negoziazione). Il campo PEC è facoltativo: Grenke non lo include sempre nel file trimestrale.",
+  "_frequenza_invio": "Trimestrale, entro il 15 del primo mese del trimestre precedente la scadenza (es. file per scadenze 01/07 arriva entro 15/04). Le scadenze Grenke cadono sempre il 01/01, 01/04, 01/07, 01/10."
 }
