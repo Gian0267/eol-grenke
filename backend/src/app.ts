@@ -131,6 +131,15 @@ if (process.env.NODE_ENV === 'production') {
   console.log(`[Frontend] Servito staticamente da ${frontendDist}`);
 }
 
+// Gestore errori finale: stampa su stdout (i log di runtime Hostinger non
+// mostrano stderr) e risponde 500 senza esporre dettagli al client.
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.log(`[ERROR] ${req.method} ${req.path}`, err);
+  if (!res.headersSent) {
+    res.status(500).json({ errore: 'Errore interno' });
+  }
+});
+
 // Avvio: socket LiteSpeed (Hostinger) se presente, altrimenti porta TCP.
 const socket = process.env.LSNODE_SOCKET;
 function onListen() {
