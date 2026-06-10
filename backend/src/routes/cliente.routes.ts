@@ -140,6 +140,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         data_scadenza: contratto.data_scadenza,
         beni: beni.map((b) => b.descrizione || 'N/D'),
         monte_canoni: Number(contratto.monte_canoni),
+        numero_mesi: contratto.numero_mesi,
         stato: contratto.stato,
       },
       economica: {

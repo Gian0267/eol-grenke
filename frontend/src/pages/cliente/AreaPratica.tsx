@@ -18,6 +18,7 @@ interface PraticaData {
     data_scadenza: string;
     beni: string[];
     monte_canoni: number;
+    numero_mesi: number;
     stato: string;
   };
   economica: {
@@ -206,6 +207,10 @@ export default function AreaPratica() {
               <p className="font-medium">
                 {format(new Date(data.contratto.data_scadenza), 'dd MMMM yyyy', { locale: it })}
               </p>
+            </div>
+            <div>
+              <span className="text-gray-500">Durata</span>
+              <p className="font-medium">{data.contratto.numero_mesi} mesi</p>
             </div>
             <div>
               <span className="text-gray-500">Monte canoni</span>
