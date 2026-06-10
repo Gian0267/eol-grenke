@@ -901,7 +901,7 @@ router.get(
 // ===== RINNOVO ROUTES =====
 
 const iniziaRinnovoSchema = z.object({
-  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
   durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
   budget_mensile: z.number().optional(),
@@ -974,7 +974,7 @@ router.post(
 const confermaRinnovoSchema = z.object({
   codice: z.string().length(6),
   metodo_otp: z.enum(['SMS', 'EMAIL']),
-  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
   durata_desiderata: z.number().int(),
   budget_mensile: z.number().optional(),
@@ -1164,7 +1164,7 @@ router.post(
 
 const iniziaRinnovoCompletoSchema = z.object({
   scelta_beni: z.enum(['TENGO', 'RESTITUISCO']),
-  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
   durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
   budget_mensile: z.number().optional(),
@@ -1238,7 +1238,7 @@ const confermaRinnovoCompletoSchema = z.object({
   codice: z.string().length(6),
   metodo_otp: z.enum(['SMS', 'EMAIL']),
   scelta_beni: z.enum(['TENGO', 'RESTITUISCO']),
-  tipo_device: z.enum(['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro']),
+  tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
   durata_desiderata: z.number().int(),
   budget_mensile: z.number().optional(),

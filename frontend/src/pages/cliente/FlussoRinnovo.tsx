@@ -23,7 +23,7 @@ interface ConfigPubblica {
   abilita_gift_card: boolean;
 }
 
-const TIPI_DEVICE = ['Apple MacBook', 'Apple iPad', 'PC Windows', 'Smartphone', 'Altro'] as const;
+const TIPI_DEVICE = ['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro'] as const;
 const DURATE = ['24', '36', '48'] as const;
 
 const ISTRUZIONI_RESTITUZIONE = [
@@ -51,10 +51,9 @@ export default function FlussoRinnovo() {
   const [confermaRestituzione, setConfermaRestituzione] = useState(false);
 
   // Step 2 — Renewal preferences
-  const [tipoDevice, setTipoDevice] = useState<string>('Apple MacBook');
+  const [tipoDevice, setTipoDevice] = useState<string>('Prodotti Apple');
   const [numDevice, setNumDevice] = useState(1);
   const [durata, setDurata] = useState<string>('36');
-  const [budget, setBudget] = useState<string>('');
   const [note, setNote] = useState('');
 
   // Step 3 — OTP
@@ -117,7 +116,6 @@ export default function FlussoRinnovo() {
           tipo_device: tipoDevice,
           numero_device: numDevice,
           durata_desiderata: durata,
-          budget_mensile: budget ? Number(budget) : undefined,
           note: note || undefined,
           metodo_otp: metodo,
         }),
@@ -148,7 +146,6 @@ export default function FlussoRinnovo() {
           tipo_device: tipoDevice,
           numero_device: numDevice,
           durata_desiderata: Number(durata),
-          budget_mensile: budget ? Number(budget) : undefined,
           note: note || undefined,
         }),
       });
@@ -376,7 +373,7 @@ export default function FlussoRinnovo() {
             )}
 
             <div className="bg-white rounded-xl border p-6 space-y-5">
-              <h2 className="font-semibold text-[#1a3a52] text-lg">Dicci le tue esigenze per il nuovo contratto</h2>
+              <h2 className="font-semibold text-[#1a3a52] text-lg">Dicci le tue esigenze per il nuovo contratto <span className="text-sm font-normal text-gray-500">(indicazioni non vincolanti)</span></h2>
 
               {/* Tipo device */}
               <div>
@@ -416,22 +413,6 @@ export default function FlussoRinnovo() {
                       {d} mesi
                     </label>
                   ))}
-                </div>
-              </div>
-
-              {/* Budget */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Budget orientativo mensile <span className="text-gray-400">(opzionale)</span>
-                </label>
-                <div className="relative w-40">
-                  <span className="absolute left-3 top-2 text-gray-400 text-sm">&euro;</span>
-                  <input
-                    type="number" min={0} value={budget}
-                    onChange={e => setBudget(e.target.value)}
-                    placeholder="es. 80"
-                    className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
-                  />
                 </div>
               </div>
 
@@ -502,10 +483,6 @@ export default function FlussoRinnovo() {
                 <div className="font-medium">{numDevice}</div>
                 <div className="text-gray-500">Durata</div>
                 <div className="font-medium">{durata} mesi</div>
-                {budget && <>
-                  <div className="text-gray-500">Budget mensile</div>
-                  <div className="font-medium">&euro; {budget}</div>
-                </>}
                 {note && <>
                   <div className="text-gray-500">Note</div>
                   <div className="font-medium">{note}</div>
@@ -663,7 +640,6 @@ export default function FlussoRinnovo() {
                 </div>
                 <p className="text-xs text-gray-600 ml-7">
                   {tipoDevice} × {numDevice} — {durata} mesi
-                  {budget ? ` — Budget: € ${budget}/mese` : ''}
                 </p>
               </div>
             </div>
