@@ -1642,7 +1642,7 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
     res.json({
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Rinnova il contratto'),
-      desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX alle stesse condizioni e ricevi un premio fedeltà.'),
+      desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze, e ricevi un premio fedeltà.'),
       titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),
       desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza del contratto.'),
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
