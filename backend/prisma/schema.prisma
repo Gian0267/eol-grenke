@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // Motore "binary" (processo separato) invece della libreria nativa in-process:
+  // necessario su Hostinger/LiteSpeed, dove il fork dei worker rompe i timer
+  // del motore library ("PANIC: timer has gone away" a ogni query).
+  engineType = "binary"
 }
 
 datasource db {
