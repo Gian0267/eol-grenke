@@ -103,7 +103,11 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
     const stipula = new Date(scadenza);
     stipula.setMonth(stipula.getMonth() - mesi);
 
-    const pricing = await calcolaPricing(canone, mesi);
+    // Prezzo Grenke→Smartcom simulato (nella realtà arriva dal file Grenke):
+    // ~60% del prezzo cliente, per avere margini realistici nei test
+    const prezzoGrenkeTest = Math.round(canone * (mesi / 12) * 0.6 * 100) / 100;
+
+    const pricing = await calcolaPricing(canone, mesi, prezzoGrenkeTest);
     const giftCard = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     const cliente = await prisma.cliente.create({
@@ -153,6 +157,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       'PEC': `g.ciardo+eol${num}pec@gmail.com`,
       'Canone Mensile': canone,
       'Numero Mesi': mesi,
+      'Prezzo Riacquisto Grenke': prezzoGrenkeTest,
       'Descrizione Beni': beni,
       'Origine': 'Smartcom',
     });
@@ -162,7 +167,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
   const ws = XLSX.utils.json_to_sheet(excelRows);
   ws['!cols'] = [
     { wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 14 },
-    { wch: 30 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 40 }, { wch: 12 },
+    { wch: 30 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 22 }, { wch: 40 }, { wch: 12 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contratti in scadenza');

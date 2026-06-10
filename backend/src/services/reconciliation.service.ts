@@ -47,6 +47,11 @@ const rowSchema = z.object({
   'cliente.provincia': z.string().optional(),
   canone_mensile: z.coerce.number().positive('Canone Mensile deve essere positivo'),
   numero_mesi: z.coerce.number().int().positive('Numero Mesi deve essere intero positivo'),
+  // Importo che Grenke addebita a Smartcom: arriva dal file, obbligatorio.
+  // Se assente o non valido la riga finisce tra gli errori dell'import.
+  pricing_grenke: z.coerce
+    .number({ error: 'Prezzo Riacquisto Grenke mancante o non numerico (colonna obbligatoria del file Grenke)' })
+    .positive('Prezzo Riacquisto Grenke deve essere positivo'),
   beni_descrizione: z.string().optional(),
   valore_originario: z.coerce.number().optional(),
   origine: z.string().optional(),
@@ -134,7 +139,7 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
     }
 
     const parsed = parseResult.data;
-    const pricing = await calcolaPricing(parsed.canone_mensile, parsed.numero_mesi);
+    const pricing = await calcolaPricing(parsed.canone_mensile, parsed.numero_mesi, parsed.pricing_grenke);
     const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     const match = grenkeIdMap.get(parsed.contratto_grenke_id);

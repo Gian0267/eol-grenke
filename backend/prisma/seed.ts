@@ -162,8 +162,10 @@ async function main() {
 
   for (const cfg of contrattiOriginali) {
     const monte_canoni = Number((cfg.canone * cfg.mesi).toFixed(2));
-    const pricing_grenke = Number((monte_canoni * 0.05).toFixed(2));
-    const pricing_riacquisto = Number((monte_canoni * 0.08).toFixed(2));
+    // Prezzo cliente: un canone per ogni anno di contratto; prezzo Grenke
+    // simulato (~60% del prezzo cliente — nella realtà arriva dal file Grenke)
+    const pricing_riacquisto = Number((cfg.canone * (cfg.mesi / 12)).toFixed(2));
+    const pricing_grenke = Number((pricing_riacquisto * 0.6).toFixed(2));
     const margine_lordo = Number((pricing_riacquisto - pricing_grenke).toFixed(2));
     const tagli = [25, 50, 75, 100, 125, 150, 200, 250, 300];
     let valore_gift_card = 0;
@@ -225,8 +227,10 @@ async function main() {
     data_stipula.setFullYear(data_stipula.getFullYear() - Math.floor(mesi / 12));
 
     const monte_canoni = Number((canone * mesi).toFixed(2));
-    const pricing_grenke = Number((monte_canoni * 0.05).toFixed(2));
-    const pricing_riacquisto = Number((monte_canoni * 0.08).toFixed(2));
+    // Prezzo cliente: un canone per ogni anno di contratto; prezzo Grenke
+    // simulato (~60% del prezzo cliente — nella realtà arriva dal file Grenke)
+    const pricing_riacquisto = Number((cfg.canone * (cfg.mesi / 12)).toFixed(2));
+    const pricing_grenke = Number((pricing_riacquisto * 0.6).toFixed(2));
     const margine_lordo = Number((pricing_riacquisto - pricing_grenke).toFixed(2));
     const tagli = [25, 50, 75, 100, 125, 150, 200, 250, 300];
     let valore_gift_card = 0;

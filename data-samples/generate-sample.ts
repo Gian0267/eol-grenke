@@ -162,6 +162,7 @@ const excelRows = allRows.map(r => {
     'PEC': r.pec,
     'Canone Mensile': r.canone,
     'Numero Mesi': r.mesi,
+    'Prezzo Riacquisto Grenke': Number((r.canone * (r.mesi / 12) * 0.6).toFixed(2)),
     'Descrizione Beni': r.beni,
     'Origine': r.origine,
   };

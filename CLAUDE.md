@@ -77,7 +77,7 @@ JSON-driven business rules read at startup by backend services:
 ## Key Domain Concepts
 
 - **Reconciliation**: match Excel rows to existing DB contracts via `contratto_grenke_id`. Unmatched = OUTLIER_DA_GESTIRE with fuzzy suggestions by P.IVA / ragione_sociale.
-- **Pricing**: monte_canoni = canone × mesi; grenke = 5%; riacquisto = 8%; margine = 3%; gift card = floor to nearest standard cut.
+- **Pricing**: monte_canoni = canone × mesi; **pricing_grenke** (what Grenke charges Smartcom) comes from the Grenke Excel file (column "Prezzo Riacquisto Grenke", REQUIRED — missing/invalid → row ERRORE at import); **pricing_riacquisto** (price charged to the client) = canone_mensile × (numero_mesi / 12), i.e. one monthly fee per contract year; margine_lordo = riacquisto − grenke (real difference, no fixed %); gift card = floor of margine to nearest standard cut. IVA a margine clamps at 0 when margine ≤ 0. The old 5%/8% percentages in pricing_rules.json / Impostazioni are obsolete (only legacy fallbacks).
 - **Outlier actions**: SCARTA (discard with motivazione), CREA (new client), ASSOCIA (link to existing client).
 - **Comunicazione iniziale**: email + PEC to each client with JWT link to area cliente, 4 options, deadline warning. GDPR-compliant subject line required.
 - **Opt-out**: `GET /api/clienti/opt-out?token=...` sets `opt_out_comunicazioni` flag, blocks future automated communications.

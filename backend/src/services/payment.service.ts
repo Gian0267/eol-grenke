@@ -18,7 +18,8 @@ const stripeProvider = new MockStripeProvider();
 // IVA a margine: l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
 function calcolaImporti(netto: number, margine: number) {
   const centNetto = Math.round(netto * 100);
-  const centMargine = Math.round(margine * 100);
+  // IVA a margine: se il margine è negativo o nullo non c'è IVA dovuta
+  const centMargine = Math.max(0, Math.round(margine * 100));
   const centIva = Math.round(centMargine * pricingRules.iva_percentuale);
   return {
     importo_netto: centNetto / 100,

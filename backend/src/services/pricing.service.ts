@@ -11,12 +11,23 @@ export interface PricingResult {
   margine_lordo: number;
 }
 
-export async function calcolaPricing(canone_mensile: number, numero_mesi: number): Promise<PricingResult> {
-  const grenkePerc = (await configService.getNumero('pricing.grenke_percentuale', 5)) / 100;
-  const riacquistoPerc = (await configService.getNumero('pricing.riacquisto_percentuale', 8)) / 100;
+/**
+ * Calcola i valori economici della pratica.
+ *
+ * - pricing_grenke: importo che Grenke addebita a Smartcom — NON è calcolato,
+ *   arriva dal file Excel di Grenke (colonna "Prezzo Riacquisto Grenke").
+ * - pricing_riacquisto (prezzo al cliente): un canone mensile per ogni anno
+ *   di contratto → canone_mensile × (numero_mesi / 12).
+ *   Es. 36 mesi a € 120/mese → € 360.
+ * - margine_lordo: differenza tra prezzo al cliente e addebito Grenke.
+ */
+export async function calcolaPricing(
+  canone_mensile: number,
+  numero_mesi: number,
+  pricing_grenke: number,
+): Promise<PricingResult> {
   const monte_canoni = canone_mensile * numero_mesi;
-  const pricing_grenke = monte_canoni * grenkePerc;
-  const pricing_riacquisto = monte_canoni * riacquistoPerc;
+  const pricing_riacquisto = canone_mensile * (numero_mesi / 12);
   return {
     monte_canoni: round2(monte_canoni),
     pricing_grenke: round2(pricing_grenke),

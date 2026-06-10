@@ -83,7 +83,8 @@ function calcolaIvaAMargine(
   margine: Prisma.Decimal,
   ivaPerc: number,
 ): { iva: number; totale: number } {
-  const centMargine = Math.round(Number(margine) * 100);
+  // IVA a margine: se il margine è negativo o nullo non c'è IVA dovuta
+  const centMargine = Math.max(0, Math.round(Number(margine) * 100));
   const ivaCentesimi = Math.round(centMargine * ivaPerc);
   const centVendita = Math.round(Number(prezzoVendita) * 100);
   return {
