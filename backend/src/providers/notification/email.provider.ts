@@ -172,17 +172,62 @@ export class PecEmailProvider implements EmailProvider {
 }
 
 /**
- * Factory: sceglie il provider email in base all'ambiente.
- *  - Resend  → se RESEND_API_KEY è configurato (produzione)
- *  - SMTP    → fallback (Mailpit in sviluppo)
+ * SOLO PER LA FASE DI TEST — da rimuovere prima della produzione effettiva.
+ *
+ * Wrapper che reindirizza ogni invio a un'unica casella di test, prefissando
+ * l'oggetto con "(mail cliente)" o "(pec cliente)" così dal soggetto si
+ * capisce quale canale è stato simulato. In cima al corpo viene aggiunto un
+ * banner col destinatario originale.
  */
-export function createEmailProvider(): EmailProvider {
+export class TestRedirectEmailProvider implements EmailProvider {
+  constructor(
+    private inner: EmailProvider,
+    private redirectTo: string,
+    private prefix: string,
+  ) {}
+
+  private banner(originalTo: string): string {
+    return (
+      `<div style="background:#fef3c7;border:1px dashed #f59e0b;padding:8px 12px;` +
+      `margin-bottom:16px;font-size:12px;color:#92400e;font-family:sans-serif;">` +
+      `MODALITÀ TEST ${this.prefix} — destinatario originale: <strong>${originalTo}</strong></div>`
+    );
+  }
+
+  send(to: string, subject: string, html: string): Promise<SendResult> {
+    return this.inner.send(this.redirectTo, `${this.prefix} ${subject}`, this.banner(to) + html);
+  }
+
+  sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+    return this.inner.sendWithAttachment(this.redirectTo, `${this.prefix} ${subject}`, this.banner(to) + html, attachments);
+  }
+}
+
+function baseEmailProvider(): EmailProvider {
   if (process.env.RESEND_API_KEY) {
     console.log('[Email] Provider attivo: Resend');
     return new ResendEmailProvider();
   }
   console.log('[Email] Provider attivo: SMTP (Mailpit/dev)');
   return new SmtpEmailProvider();
+}
+
+/**
+ * Factory: sceglie il provider email in base all'ambiente.
+ *  - Resend  → se RESEND_API_KEY è configurato (produzione)
+ *  - SMTP    → fallback (Mailpit in sviluppo)
+ *
+ * SOLO TEST: se TEST_MAIL_REDIRECT è impostata, ogni invio viene reindirizzato
+ * a quella casella con oggetto prefissato "(mail cliente)".
+ */
+export function createEmailProvider(): EmailProvider {
+  const provider = baseEmailProvider();
+  const redirect = process.env.TEST_MAIL_REDIRECT;
+  if (redirect) {
+    console.log(`[Email] MODALITÀ TEST: tutte le email reindirizzate a ${redirect}`);
+    return new TestRedirectEmailProvider(provider, redirect, '(mail cliente)');
+  }
+  return provider;
 }
 
 /** True se la casella PEC è configurata (credenziali presenti). */
@@ -193,8 +238,17 @@ export function isPecConfigured(): boolean {
 /**
  * Factory PEC: restituisce il provider PEC se configurato, altrimenti null.
  * Quando null, il canale PEC ricade sul provider email normale (comportamento legacy).
+ *
+ * SOLO TEST: se TEST_MAIL_REDIRECT è impostata, il canale PEC NON usa Aruba —
+ * simula l'invio con una email ordinaria reindirizzata alla casella di test,
+ * con oggetto prefissato "(pec cliente)". Zero PEC reali consumate nei test.
  */
 export function createPecProvider(): EmailProvider | null {
+  const redirect = process.env.TEST_MAIL_REDIRECT;
+  if (redirect) {
+    console.log(`[PEC] MODALITÀ TEST: canale PEC simulato via email ordinaria verso ${redirect}`);
+    return new TestRedirectEmailProvider(baseEmailProvider(), redirect, '(pec cliente)');
+  }
   if (isPecConfigured()) {
     console.log('[PEC] Provider PEC attivo:', process.env.PEC_SMTP_HOST || 'smtps.pec.aruba.it');
     return new PecEmailProvider();

@@ -18,7 +18,9 @@ import { calcolaPricing, calcolaValoreGiftCard } from './pricing.service.js';
  * Le email dei clienti di test usano il pattern g.ciardo+eolNN@gmail.com:
  * Gmail le recapita tutte nella casella g.ciardo@gmail.com, quindi le
  * comunicazioni inviate durante i test arrivano davvero e sono verificabili.
- * La PEC è lasciata vuota per non generare invii certificati verso indirizzi finti.
+ * La PEC è un alias fittizio (+eolNNpec) che attiva il canale PEC nel flusso;
+ * con TEST_MAIL_REDIRECT impostata gli invii PEC sono simulati via email
+ * ordinaria con oggetto "(pec cliente) ..." — nessuna PEC reale consumata.
  */
 
 const AZIENDE_TEST = [
@@ -109,7 +111,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
         ragione_sociale: az.nome,
         piva: az.piva,
         email,
-        pec: null,
+        pec: `g.ciardo+eol${num}pec@gmail.com`,
         telefono: `011${az.piva.slice(-7)}`,
         referente_nome: `Referente ${az.nome.split(' ')[0]}`,
         indirizzo_sede: `Via dei Test ${i + 1}`,
@@ -148,7 +150,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       'Ragione Sociale': az.nome,
       'P.IVA': az.piva,
       'Email': email,
-      'PEC': '',
+      'PEC': `g.ciardo+eol${num}pec@gmail.com`,
       'Canone Mensile': canone,
       'Numero Mesi': mesi,
       'Descrizione Beni': beni,
