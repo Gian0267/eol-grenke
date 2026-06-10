@@ -557,9 +557,11 @@ export default function FlussoRiacquisto() {
                 {countdown > 0 ? `Codice valido per ${formatCountdown()}` : 'Codice scaduto'}
               </div>
 
-              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
-                Modalita test: usa il codice <strong>123456</strong>
-              </div>
+              {import.meta.env.DEV && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
+                  Modalita test: usa il codice <strong>123456</strong>
+                </div>
+              )}
             </div>
 
             <button
