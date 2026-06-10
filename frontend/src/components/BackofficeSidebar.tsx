@@ -3,7 +3,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
   BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings, Users,
+  FlaskConical, Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Utente {
   id: string;
@@ -20,6 +22,37 @@ export default function BackofficeSidebar() {
   const [utente, setUtente] = useState<Utente | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // SOLO FASE DI TEST — da rimuovere in produzione effettiva
+  const resetDatiTest = async () => {
+    const ok = window.confirm(
+      'ATTENZIONE — Reset dati di test\n\n' +
+      'Verranno CANCELLATE tutte le pratiche, decisioni, pagamenti, ' +
+      'comunicazioni e clienti, e ricreate 15 pratiche vergini.\n\n' +
+      'Utenti e impostazioni NON vengono toccati.\n\nProcedere?',
+    );
+    if (!ok) return;
+
+    setResetting(true);
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (utente?.id) (headers as Record<string, string>)['x-user-id'] = utente.id;
+      const res = await fetch(`${API_BASE}/api/admin/test/reset-pratiche`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore reset');
+      toast.success(`Reset completato: ${body.pratiche_create} pratiche di test create`);
+      window.location.href = '/backoffice/pratiche';
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Errore durante il reset');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('nsm_user');
@@ -94,6 +127,23 @@ export default function BackofficeSidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* SOLO FASE DI TEST — pulsante reset dati (rimuovere in produzione) */}
+      {isInternoOrAdmin && (
+        <div className="px-2 pb-2">
+          <button
+            onClick={resetDatiTest}
+            disabled={resetting}
+            title="Cancella tutto e ricrea 15 pratiche di test"
+            className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm border border-dashed border-amber-400/50 text-amber-300 hover:bg-amber-400/10 transition-colors disabled:opacity-50"
+          >
+            {resetting
+              ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              : <FlaskConical className="w-4 h-4 shrink-0" />}
+            {!collapsed && (resetting ? 'Reset in corso…' : 'Reset dati test (15)')}
+          </button>
+        </div>
+      )}
 
       {/* User footer */}
       {utente && (

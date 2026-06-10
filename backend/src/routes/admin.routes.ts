@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { runScheduler } from '../services/scheduler.service.js';
 import { verificaCatena } from '../services/audit.service.js';
 import { generaAuditExport } from '../services/pdf.service.js';
+import { resetTestData } from '../services/test-data.service.js';
 import { prisma } from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 
@@ -107,6 +108,23 @@ router.get('/audit/export/:contratto_id', async (req: any, res: Response) => {
     res.send(pdf);
   } catch (err) {
     console.error('[Admin] Errore audit export:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// ─── RESET DATI DI TEST ─────────────────────────────────────────
+// SOLO PER LA FASE DI TEST — rimuovere prima della produzione effettiva.
+// Svuota tutti i dati operativi e ricrea 15 pratiche vergini.
+// Non tocca utenti e impostazioni.
+router.post('/test/reset-pratiche', async (req: any, res: Response) => {
+  try {
+    const authorized = await verifyAdmin(req, res);
+    if (!authorized) return;
+
+    const result = await resetTestData();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.log('[Admin] Errore reset dati di test:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });
