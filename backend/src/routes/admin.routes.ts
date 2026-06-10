@@ -114,15 +114,18 @@ router.get('/audit/export/:contratto_id', async (req: any, res: Response) => {
 
 // ─── RESET DATI DI TEST ─────────────────────────────────────────
 // SOLO PER LA FASE DI TEST — rimuovere prima della produzione effettiva.
-// Svuota tutti i dati operativi e ricrea 15 pratiche vergini.
+// Svuota tutti i dati operativi, ricrea 15 contratti FLEX_ATTIVO e
+// restituisce il file Excel "lista Grenke" da importare manualmente.
 // Non tocca utenti e impostazioni.
 router.post('/test/reset-pratiche', async (req: any, res: Response) => {
   try {
     const authorized = await verifyAdmin(req, res);
     if (!authorized) return;
 
-    const result = await resetTestData();
-    res.json({ success: true, ...result });
+    const { buffer, filename } = await resetTestData();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   } catch (err) {
     console.log('[Admin] Errore reset dati di test:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });

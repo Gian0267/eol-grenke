@@ -29,24 +29,42 @@ export default function BackofficeSidebar() {
     const ok = window.confirm(
       'ATTENZIONE — Reset dati di test\n\n' +
       'Verranno CANCELLATE tutte le pratiche, decisioni, pagamenti, ' +
-      'comunicazioni e clienti, e ricreate 15 pratiche vergini.\n\n' +
+      'comunicazioni e clienti. Verranno ricreati 15 contratti attivi e ' +
+      'scaricato un file Excel "lista Grenke" vergine da importare.\n\n' +
       'Utenti e impostazioni NON vengono toccati.\n\nProcedere?',
     );
     if (!ok) return;
 
     setResetting(true);
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      const headers: HeadersInit = {};
       if (utente?.id) (headers as Record<string, string>)['x-user-id'] = utente.id;
       const res = await fetch(`${API_BASE}/api/admin/test/reset-pratiche`, {
         method: 'POST',
         credentials: 'include',
         headers,
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Errore reset');
-      toast.success(`Reset completato: ${body.pratiche_create} pratiche di test create`);
-      window.location.href = '/backoffice/pratiche';
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Errore reset');
+      }
+
+      // Scarica il file Excel restituito dal server
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || 'lista_grenke_test.xlsx';
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Reset completato — scaricato ${filename}. Importalo da "Importa lista".`, { duration: 8000 });
+      navigate('/backoffice/import');
+      setMobileOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Errore durante il reset');
     } finally {
@@ -134,7 +152,7 @@ export default function BackofficeSidebar() {
           <button
             onClick={resetDatiTest}
             disabled={resetting}
-            title="Cancella tutto e ricrea 15 pratiche di test"
+            title="Cancella tutto, ricrea 15 contratti attivi e scarica l'Excel da importare"
             className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm border border-dashed border-amber-400/50 text-amber-300 hover:bg-amber-400/10 transition-colors disabled:opacity-50"
           >
             {resetting
