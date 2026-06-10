@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicazione fine contratto</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:Georgia,'Times New Roman',serif;color:#1f2937;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;">
+
+          <!-- Intestazione -->
+          <tr>
+            <td style="border-bottom:2px solid #1a3a52;padding:0 0 16px;">
+              <p style="margin:0;color:#1a3a52;font-size:20px;font-weight:700;letter-spacing:0.5px;">Smartcom Solutions Srl</p>
+              <p style="margin:4px 0 0;color:#6b7280;font-size:12px;">Noleggio Su Misura &mdash; Divisione Rental di Smartcom Solutions Srl</p>
+            </td>
+          </tr>
+
+          <!-- Corpo -->
+          <tr>
+            <td style="padding:28px 0 0;">
+
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                come gi&agrave; anticipato da Grenke Italia, nostro partner finanziario,
+                il contratto di locazione operativa n. <strong>{{numero_contratto_grenke}}</strong>
+                (rif. interno {{numero_contratto_nsm}}) giunger&agrave; a scadenza in data
+                <strong>{{data_scadenza}}</strong>.
+              </p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                In qualit&agrave; di partner autorizzato Grenke per la gestione della fase di fine
+                contratto, Le presentiamo di seguito le opzioni disponibili.
+              </p>
+
+              <p style="margin:0 0 6px;font-size:14px;color:#6b7280;">Beni oggetto del contratto:</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;"><strong>{{beni}}</strong></p>
+
+              <!-- Opzioni -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:1px solid #d1d5db;">
+                <tr>
+                  <td style="padding:16px 4px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 6px;font-size:15px;color:#1a3a52;"><strong>1. Rinnovo del contratto</strong></p>
+                    <p style="margin:0;font-size:14px;line-height:1.6;color:#374151;">
+                      Stipula di un nuovo contratto FLEX su dispositivi aggiornati. Alla firma del nuovo
+                      contratto Le verr&agrave; riconosciuta una gift card Smartcom Solutions del valore di
+                      <strong>&euro; {{valore_gift_card}}</strong>, spendibile sul catalogo Smartcom Solutions Srl.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 4px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 6px;font-size:15px;color:#1a3a52;"><strong>2. Acquisto dei beni attuali</strong></p>
+                    <p style="margin:0;font-size:14px;line-height:1.6;color:#374151;">
+                      Acquisto dei beni in locazione al prezzo di <strong>&euro; {{pricing_riacquisto}} oltre IVA</strong>,
+                      con pagamento online tramite bonifico istantaneo o carta.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 4px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 6px;font-size:15px;color:#1a3a52;"><strong>3. Contatto personalizzato</strong></p>
+                    <p style="margin:0;font-size:14px;line-height:1.6;color:#374151;">
+                      Un nostro consulente La contatter&agrave; per valutare insieme la soluzione pi&ugrave; adatta.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 4px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 6px;font-size:15px;color:#1a3a52;"><strong>4. Restituzione dei beni</strong></p>
+                    <p style="margin:0;font-size:14px;line-height:1.6;color:#374151;">
+                      Riconsegna dei beni secondo le istruzioni operative che Le verranno fornite.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                La Sua scelta pu&ograve; essere comunicata attraverso l'area riservata al seguente
+                indirizzo:<br>
+                <a href="{{{link_area_cliente}}}" target="_blank" style="color:#1a3a52;font-size:14px;word-break:break-all;">{{{link_area_cliente}}}</a>
+              </p>
+
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                <strong>Termine per la scelta: {{deadline_decisione}}.</strong><br>
+                In assenza di una scelta entro tale data, il contratto proseguir&agrave; in proroga
+                con canoni invariati per 6 mesi, decorsi i quali non sar&agrave; pi&ugrave; possibile
+                esercitare le opzioni sopra indicate.
+              </p>
+
+              <p style="margin:28px 0 0;font-size:15px;line-height:1.7;">
+                Distinti saluti,<br>
+                <strong>Smartcom Solutions Srl</strong><br>
+                <span style="font-size:13px;color:#6b7280;">Noleggio Su Misura &mdash; Divisione Rental</span>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Pi&egrave; di pagina -->
+          <tr>
+            <td style="border-top:1px solid #d1d5db;margin-top:28px;padding:16px 0 0;">
+              <p style="margin:16px 0 4px;color:#6b7280;font-size:12px;">
+                Smartcom Solutions Srl &mdash; Via Tunisia 5, Collegno (TO) &mdash; P.IVA 12711040019<br>
+                Tel: 011 4557949 &mdash; info@noleggiosumisura.it
+              </p>
+              <p style="margin:8px 0 0;">
+                <a href="{{{link_opt_out}}}" style="color:#9ca3af;font-size:11px;">Non desidero pi&ugrave; ricevere comunicazioni</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

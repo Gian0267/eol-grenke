@@ -103,6 +103,16 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     templateHtml = readFileSync(templatePath, 'utf-8');
   }
   const html = Handlebars.compile(templateHtml)(templateVars);
+
+  // Il canale PEC usa un template istituzionale dedicato (sobrio, senza
+  // elementi grafici colorati), più adatto a una comunicazione certificata.
+  let templatePecHtml = await configService.getHtml('email.comunicazione_iniziale_pec');
+  if (!templatePecHtml) {
+    const templatePecPath = resolve(__dirname, '../../../templates/email/comunicazione_iniziale_pec.html');
+    templatePecHtml = readFileSync(templatePecPath, 'utf-8');
+  }
+  const htmlPec = Handlebars.compile(templatePecHtml)(templateVars);
+
   const oggetto = `Comunicazione relativa al Suo contratto di locazione operativa n. ${contratto.contratto_nsm_id} in scadenza`;
 
   const destinatari: Array<{ email: string; canale: string }> = [
@@ -116,10 +126,12 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
   let almenoUnInvioOk = false;
 
   for (const dest of destinatari) {
-    // Il canale PEC usa il provider PEC certificato (se configurato);
-    // altrimenti ricade sul provider email normale.
-    const provider = dest.canale === 'PEC' && pecProvider ? pecProvider : emailProvider;
-    const sendResult = await provider.send(dest.email, oggetto, html);
+    // Il canale PEC usa il provider PEC certificato (se configurato) e il
+    // template istituzionale; altrimenti provider e template ordinari.
+    const isPec = dest.canale === 'PEC';
+    const provider = isPec && pecProvider ? pecProvider : emailProvider;
+    const corpo = isPec ? htmlPec : html;
+    const sendResult = await provider.send(dest.email, oggetto, corpo);
 
     await prisma.comunicazione.create({
       data: {
@@ -128,7 +140,7 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
         canale: dest.canale,
         destinatario: dest.email,
         oggetto,
-        corpo_html: html,
+        corpo_html: corpo,
         data_invio: new Date(),
         esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
         operatore_id: null,

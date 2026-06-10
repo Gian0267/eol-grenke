@@ -75,6 +75,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
 
     // ─── EMAIL (HTML) ─────────────────────────────────────────────────
     { chiave: 'email.comunicazione_iniziale', valore: readTemplate('email', 'comunicazione_iniziale.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Comunicazione iniziale', descrizione: 'Template email della prima comunicazione al cliente con le 4 opzioni di fine contratto' },
+    { chiave: 'email.comunicazione_iniziale_pec', valore: readTemplate('email', 'comunicazione_iniziale_pec.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Comunicazione iniziale (PEC)', descrizione: 'Template istituzionale della prima comunicazione, usato per il canale PEC' },
     { chiave: 'email.sollecito_1', valore: readTemplate('email', 'sollecito_1.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Sollecito 1 (T-90)', descrizione: 'Template primo sollecito email' },
     { chiave: 'email.sollecito_2', valore: readTemplate('email', 'sollecito_2.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Sollecito 2 (T-60)', descrizione: 'Template secondo sollecito email' },
     { chiave: 'email.sollecito_3', valore: readTemplate('email', 'sollecito_3.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Sollecito 3 (T-45)', descrizione: 'Template terzo sollecito email' },
