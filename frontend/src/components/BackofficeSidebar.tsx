@@ -97,7 +97,7 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/export-grenke', label: 'Export Grenke', icon: FileSpreadsheet, visible: isInternoOrAdmin },
     { to: '/backoffice/miei-task', label: 'I miei Task', icon: Bell, visible: isAgenteOrCapo },
     { to: '/backoffice/task-escalation', label: 'Task Escalation', icon: Phone, visible: isAgenteOrCapo || isInternoOrAdmin },
-    { to: '/backoffice/riacquisti-in-attesa', label: 'Riacquisti in attesa', icon: CreditCard, visible: true },
+    { to: '/backoffice/riacquisti-in-attesa', label: 'Clienti in attesa', icon: CreditCard, visible: true },
     { to: '/backoffice/import', label: 'Importa lista', icon: Upload, visible: isInternoOrAdmin },
     { to: '/backoffice/outlier', label: 'Outlier', icon: AlertTriangle, visible: isInternoOrAdmin },
     { to: '/backoffice/reportistica', label: 'Reportistica', icon: BarChart3, visible: true },

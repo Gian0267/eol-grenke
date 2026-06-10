@@ -71,8 +71,8 @@ export default function RiacquistiInAttesa() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-graphite mb-1">Riacquisti in attesa di chiamata</h1>
-      <p className="text-sm text-stone mb-6">Pratiche che richiedono contatto prima del pagamento</p>
+      <h1 className="text-xl font-bold text-graphite mb-1">Clienti in attesa di contatto</h1>
+      <p className="text-sm text-stone mb-6">Riacquisti da sbloccare e richieste di informazioni che richiedono una chiamata</p>
 
       <div>
         {loading ? (
@@ -83,7 +83,7 @@ export default function RiacquistiInAttesa() {
         ) : pratiche.length === 0 ? (
           <div className="text-center py-12 text-stone">
             <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-ok-text" />
-            <p className="font-medium">Nessuna pratica in attesa di chiamata</p>
+            <p className="font-medium">Nessun cliente in attesa di contatto</p>
           </div>
         ) : (
           <div className="space-y-4">
