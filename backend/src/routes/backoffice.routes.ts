@@ -236,7 +236,7 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             margine_lordo: pricing.margine_lordo,
             valore_gift_card,
             stato: 'LISTA_RICEVUTA',
-            origine: matchedNsm?.origine || 'Smartcom',
+            origine: raw.origine || matchedNsm?.origine || 'Smartcom',
             data_importazione: new Date(),
             stato_riconciliazione: row.status === 'RICONCILIATO_AUTO' ? 'RICONCILIATO_AUTO' : 'OUTLIER_RISOLTO',
             token_accesso_cliente: null,

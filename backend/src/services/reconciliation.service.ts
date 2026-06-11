@@ -45,6 +45,8 @@ const rowSchema = z.object({
   pricing_grenke: z.coerce
     .number({ error: 'Importo Riacquisto Grenke mancante o non numerico (colonna obbligatoria del file Grenke)' })
     .positive('Importo Riacquisto Grenke deve essere positivo'),
+  // Origine commerciale del contratto (IOL / Smartcom) — ultima colonna
+  origine: z.string().optional(),
 });
 
 export type ParsedRow = z.infer<typeof rowSchema>;

@@ -97,6 +97,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
     const grenkeId = `G-FLEX-TEST-${num}`;
     const beni = BENI_TEST[i % BENI_TEST.length]!;
     const email = `g.ciardo+eol${num}@gmail.com`;
+    const origine = i % 4 === 3 ? 'IOL' : 'Smartcom'; // qualche IOL per testare la colonna
 
     const scadenza = new Date(oggi);
     scadenza.setDate(scadenza.getDate() + GIORNI_SCADENZA[i]!);
@@ -141,7 +142,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
         margine_lordo: pricing.margine_lordo,
         valore_gift_card: giftCard,
         stato: 'FLEX_ATTIVO',
-        origine: 'Smartcom',
+        origine,
         data_importazione: oggi,
         stato_riconciliazione: 'RICONCILIATO_AUTO',
       },
@@ -157,6 +158,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       'Data Inizio Contratto': formatDateIt(stipula),
       'Data Fine Contratto': formatDateIt(scadenza),
       'Importo Riacquisto Grenke': prezzoGrenkeTest,
+      'Origine': origine,
     });
   }
 
@@ -164,7 +166,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
   const ws = XLSX.utils.json_to_sheet(excelRows);
   ws['!cols'] = [
     { wch: 26 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 28 },
-    { wch: 18 }, { wch: 18 }, { wch: 24 },
+    { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 12 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contratti in scadenza');

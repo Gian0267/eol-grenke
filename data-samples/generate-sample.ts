@@ -162,6 +162,7 @@ const excelRows = allRows.map(r => {
     'Data Inizio Contratto': formatDate(stipula),
     'Data Fine Contratto': formatDate(scadenza),
     'Importo Riacquisto Grenke': Number((r.canone * (r.mesi / 12) * 0.6).toFixed(2)),
+    'Origine': r.origine,
   };
 });
 
@@ -177,6 +178,7 @@ ws['!cols'] = [
   { wch: 18 }, // Data Inizio Contratto
   { wch: 18 }, // Data Fine Contratto
   { wch: 24 }, // Importo Riacquisto Grenke
+  { wch: 12 }, // Origine
 ];
 
 const wb = XLSX.utils.book_new();

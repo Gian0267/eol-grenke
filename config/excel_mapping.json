@@ -9,7 +9,8 @@
     "PEC": "cliente.pec",
     "Data Inizio Contratto": "data_stipula",
     "Data Fine Contratto": "data_scadenza",
-    "Importo Riacquisto Grenke": "pricing_grenke"
+    "Importo Riacquisto Grenke": "pricing_grenke",
+    "Origine": "origine"
   },
   "campi_obbligatori": [
     "contratto_grenke_id",
