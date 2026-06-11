@@ -238,11 +238,11 @@ export default function FlussoRestituzione() {
               <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{errore}</div>
             )}
 
-            <div className="max-w-xs mx-auto">
+            <div className="w-full">
               <button
                 onClick={() => inviaOtp('EMAIL')}
                 disabled={submitting}
-                className="bg-white border-2 border-[#2563eb] rounded-xl p-5 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
+                className="w-full bg-white border-2 border-[#2563eb] rounded-xl p-5 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
               >
                 <Mail className="w-8 h-8 text-[#2563eb] mx-auto mb-2" />
                 <p className="font-semibold text-[#2563eb]">Ricevi via Email</p>

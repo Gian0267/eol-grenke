@@ -503,11 +503,11 @@ export default function FlussoRiacquisto() {
                   Per confermare il riacquisto, inviamo un codice di verifica a 6 cifre.
                 </p>
 
-                <div className="max-w-xs mx-auto">
+                <div className="w-full">
                   <button
                     onClick={() => handleInviaOtp('EMAIL')}
                     disabled={submitting}
-                    className="border-2 border-[#2563eb] rounded-xl p-5 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
+                    className="w-full border-2 border-[#2563eb] rounded-xl p-5 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
                   >
                     <Mail className="w-8 h-8 text-[#2563eb] mx-auto mb-2" />
                     <p className="font-semibold text-[#2563eb]">Ricevi via Email</p>
