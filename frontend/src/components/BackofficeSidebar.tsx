@@ -49,8 +49,12 @@ export default function BackofficeSidebar() {
         throw new Error(body.error || 'Errore reset');
       }
 
-      // Scarica i due file Excel di test (lista Grenke + export NSM)
-      for (const file of body.files || []) {
+      // Scarica i due file Excel di test (lista Grenke + export NSM).
+      // I download partono in sequenza con una pausa: i browser bloccano
+      // più download programmatici lanciati nello stesso istante.
+      const files: Array<{ filename: string; base64: string }> = body.files || [];
+      for (let fi = 0; fi < files.length; fi++) {
+        const file = files[fi]!;
         const bin = atob(file.base64);
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -62,7 +66,10 @@ export default function BackofficeSidebar() {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        if (fi < files.length - 1) {
+          await new Promise((r) => setTimeout(r, 800));
+        }
       }
 
       toast.success('Reset completato — scaricati i 2 file di test (lista Grenke + export NSM). Caricali in "Importa contratti".', { duration: 9000 });
