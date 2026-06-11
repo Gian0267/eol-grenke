@@ -537,6 +537,7 @@ export default function ListaPratiche() {
                   </ThSortable>
                   <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Contr. Grenke</th>
                   <th className="px-4 py-3 font-medium text-stone">Cliente</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Origine</th>
                   <ThSortable columnKey="data_scadenza" label="Scadenza" onSort={handleSort}>
                     <SortIcon columnKey="data_scadenza" />
                   </ThSortable>
@@ -565,6 +566,7 @@ export default function ListaPratiche() {
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate" title={p.cliente}>
                       {p.cliente}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs">{p.origine || '—'}</td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{formatDate(p.data_scadenza)}</td>
                     <td className="px-4 py-3">
                       <span

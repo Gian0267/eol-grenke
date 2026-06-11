@@ -222,7 +222,7 @@ export default function FlussoRinnovo() {
             <div className="bg-white rounded-xl border p-6">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Cosa vuoi fare con i beni attuali?</h2>
               <p className="text-sm text-gray-600 mb-5">
-                Prima di procedere con il rinnovo, scegli se tenere o restituire i dispositivi attualmente in uso.
+                Prima di procedere con un nuovo contratto, scegli se tenere o restituire i dispositivi attualmente in uso.
               </p>
 
               {/* Elenco beni */}
@@ -350,7 +350,7 @@ export default function FlussoRinnovo() {
               disabled={!sceltaBeni || (sceltaBeni === 'RESTITUISCO' && !confermaRestituzione)}
               className="w-full bg-[#16a34a] text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Procedi al rinnovo <ArrowRight className="w-4 h-4" />
+              Procedi con la richiesta di un nuovo contratto <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}

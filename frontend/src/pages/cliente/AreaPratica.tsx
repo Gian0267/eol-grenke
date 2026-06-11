@@ -125,7 +125,7 @@ export default function AreaPratica() {
   const opzioni = [
     {
       id: 'rinnovo',
-      titolo: config?.titolo_opzione_rinnovo || 'Rinnova il contratto',
+      titolo: config?.titolo_opzione_rinnovo || 'Fai un nuovo contratto con noi',
       descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze, e ricevi un premio fedeltà.',
       icona: <Gift className="w-6 h-6" />,
       colore: 'border-[#16a34a]',

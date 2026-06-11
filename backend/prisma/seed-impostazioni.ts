@@ -85,7 +85,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'email.conferma_contatto', valore: readTemplate('email', 'notifica_richiesta_contatto.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Conferma contatto', descrizione: 'Template email di conferma richiesta di contatto personalizzato' },
 
     // ─── AREA CLIENTE ─────────────────────────────────────────────────
-    { chiave: 'cliente.titolo_opzione_rinnovo', valore: 'Rinnova il contratto', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione rinnovo', descrizione: 'Titolo della card rinnovo nell\'area cliente' },
+    { chiave: 'cliente.titolo_opzione_rinnovo', valore: 'Fai un nuovo contratto con noi', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione rinnovo', descrizione: 'Titolo della card rinnovo nell\'area cliente' },
     { chiave: 'cliente.desc_opzione_rinnovo', valore: 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantita e durata in base alle tue esigenze, e ricevi un premio fedelta.', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Descrizione opzione rinnovo', descrizione: 'Testo descrittivo della card rinnovo' },
     { chiave: 'cliente.titolo_opzione_riacquisto', valore: 'Prenota l\'acquisto del bene', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione riacquisto', descrizione: 'Titolo della card riacquisto nell\'area cliente' },
     { chiave: 'cliente.desc_opzione_riacquisto', valore: 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza del contratto.', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Descrizione opzione riacquisto', descrizione: 'Testo descrittivo della card riacquisto' },
