@@ -1,15 +1,13 @@
 import * as XLSX from 'xlsx';
 import { PrismaClient } from '@prisma/client';
-import { calcolaValoreGiftCard } from './pricing.service.js';
 
 /**
- * Import del file export della piattaforma di noleggio NSM.
+ * Parser e validazione dell'export della piattaforma di noleggio NSM.
  *
- * È il PRIMO import del flusso: crea/aggiorna la base dei contratti attivi
- * (FLEX_ATTIVO) con le informazioni complete che il file Grenke non porta
- * (dispositivi con seriali, firmatario, contatti, canone reale per device).
- * Il file Grenke trimestrale viene importato DOPO e riconcilia per numero
- * contratto Grenke, aggiungendo la scadenza ufficiale e il prezzo Grenke.
+ * Usato dall'import combinato (combined-import.service.ts): il file NSM viene
+ * caricato insieme al file Grenke e fornisce le informazioni che il file
+ * Grenke non porta (dispositivi con seriali, firmatario, contatti, canone
+ * reale per device, numero rate).
  *
  * Regole (concordate con NSM):
  * - vale solo per le righe con Finanziaria = GRENKE (col. E)
@@ -18,8 +16,7 @@ import { calcolaValoreGiftCard } from './pricing.service.js';
  *   AT (accessori) NON si conta
  * - canone mensile del contratto = somma dei canoni dei dispositivi
  * - il canone del file NSM è il dato MASTER (quello del file Grenke si ignora)
- * - la data di scadenza NON è in questo file: resta null finché il contratto
- *   non compare in un file Grenke
+ * - la data di scadenza NON è in questo file: arriva dal file Grenke
  * - REGOLA 1:1 — a ogni contratto NSM corrisponde UN solo contratto Grenke:
  *   se un numero NSM compare su più contratti Grenke il file è errato e i
  *   gruppi coinvolti finiscono in errore
@@ -263,111 +260,4 @@ export async function previewNsmImport(buffer: Buffer, prisma: PrismaClient): Pr
     validi: contratti.filter((c) => c.errors.length === 0).length,
     errori: contratti.filter((c) => c.errors.length > 0).length,
   };
-}
-
-export interface NsmImportResult {
-  creati: number;
-  aggiornati: number;
-  clienti_creati: number;
-  clienti_aggiornati: number;
-  scartati: number;
-}
-
-export async function confirmNsmImport(buffer: Buffer, prisma: PrismaClient): Promise<NsmImportResult> {
-  const preview = await previewNsmImport(buffer, prisma);
-  const { gruppi } = parseNsmExport(buffer);
-  const result: NsmImportResult = { creati: 0, aggiornati: 0, clienti_creati: 0, clienti_aggiornati: 0, scartati: 0 };
-
-  for (const c of preview.contratti) {
-    if (c.errors.length > 0) {
-      result.scartati++;
-      continue;
-    }
-
-    const prima = gruppi.get(c.contratto_grenke_id)?.[0];
-    const firmatario = prima
-      ? [str(prima.firmatario_nome), str(prima.firmatario_cognome)].filter(Boolean).join(' ')
-      : '';
-
-    // 1) Cliente per P.IVA
-    const datiCliente = {
-      ragione_sociale: c.ragione_sociale,
-      codice_fiscale: prima ? str(prima.codice_fiscale) || null : null,
-      email: c.email,
-      pec: c.pec,
-      telefono: prima ? str(prima.telefono) || null : null,
-      referente_nome: firmatario || null,
-      referente_telefono: prima ? str(prima.firmatario_telefono) || null : null,
-      indirizzo_sede: prima ? str(prima.indirizzo) || null : null,
-      cap: prima ? str(prima.cap) || null : null,
-      citta: prima ? str(prima.citta) || null : null,
-      provincia: prima ? str(prima.provincia) || null : null,
-    };
-
-    const clienteEsistente = await prisma.cliente.findUnique({ where: { piva: c.piva } });
-    let clienteId: string;
-    if (clienteEsistente) {
-      await prisma.cliente.update({ where: { id: clienteEsistente.id }, data: datiCliente });
-      clienteId = clienteEsistente.id;
-      result.clienti_aggiornati++;
-    } else {
-      const nuovo = await prisma.cliente.create({ data: { piva: c.piva, ...datiCliente } });
-      clienteId = nuovo.id;
-      result.clienti_creati++;
-    }
-
-    // 2) Contratto: il canone NSM è master → ricalcola pricing cliente
-    const monteCanoni = round2(c.canone_mensile * c.numero_mesi);
-    const pricingRiacquisto = round2(c.canone_mensile * (c.numero_mesi / 12));
-
-    const esistente = await prisma.contratto_EOL.findFirst({
-      where: { contratto_grenke_id: c.contratto_grenke_id },
-    });
-
-    if (esistente) {
-      const pricingGrenke = Number(esistente.pricing_grenke) || 0;
-      const margine = round2(pricingRiacquisto - pricingGrenke);
-      await prisma.contratto_EOL.update({
-        where: { id: esistente.id },
-        data: {
-          contratto_nsm_id: c.contratto_nsm_id,
-          contratto_grenke_id: c.contratto_grenke_id,
-          cliente_id: clienteId,
-          canone_mensile: c.canone_mensile,
-          numero_mesi: c.numero_mesi,
-          monte_canoni: monteCanoni,
-          beni_json: JSON.stringify(c.dispositivi),
-          pricing_riacquisto: pricingRiacquisto,
-          margine_lordo: margine,
-          valore_gift_card: await calcolaValoreGiftCard(margine),
-        },
-      });
-      result.aggiornati++;
-    } else {
-      await prisma.contratto_EOL.create({
-        data: {
-          contratto_nsm_id: c.contratto_nsm_id,
-          contratto_grenke_id: c.contratto_grenke_id,
-          cliente_id: clienteId,
-          data_stipula: new Date(),
-          data_scadenza: null, // arriverà dal file Grenke
-          canone_mensile: c.canone_mensile,
-          numero_mesi: c.numero_mesi,
-          monte_canoni: monteCanoni,
-          beni_json: JSON.stringify(c.dispositivi),
-          pricing_riacquisto: pricingRiacquisto,
-          pricing_grenke: 0, // arriverà dal file Grenke
-          margine_lordo: pricingRiacquisto,
-          valore_gift_card: 0,
-          stato: 'FLEX_ATTIVO',
-          origine: 'Smartcom',
-          data_importazione: new Date(),
-          stato_riconciliazione: 'RICONCILIATO_AUTO',
-        },
-      });
-      result.creati++;
-    }
-  }
-
-  return result;
 }

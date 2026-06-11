@@ -8,7 +8,6 @@ import MieiTask from './pages/backoffice/MieiTask'
 import TaskEscalation from './pages/backoffice/TaskEscalation'
 import RiacquistiInAttesa from './pages/backoffice/RiacquistiInAttesa'
 import ImportLista from './pages/backoffice/ImportLista'
-import ImportContrattiNSM from './pages/backoffice/ImportContrattiNSM'
 import GestioneOutlier from './pages/backoffice/GestioneOutlier'
 import Reportistica from './pages/backoffice/Reportistica'
 import EsportaListaGrenke from './pages/backoffice/EsportaListaGrenke'
@@ -47,7 +46,6 @@ export default function App() {
           <Route path="task-escalation" element={<TaskEscalation />} />
           <Route path="riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
           <Route path="import" element={<ImportLista />} />
-          <Route path="import-nsm" element={<ImportContrattiNSM />} />
           <Route path="outlier" element={<GestioneOutlier />} />
           <Route path="reportistica" element={<Reportistica />} />
           <Route path="export-grenke" element={<EsportaListaGrenke />} />

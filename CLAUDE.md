@@ -83,7 +83,7 @@ node backend/dist/index.js # serves API + built frontend (NODE_ENV=production)
   - `/miei-task` — MieiTask (agent-only task list)
   - `/task-escalation` — TaskEscalation (phone escalation workflow)
   - `/riacquisti-in-attesa` — RiacquistiInAttesa (label "Clienti in attesa": buyback unlock + info requests awaiting a call; route name kept for compatibility)
-  - `/import` — ImportLista (Excel upload + reconciliation; preview table shows Prezzo Grenke / Riacquisto Cliente / Margine, margine ≤ 0 highlighted red)
+  - `/import` — ImportLista "Importa contratti": COMBINED guided import — upload Grenke file (9 cols), then NSM platform export; match by numero contratto Grenke (file-to-file, NOT against DB); NSM records absent from the Grenke file are discarded (counted); Grenke rows without NSM data are non-importable exceptions; confirm creates complete pratiche (real NSM number, devices+serials, canone NSM, scadenza/importo/origine Grenke). Margine ≤ 0 highlighted red. Backend: combined-import.service.ts (preview+confirm re-upload both files, fields `grenke` + `nsm`); reconciliation.service.ts is now a pure Grenke-file parser; nsm-import.service.ts a pure NSM-export parser.
   - `/outlier` — GestioneOutlier (fuzzy matching, associa/crea/scarta — BACKOFFICE_INTERNO/ADMIN only)
   - `/reportistica` — Reportistica (period selector, Recharts graphs, perdite silenzio, performance agenti, CSV export)
   - `/export-grenke` — EsportaListaGrenke; `/utenti` — GestioneUtenti (ADMIN); `/impostazioni` — Impostazioni (ADMIN)
@@ -101,7 +101,7 @@ JSON-driven business rules read at startup by backend services:
 ## Test phase (TEMPORARY — remove before real production)
 
 All marked `SOLO FASE DI TEST` in code. Removal checklist also in auto-memory (`project_eol_fase_test.md`):
-- **Reset button** in sidebar ("Reset dati test (15)", ADMIN/BACKOFFICE_INTERNO) → `POST /api/admin/test/reset-pratiche` → `test-data.service.ts`: wipes ALL operational data (keeps Utente_NSM + Impostazione), recreates 15 FLEX_ATTIVO contracts and **downloads the matching Grenke Excel** (with the mandatory Prezzo Riacquisto Grenke column, simulated at ~60% of client price) to test the full import → workflow cycle.
+- **Reset button** in sidebar ("Reset dati test (15)", ADMIN/BACKOFFICE_INTERNO) → `POST /api/admin/test/reset-pratiche` → `test-data.service.ts`: wipes ALL operational data (keeps Utente_NSM + Impostazione) and returns JSON with TWO base64 Excel files the frontend downloads: lista Grenke (15 contracts + 1 senza-NSM exception) and NSM export (same 15 + 2 extra that must be discarded). No contracts are pre-created — everything enters via the combined import.
 - **`TEST_MAIL_REDIRECT` env var** (set in hPanel + local .env = g.ciardo@gmail.com): `TestRedirectEmailProvider` reroutes EVERY outgoing email to that address with subject prefix `(mail cliente)` / `(pec cliente)` and an amber banner showing the original recipient. With it set, the PEC channel does NOT touch Aruba (zero real PEC consumed). Remove the var → real sending resumes.
 - Test clients use Gmail aliases `g.ciardo+eolNN@gmail.com` (email) and `g.ciardo+eolNNpec@gmail.com` (PEC field) so everything lands in the owner's real inbox even without the redirect.
 

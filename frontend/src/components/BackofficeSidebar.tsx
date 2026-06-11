@@ -29,8 +29,8 @@ export default function BackofficeSidebar() {
     const ok = window.confirm(
       'ATTENZIONE — Reset dati di test\n\n' +
       'Verranno CANCELLATE tutte le pratiche, decisioni, pagamenti, ' +
-      'comunicazioni e clienti. Verranno ricreati 15 contratti attivi e ' +
-      'scaricato un file Excel "lista Grenke" vergine da importare.\n\n' +
+      'comunicazioni e clienti. Verranno scaricati 2 file Excel di test ' +
+      '(lista Grenke + export NSM) da caricare in "Importa contratti".\n\n' +
       'Utenti e impostazioni NON vengono toccati.\n\nProcedere?',
     );
     if (!ok) return;
@@ -44,25 +44,28 @@ export default function BackofficeSidebar() {
         credentials: 'include',
         headers,
       });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Errore reset');
       }
 
-      // Scarica il file Excel restituito dal server
-      const disposition = res.headers.get('Content-Disposition') || '';
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || 'lista_grenke_test.xlsx';
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      // Scarica i due file Excel di test (lista Grenke + export NSM)
+      for (const file of body.files || []) {
+        const bin = atob(file.base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
 
-      toast.success(`Reset completato — scaricato ${filename}. Importalo da "Importa lista".`, { duration: 8000 });
+      toast.success('Reset completato — scaricati i 2 file di test (lista Grenke + export NSM). Caricali in "Importa contratti".', { duration: 9000 });
       navigate('/backoffice/import');
       setMobileOpen(false);
     } catch (e) {
@@ -98,8 +101,7 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/miei-task', label: 'I miei Task', icon: Bell, visible: isAgenteOrCapo },
     { to: '/backoffice/task-escalation', label: 'Task Escalation', icon: Phone, visible: isAgenteOrCapo || isInternoOrAdmin },
     { to: '/backoffice/riacquisti-in-attesa', label: 'Clienti in attesa', icon: CreditCard, visible: true },
-    { to: '/backoffice/import', label: 'Importa lista Grenke', icon: Upload, visible: isInternoOrAdmin },
-    { to: '/backoffice/import-nsm', label: 'Importa contratti NSM', icon: FileSpreadsheet, visible: isInternoOrAdmin },
+    { to: '/backoffice/import', label: 'Importa contratti', icon: Upload, visible: isInternoOrAdmin },
     { to: '/backoffice/outlier', label: 'Outlier', icon: AlertTriangle, visible: isInternoOrAdmin },
     { to: '/backoffice/reportistica', label: 'Reportistica', icon: BarChart3, visible: true },
     { to: '/backoffice/utenti', label: 'Utenti', icon: Users, visible: isAdmin },
@@ -153,7 +155,7 @@ export default function BackofficeSidebar() {
           <button
             onClick={resetDatiTest}
             disabled={resetting}
-            title="Cancella tutto, ricrea 15 contratti attivi e scarica l'Excel da importare"
+            title="Cancella tutto e scarica i 2 file Excel di test da importare"
             className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm border border-dashed border-amber-400/50 text-amber-300 hover:bg-amber-400/10 transition-colors disabled:opacity-50"
           >
             {resetting

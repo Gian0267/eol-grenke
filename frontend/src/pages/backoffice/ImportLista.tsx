@@ -1,496 +1,365 @@
-import { useState, useCallback, useRef } from 'react'
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2, ChevronDown } from 'lucide-react'
-import { Toaster, toast } from 'sonner'
+import { useState, useRef } from 'react';
+import {
+  Upload, Loader2, CheckCircle2, AlertTriangle, FileSpreadsheet,
+  Smartphone, ArrowRight, XCircle, SkipForward,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
-const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001'
+const API_BASE = '';
+const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
 
-type RowStatus = 'RICONCILIATO_AUTO' | 'OUTLIER_DA_GESTIRE' | 'ERRORE'
+type RowStatus = 'PRONTO' | 'SENZA_NSM' | 'GIA_PRESENTE' | 'ERRORE';
 
-interface PreviewRow {
-  index: number
-  status: RowStatus
-  raw: Record<string, any>
-  errors?: string[]
-  matchedContractId?: string
-  matchedContractNsmId?: string
-  warnings?: string[]
+interface Dispositivo {
+  descrizione: string;
+  quantita: number;
+  seriale?: string;
+  canone_unitario: number;
+}
+
+interface CombinedRow {
+  index: number;
+  status: RowStatus;
+  contratto_grenke_id: string;
+  contratto_nsm_id?: string;
+  denominazione: string;
+  origine?: string;
+  data_scadenza?: string;
+  pricing_grenke?: number;
+  canone_mensile?: number;
+  numero_mesi?: number;
+  dispositivi?: Dispositivo[];
   pricing?: {
-    monte_canoni: number
-    pricing_grenke: number
-    pricing_riacquisto: number
-    margine_lordo: number
-    valore_gift_card: number
-  }
-  suggestedMatches?: Array<{
-    clienteId: string
-    ragioneSociale: string
-    piva: string
-  }>
+    monte_canoni: number;
+    pricing_grenke: number;
+    pricing_riacquisto: number;
+    margine_lordo: number;
+    valore_gift_card: number;
+  };
+  errors?: string[];
 }
 
-interface PreviewResult {
-  totalRows: number
-  riconciliatiAuto: number
-  outlier: number
-  errori: number
-  rows: PreviewRow[]
+interface CombinedPreview {
+  grenke_righe: number;
+  nsm_contratti: number;
+  nsm_scartati: number;
+  pronti: number;
+  senza_nsm: number;
+  gia_presenti: number;
+  errori: number;
+  rows: CombinedRow[];
 }
 
-type OutlierAction = 'ASSOCIA' | 'CREA' | 'SCARTA'
-
-interface OutlierDecision {
-  index: number
-  action: OutlierAction
-  clienteId?: string
-  motivazione?: string
+function fmt(n: number | undefined | null): string {
+  if (n === undefined || n === null) return '—';
+  return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-interface ConfirmResult {
-  success: boolean
-  message: string
-  creati: number
-  scartati: number
-  errori: number
+function fmtDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getHeaders(): HeadersInit {
+  const raw = localStorage.getItem('nsm_user');
+  const id = raw ? (JSON.parse(raw).id as string) : BACKOFFICE_USER_ID;
+  return { 'x-user-id': id };
+}
+
+const STATUS_UI: Record<RowStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
+  PRONTO: { label: 'Pronto', cls: 'bg-ok text-ok-text', icon: CheckCircle2 },
+  SENZA_NSM: { label: 'Senza dati NSM', cls: 'bg-outlier text-outlier-text', icon: AlertTriangle },
+  GIA_PRESENTE: { label: 'Già presente', cls: 'bg-paper text-stone', icon: SkipForward },
+  ERRORE: { label: 'Errore', cls: 'bg-err text-err-text', icon: XCircle },
+};
+
+interface DropZoneProps {
+  label: string;
+  sublabel: string;
+  file: File | null;
+  onFile: (f: File) => void;
+  highlight?: boolean;
+}
+
+function DropZone({ label, sublabel, file, onFile, highlight }: DropZoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div
+      className={`border-2 border-dashed rounded-xl p-8 text-center bg-card cursor-pointer transition-colors ${
+        highlight ? 'border-flex' : 'border-border hover:border-flex'
+      } ${file ? 'border-ok-border bg-ok/30' : ''}`}
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) onFile(f);
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.target.value = '';
+        }}
+      />
+      {file ? (
+        <>
+          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-ok-text" />
+          <p className="font-medium text-graphite">{file.name}</p>
+          <p className="text-xs text-stone mt-1">clicca per sostituire</p>
+        </>
+      ) : (
+        <>
+          <FileSpreadsheet className="w-8 h-8 mx-auto mb-2 text-stone" />
+          <p className="font-medium text-graphite">{label}</p>
+          <p className="text-sm text-stone mt-1">{sublabel}</p>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function ImportLista() {
-  const [step, setStep] = useState<'upload' | 'preview' | 'confirmed'>('upload')
-  const [loading, setLoading] = useState(false)
-  const [preview, setPreview] = useState<PreviewResult | null>(null)
-  const [decisions, setDecisions] = useState<Map<number, OutlierDecision>>(new Map())
-  const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null)
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate();
+  const [fileGrenke, setFileGrenke] = useState<File | null>(null);
+  const [fileNsm, setFileNsm] = useState<File | null>(null);
+  const [preview, setPreview] = useState<CombinedPreview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
 
-  const uploadFile = useCallback(async (file: File) => {
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      toast.error('Formato non supportato. Caricare un file .xlsx')
-      return
-    }
-    setLoading(true)
+  const caricaPreview = async (grenke: File, nsm: File) => {
+    setLoading(true);
+    setPreview(null);
+    setDone(null);
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/backoffice/import/preview', {
+      const fd = new FormData();
+      fd.append('grenke', grenke);
+      fd.append('nsm', nsm);
+      const res = await fetch(`${API_BASE}/api/backoffice/import/preview`, {
         method: 'POST',
-        headers: { 'x-user-id': BACKOFFICE_USER_ID },
-        body: formData,
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || `HTTP ${res.status}`)
-      }
-      const data: PreviewResult = await res.json()
-      setPreview(data)
-      setStep('preview')
-
-      const initialDecisions = new Map<number, OutlierDecision>()
-      for (const row of data.rows) {
-        if (row.status === 'OUTLIER_DA_GESTIRE') {
-          initialDecisions.set(row.index, { index: row.index, action: 'SCARTA', motivazione: '' })
-        }
-      }
-      setDecisions(initialDecisions)
-
-      toast.success(`Anteprima caricata: ${data.totalRows} righe`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Errore caricamento')
+        credentials: 'include',
+        headers: getHeaders(),
+        body: fd,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore anteprima');
+      setPreview(body);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Errore caricamento');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) uploadFile(file)
-  }, [uploadFile])
+  const onGrenke = (f: File) => {
+    setFileGrenke(f);
+    setPreview(null);
+    setDone(null);
+    if (fileNsm) caricaPreview(f, fileNsm);
+  };
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) uploadFile(file)
-  }, [uploadFile])
+  const onNsm = (f: File) => {
+    setFileNsm(f);
+    if (fileGrenke) caricaPreview(fileGrenke, f);
+  };
 
-  const updateDecision = (index: number, update: Partial<OutlierDecision>) => {
-    setDecisions(prev => {
-      const next = new Map(prev)
-      const existing = next.get(index) || { index, action: 'SCARTA' as OutlierAction, motivazione: '' }
-      next.set(index, { ...existing, ...update })
-      return next
-    })
-  }
-
-  const canConfirm = () => {
-    if (!preview) return false
-    for (const row of preview.rows) {
-      if (row.status !== 'OUTLIER_DA_GESTIRE') continue
-      const d = decisions.get(row.index)
-      if (!d) return false
-      if ((d.action === 'SCARTA' || d.action === 'CREA') && !d.motivazione?.trim()) return false
-      if (d.action === 'ASSOCIA' && !d.clienteId) return false
-    }
-    return true
-  }
-
-  const handleConfirm = async () => {
-    if (!preview || !canConfirm()) return
-    setLoading(true)
+  const conferma = async () => {
+    if (!fileGrenke || !fileNsm) return;
+    setConfirming(true);
     try {
-      const res = await fetch('/api/backoffice/import/confirm', {
+      const fd = new FormData();
+      fd.append('grenke', fileGrenke);
+      fd.append('nsm', fileNsm);
+      const res = await fetch(`${API_BASE}/api/backoffice/import/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': BACKOFFICE_USER_ID,
-        },
-        body: JSON.stringify({
-          rows: preview.rows,
-          outlierDecisions: Array.from(decisions.values()),
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || `HTTP ${res.status}`)
-      }
-      const result: ConfirmResult = await res.json()
-      setConfirmResult(result)
-      setStep('confirmed')
-      toast.success(result.message)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Errore conferma')
+        credentials: 'include',
+        headers: getHeaders(),
+        body: fd,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore importazione');
+      setDone(body.message);
+      toast.success(body.message, { duration: 8000 });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Errore importazione');
     } finally {
-      setLoading(false)
+      setConfirming(false);
     }
-  }
-
-  const statusIcon = (status: RowStatus) => {
-    switch (status) {
-      case 'RICONCILIATO_AUTO': return <CheckCircle2 className="w-5 h-5 text-ok-text" />
-      case 'OUTLIER_DA_GESTIRE': return <AlertTriangle className="w-5 h-5 text-warn-text" />
-      case 'ERRORE': return <XCircle className="w-5 h-5 text-danger-text" />
-    }
-  }
-
-  const statusBg = (status: RowStatus) => {
-    switch (status) {
-      case 'RICONCILIATO_AUTO': return 'bg-ok border-ok-border'
-      case 'OUTLIER_DA_GESTIRE': return 'bg-warn border-warn-border'
-      case 'ERRORE': return 'bg-danger border-danger-border'
-    }
-  }
-
-  const statusLabel = (status: RowStatus) => {
-    switch (status) {
-      case 'RICONCILIATO_AUTO': return 'Riconciliato'
-      case 'OUTLIER_DA_GESTIRE': return 'Outlier'
-      case 'ERRORE': return 'Errore'
-    }
-  }
-
-  const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+  };
 
   return (
     <div>
-      <Toaster position="top-right" richColors />
+      <h1 className="text-xl font-bold text-graphite mb-1">Importazione contratti</h1>
+      <p className="text-sm text-stone mb-6">
+        Carica la <strong>lista Grenke</strong> e l'<strong>export della piattaforma NSM</strong>:
+        il sistema abbina i contratti per numero Grenke e crea le pratiche complete
+        (numero NSM, dispositivi, canone, scadenza, importo Grenke).
+        I record NSM non presenti nella lista Grenke vengono scartati.
+      </p>
 
-      <div>
-        {/* Step: Upload */}
-        {step === 'upload' && (
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-graphite mb-2">Importa lista Grenke</h2>
-            <p className="text-stone mb-8">
-              Carica il file Excel ricevuto da Grenke con la lista dei contratti in scadenza.
-              Il sistema effettuerà la riconciliazione automatica con i contratti NSM.
-            </p>
-
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`
-                border-2 border-dashed rounded-xl p-16 text-center cursor-pointer transition-all
-                ${dragOver ? 'border-ok-border bg-ok' : 'border-border hover:border-flex hover:bg-paper'}
-                ${loading ? 'pointer-events-none opacity-60' : ''}
-              `}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              {loading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-12 h-12 text-flex animate-spin" />
-                  <p className="text-flex font-medium">Analisi in corso...</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 rounded-full bg-paper flex items-center justify-center">
-                    {dragOver ? (
-                      <FileSpreadsheet className="w-8 h-8 text-ok-text" />
-                    ) : (
-                      <Upload className="w-8 h-8 text-stone" />
-                    )}
-                  </div>
-                  <p className="text-graphite font-medium">
-                    Trascina qui il file Excel oppure clicca per selezionarlo
-                  </p>
-                  <p className="text-sm text-stone">Formato supportato: .xlsx</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Step: Preview */}
-        {step === 'preview' && preview && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-graphite">Anteprima importazione</h2>
-                <p className="text-stone">{preview.totalRows} contratti analizzati</p>
-              </div>
-              <button
-                onClick={() => { setStep('upload'); setPreview(null) }}
-                className="text-sm text-stone hover:text-graphite underline"
-              >
-                Carica un altro file
-              </button>
-            </div>
-
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-ok border border-ok-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="w-5 h-5 text-ok-text" />
-                  <span className="text-sm font-medium text-ok-text">Riconciliati</span>
-                </div>
-                <p className="text-3xl font-bold text-ok-text">{preview.riconciliatiAuto}</p>
-              </div>
-              <div className="bg-warn border border-warn-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle className="w-5 h-5 text-warn-text" />
-                  <span className="text-sm font-medium text-warn-text">Outlier</span>
-                </div>
-                <p className="text-3xl font-bold text-warn-text">{preview.outlier}</p>
-              </div>
-              <div className="bg-danger border border-danger-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="w-5 h-5 text-danger-text" />
-                  <span className="text-sm font-medium text-danger-text">Errori</span>
-                </div>
-                <p className="text-3xl font-bold text-danger-text">{preview.errori}</p>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-paper border-b border-border">
-                      <th className="text-left px-4 py-3 font-medium text-stone">#</th>
-                      <th className="text-left px-4 py-3 font-medium text-stone">Stato</th>
-                      <th className="text-left px-4 py-3 font-medium text-stone">Contratto Grenke</th>
-                      <th className="text-left px-4 py-3 font-medium text-stone">Ragione Sociale</th>
-                      <th className="text-left px-4 py-3 font-medium text-stone">P.IVA</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Monte Canoni</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Prezzo Grenke</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Riacquisto Cliente</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Margine</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Gift Card</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.rows.map((row) => (
-                      <tr key={row.index} className={`border-b border-border ${statusBg(row.status)}`}>
-                        <td className="px-4 py-3 text-stone">{row.index + 1}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {statusIcon(row.status)}
-                            <span className="text-xs font-medium">{statusLabel(row.status)}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs">{row.raw.contratto_grenke_id}</td>
-                        <td className="px-4 py-3">
-                          {row.raw['cliente.ragione_sociale']}
-                          {row.warnings && row.warnings.length > 0 && (
-                            <ul className="mt-1 text-xs text-outlier-text list-disc list-inside">
-                              {row.warnings.map((w, wi) => <li key={wi}>{w}</li>)}
-                            </ul>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs">{row.raw['cliente.piva']}</td>
-                        <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.monte_canoni) : '—'}</td>
-                        <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_grenke) : '—'}</td>
-                        <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_riacquisto) : '—'}</td>
-                        <td className={`px-4 py-3 text-right ${row.pricing && row.pricing.margine_lordo <= 0 ? 'text-err-text font-medium' : ''}`}>{row.pricing ? fmt(row.pricing.margine_lordo) : '—'}</td>
-                        <td className="px-4 py-3 text-right">
-                          {row.pricing ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ok text-ok-text">
-                              {fmt(row.pricing.valore_gift_card)}
-                            </span>
-                          ) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Outlier management */}
-            {preview.outlier > 0 && (
-              <div className="mt-8">
-                <h3 className="text-lg font-bold text-graphite mb-4">
-                  Gestione Outlier ({preview.outlier})
-                </h3>
-                <div className="space-y-4">
-                  {preview.rows
-                    .filter(r => r.status === 'OUTLIER_DA_GESTIRE')
-                    .map(row => {
-                      const decision = decisions.get(row.index)
-                      return (
-                        <div key={row.index} className="bg-warn border border-warn-border rounded-xl p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <p className="font-medium text-graphite">
-                                {row.raw['cliente.ragione_sociale']}
-                                <span className="ml-2 text-sm text-stone">P.IVA {row.raw['cliente.piva']}</span>
-                              </p>
-                              <p className="text-sm text-stone">
-                                Contratto: {row.raw.contratto_grenke_id} — Importo Grenke {fmt(row.raw.pricing_grenke)} €
-                              </p>
-                            </div>
-                            {row.pricing && (
-                              <span className="text-sm font-medium text-warn-text">
-                                Monte canoni: {fmt(row.pricing.monte_canoni)}
-                              </span>
-                            )}
-                          </div>
-
-                          {row.suggestedMatches && row.suggestedMatches.length > 0 && (
-                            <div className="mb-3 p-3 bg-white/50 rounded-lg">
-                              <p className="text-xs font-medium text-warn-text mb-1">Suggerimenti di matching:</p>
-                              {row.suggestedMatches.map((s, si) => (
-                                <p key={si} className="text-xs text-stone">
-                                  {s.ragioneSociale} (P.IVA {s.piva})
-                                  <button
-                                    onClick={() => updateDecision(row.index, { action: 'ASSOCIA', clienteId: s.clienteId })}
-                                    className="ml-2 text-flex underline"
-                                  >
-                                    Associa
-                                  </button>
-                                </p>
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <select
-                                value={decision?.action || 'SCARTA'}
-                                onChange={(e) => updateDecision(row.index, {
-                                  action: e.target.value as OutlierAction,
-                                  clienteId: undefined,
-                                  motivazione: '',
-                                })}
-                                className="appearance-none bg-card border border-border rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-flex/20"
-                              >
-                                <option value="SCARTA">Scarta</option>
-                                <option value="CREA">Crea nuovo</option>
-                                <option value="ASSOCIA">Associa esistente</option>
-                              </select>
-                              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-stone pointer-events-none" />
-                            </div>
-
-                            {(decision?.action === 'SCARTA' || decision?.action === 'CREA') && (
-                              <input
-                                type="text"
-                                placeholder="Motivazione (obbligatoria)"
-                                value={decision?.motivazione || ''}
-                                onChange={(e) => updateDecision(row.index, { motivazione: e.target.value })}
-                                className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/20 placeholder:text-stone"
-                              />
-                            )}
-
-                            {decision?.action === 'ASSOCIA' && decision.clienteId && (
-                              <span className="text-sm text-ok-text font-medium">
-                                Associato a cliente {decision.clienteId.slice(0, 8)}...
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Confirm button */}
-            <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
-              <p className="text-sm text-stone">
-                Verranno creati <strong>{preview.riconciliatiAuto + Array.from(decisions.values()).filter(d => d.action !== 'SCARTA').length}</strong> contratti EOL
-              </p>
-              <button
-                onClick={handleConfirm}
-                disabled={loading || !canConfirm()}
-                className={`
-                  px-6 py-3 rounded-xl font-medium text-white transition-all
-                  ${loading || !canConfirm()
-                    ? 'bg-stone cursor-not-allowed'
-                    : 'bg-ok-text hover:bg-ok-text/80 shadow-md hover:shadow-lg'}
-                `}
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Importazione in corso...
-                  </span>
-                ) : (
-                  'Conferma importazione'
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Confirmed */}
-        {step === 'confirmed' && confirmResult && (
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="w-20 h-20 rounded-full bg-ok flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-ok-text" />
-            </div>
-            <h2 className="text-2xl font-bold text-graphite mb-2">Importazione completata</h2>
-            <p className="text-stone mb-8">{confirmResult.message}</p>
-
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-ok border border-ok-border rounded-xl p-4">
-                <p className="text-sm text-ok-text font-medium">Creati</p>
-                <p className="text-3xl font-bold text-ok-text">{confirmResult.creati}</p>
-              </div>
-              <div className="bg-warn border border-warn-border rounded-xl p-4">
-                <p className="text-sm text-warn-text font-medium">Scartati</p>
-                <p className="text-3xl font-bold text-warn-text">{confirmResult.scartati}</p>
-              </div>
-              <div className="bg-danger border border-danger-border rounded-xl p-4">
-                <p className="text-sm text-danger-text font-medium">Errori</p>
-                <p className="text-3xl font-bold text-danger-text">{confirmResult.errori}</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => { setStep('upload'); setPreview(null); setConfirmResult(null) }}
-              className="px-6 py-3 rounded-xl font-medium text-white bg-flex hover:bg-flex-dark transition-all shadow-md"
-            >
-              Nuova importazione
-            </button>
-          </div>
-        )}
+      {/* Step 1 + 2: upload */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <p className="text-sm font-semibold text-graphite mb-2">1. File Grenke</p>
+          <DropZone
+            label="Trascina qui la lista Grenke"
+            sublabel="contratti in scadenza (.xlsx)"
+            file={fileGrenke}
+            onFile={onGrenke}
+          />
+        </div>
+        <div className={fileGrenke ? '' : 'opacity-40 pointer-events-none'}>
+          <p className="text-sm font-semibold text-graphite mb-2">
+            2. File NSM {fileGrenke && !fileNsm && <span className="text-flex font-bold">← ora carica questo</span>}
+          </p>
+          <DropZone
+            label="Trascina qui l'export NSM"
+            sublabel="contratti della piattaforma di noleggio (.xlsx)"
+            file={fileNsm}
+            onFile={onNsm}
+            highlight={!!fileGrenke && !fileNsm}
+          />
+        </div>
       </div>
+
+      {loading && (
+        <div className="text-center py-10 text-stone">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+          Abbinamento dei due file in corso...
+        </div>
+      )}
+
+      {done && (
+        <div className="bg-ok border border-ok-border/40 rounded-xl p-4 mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-ok-text">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <p className="font-medium">{done}</p>
+          </div>
+          <button
+            onClick={() => navigate('/backoffice/pratiche')}
+            className="shrink-0 bg-flex text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-flex-dark transition-colors flex items-center gap-2"
+          >
+            Vai alle pratiche <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: anteprima */}
+      {preview && !done && (
+        <>
+          <div className="flex flex-wrap gap-2 mb-4 text-sm">
+            <span className="px-3 py-1.5 rounded-full bg-ok text-ok-text border border-ok-border/40 font-medium">{preview.pronti} pronte</span>
+            {preview.senza_nsm > 0 && (
+              <span className="px-3 py-1.5 rounded-full bg-outlier text-outlier-text border border-outlier-border/40">{preview.senza_nsm} senza dati NSM</span>
+            )}
+            {preview.gia_presenti > 0 && (
+              <span className="px-3 py-1.5 rounded-full bg-paper border text-stone">{preview.gia_presenti} già presenti</span>
+            )}
+            {preview.errori > 0 && (
+              <span className="px-3 py-1.5 rounded-full bg-err text-err-text border border-err-border/40">{preview.errori} errori</span>
+            )}
+            {preview.nsm_scartati > 0 && (
+              <span className="px-3 py-1.5 rounded-full bg-paper border text-stone">
+                {preview.nsm_scartati} record NSM scartati (non in lista Grenke)
+              </span>
+            )}
+          </div>
+
+          <div className="bg-card rounded-xl border border-border overflow-x-auto mb-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-paper/60 text-left">
+                  <th className="px-4 py-3 font-medium text-stone">Stato</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Contr. Grenke</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Contr. NSM</th>
+                  <th className="px-4 py-3 font-medium text-stone">Denominazione</th>
+                  <th className="px-4 py-3 font-medium text-stone">Origine</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Scadenza</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right">Canone</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right">Mesi</th>
+                  <th className="px-4 py-3 font-medium text-stone">Dispositivi</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Ns. costo</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Riacquisto cliente</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right">Margine</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Gift card</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.map((r) => {
+                  const ui = STATUS_UI[r.status];
+                  const Icon = ui.icon;
+                  return (
+                    <tr key={r.index} className={`border-b last:border-b-0 ${r.status === 'ERRORE' ? 'bg-err/30' : r.status === 'SENZA_NSM' ? 'bg-outlier/30' : ''}`}>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ui.cls}`}>
+                          <Icon className="w-3.5 h-3.5" /> {ui.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{r.contratto_grenke_id}</td>
+                      <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{r.contratto_nsm_id || '—'}</td>
+                      <td className="px-4 py-3 font-medium max-w-[200px]">
+                        <span className="block truncate" title={r.denominazione}>{r.denominazione}</span>
+                        {r.errors && r.errors.length > 0 && (
+                          <ul className="mt-1 text-xs text-err-text list-disc list-inside font-normal">
+                            {r.errors.map((e, j) => <li key={j}>{e}</li>)}
+                          </ul>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">{r.origine || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{fmtDate(r.data_scadenza)}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{r.canone_mensile !== undefined ? `${fmt(r.canone_mensile)} €` : '—'}</td>
+                      <td className="px-4 py-3 text-right">{r.numero_mesi ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        {r.dispositivi && r.dispositivi.length > 0 ? (
+                          <div className="flex items-start gap-1.5 text-xs text-stone">
+                            <Smartphone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            <span>
+                              {r.dispositivi.map((d, j) => (
+                                <span key={j} className="block whitespace-nowrap">
+                                  {d.quantita}× {d.descrizione}
+                                </span>
+                              ))}
+                            </span>
+                          </div>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{r.pricing_grenke !== undefined ? `${fmt(r.pricing_grenke)} €` : '—'}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{r.pricing ? `${fmt(r.pricing.pricing_riacquisto)} €` : '—'}</td>
+                      <td className={`px-4 py-3 text-right whitespace-nowrap ${r.pricing && r.pricing.margine_lordo <= 0 ? 'text-err-text font-medium' : ''}`}>
+                        {r.pricing ? `${fmt(r.pricing.margine_lordo)} €` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {r.pricing ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ok text-ok-text">
+                            {fmt(r.pricing.valore_gift_card)} €
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <button
+            onClick={conferma}
+            disabled={confirming || preview.pronti === 0}
+            className="bg-flex text-white px-6 py-2.5 rounded-lg font-medium hover:bg-flex-dark transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Conferma importazione ({preview.pronti} pratiche)
+          </button>
+        </>
+      )}
     </div>
-  )
+  );
 }

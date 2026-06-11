@@ -5,9 +5,7 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
 import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
-import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
-import { previewNsmImport, confirmNsmImport } from '../services/nsm-import.service.js';
-import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
+import { previewCombinedImport, confirmCombinedImport } from '../services/combined-import.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from '../services/audit.service.js';
@@ -26,24 +24,33 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 router.use(verifyBackofficeToken as any);
 
-// POST /api/backoffice/import/preview
-router.post('/import/preview', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+// ─── IMPORT COMBINATO (file Grenke + export piattaforma NSM) ────────
+// Procedura guidata: 1) file Grenke 2) file NSM 3) match per numero
+// contratto Grenke 4) conferma → pratiche complete. I record NSM non
+// presenti nel file Grenke vengono scartati.
+
+const importFiles = upload.fields([
+  { name: 'grenke', maxCount: 1 },
+  { name: 'nsm', maxCount: 1 },
+]);
+
+function getImportFiles(req: AuthenticatedRequest): { grenke: Buffer; nsm: Buffer } | null {
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const grenke = files?.grenke?.[0];
+  const nsm = files?.nsm?.[0];
+  if (!grenke || !nsm) return null;
+  return { grenke: grenke.buffer, nsm: nsm.buffer };
+}
+
+// POST /api/backoffice/import/preview — multipart: grenke + nsm
+router.post('/import/preview', importFiles, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Nessun file caricato' });
+    const files = getImportFiles(req);
+    if (!files) {
+      res.status(400).json({ error: 'Servono entrambi i file: lista Grenke e export NSM (.xlsx)' });
       return;
     }
-
-    const allowedTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ];
-    if (!allowedTypes.includes(req.file.mimetype) && !req.file.originalname.endsWith('.xlsx')) {
-      res.status(400).json({ error: 'Formato file non supportato. Caricare un file .xlsx' });
-      return;
-    }
-
-    const preview = await parseAndReconcile(req.file.buffer, prisma);
+    const preview = await previewCombinedImport(files.grenke, files.nsm, prisma);
     res.json(preview);
   } catch (err) {
     console.error('[import/preview] Errore:', err);
@@ -51,225 +58,35 @@ router.post('/import/preview', upload.single('file'), async (req: AuthenticatedR
   }
 });
 
-// ─── IMPORT CONTRATTI NSM (export piattaforma di noleggio) ─────────
-// Va eseguito PRIMA dell'import del file Grenke: crea/aggiorna la base
-// dei contratti FLEX_ATTIVO con dispositivi, firmatario e canone reale.
-
-// POST /api/backoffice/import-nsm/preview
-router.post('/import-nsm/preview', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+// POST /api/backoffice/import/confirm — multipart: grenke + nsm
+router.post('/import/confirm', importFiles, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Nessun file caricato' });
+    const files = getImportFiles(req);
+    if (!files) {
+      res.status(400).json({ error: 'Servono entrambi i file: lista Grenke e export NSM (.xlsx)' });
       return;
     }
-    if (!req.file.originalname.endsWith('.xlsx')) {
-      res.status(400).json({ error: 'Formato file non supportato. Caricare un file .xlsx' });
-      return;
-    }
-    const preview = await previewNsmImport(req.file.buffer, prisma);
-    res.json(preview);
-  } catch (err) {
-    console.error('[import-nsm/preview] Errore:', err);
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
-  }
-});
-
-// POST /api/backoffice/import-nsm/confirm — ricarica il file e applica
-router.post('/import-nsm/confirm', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Nessun file caricato' });
-      return;
-    }
-    const result = await confirmNsmImport(req.file.buffer, prisma);
-
-    await registraEvento(null, 'BACKOFFICE', req.user?.id || 'SCONOSCIUTO', 'IMPORT_CONTRATTI_NSM', {
-      creati: result.creati,
-      aggiornati: result.aggiornati,
-      scartati: result.scartati,
-      file: req.file.originalname,
-    });
-
-    res.json({ success: true, ...result });
-  } catch (err) {
-    console.error('[import-nsm/confirm] Errore:', err);
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
-  }
-});
-
-// POST /api/backoffice/import/confirm
-interface OutlierDecision {
-  index: number;
-  action: 'ASSOCIA' | 'CREA' | 'SCARTA';
-  clienteId?: string;
-  motivazione?: string;
-}
-
-interface ConfirmBody {
-  rows: PreviewRow[];
-  outlierDecisions: OutlierDecision[];
-}
-
-router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { rows, outlierDecisions } = req.body as ConfirmBody;
-
-    if (!rows || !Array.isArray(rows)) {
-      res.status(400).json({ error: 'Dati anteprima mancanti' });
-      return;
-    }
-
-    const decisionMap = new Map<number, OutlierDecision>();
-    if (outlierDecisions) {
-      for (const d of outlierDecisions) {
-        if (d.action === 'SCARTA' && !d.motivazione) {
-          res.status(400).json({ error: `Motivazione obbligatoria per scarto riga ${d.index}` });
-          return;
-        }
-        if (d.action === 'CREA' && !d.motivazione) {
-          res.status(400).json({ error: `Motivazione obbligatoria per creazione riga ${d.index}` });
-          return;
-        }
-        decisionMap.set(d.index, d);
-      }
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      let creati = 0;
-      let scartati = 0;
-      let errori = 0;
-      const contrattiCreati: string[] = [];
-
-      for (const row of rows) {
-        if (row.status === 'ERRORE') {
-          errori++;
-          continue;
-        }
-
-        if (row.status === 'OUTLIER_DA_GESTIRE') {
-          const decision = decisionMap.get(row.index);
-          if (!decision) {
-            throw new Error(`Decisione mancante per outlier riga ${row.index}`);
-          }
-          if (decision.action === 'SCARTA') {
-            scartati++;
-            continue;
-          }
-        }
-
-        const raw = row.raw;
-        // Il tracciato Grenke porta solo denominazione, P.IVA, email e PEC:
-        // gli altri dati anagrafici restano quelli della piattaforma NSM.
-        const clienteData = {
-          ragione_sociale: raw['cliente.ragione_sociale'],
-          email: raw['cliente.email'],
-          pec: raw['cliente.pec'] || null,
-        };
-
-        let clienteId: string;
-        // Dati master dal contratto NSM matchato (file piattaforma di noleggio):
-        // canone, mesi e beni del file Grenke si IGNORANO quando c'è il match.
-        let matchedNsm: { canone_mensile: unknown; numero_mesi: number; beni_json: string; data_stipula: Date; origine: string } | null = null;
-
-        if (row.status === 'RICONCILIATO_AUTO' && row.matchedContractId) {
-          const existingContract = await tx.contratto_EOL.findUnique({
-            where: { id: row.matchedContractId },
-            select: { cliente_id: true, canone_mensile: true, numero_mesi: true, beni_json: true, data_stipula: true, origine: true },
-          });
-          if (!existingContract) {
-            throw new Error(`Contratto matchato ${row.matchedContractId} non trovato`);
-          }
-          clienteId = existingContract.cliente_id;
-          matchedNsm = existingContract;
-
-          // I dati anagrafici NON vengono sovrascritti dal file Grenke:
-          // la fonte master è l'export della piattaforma NSM.
-          // Aggiorniamo però la scadenza ufficiale sul contratto base.
-          await tx.contratto_EOL.update({
-            where: { id: row.matchedContractId },
-            data: { data_scadenza: new Date(raw.data_scadenza) },
-          });
-        } else if (row.status === 'OUTLIER_DA_GESTIRE') {
-          const decision = decisionMap.get(row.index)!;
-          if (decision.action === 'ASSOCIA' && decision.clienteId) {
-            clienteId = decision.clienteId;
-            await tx.cliente.update({ where: { id: clienteId }, data: clienteData });
-          } else {
-            // CREA nuovo cliente (o aggiorna se piva già esiste)
-            const newCliente = await tx.cliente.upsert({
-              where: { piva: raw['cliente.piva'] },
-              update: clienteData,
-              create: { piva: raw['cliente.piva'], ...clienteData },
-            });
-            clienteId = newCliente.id;
-          }
-        } else {
-          continue;
-        }
-
-        // Canone/mesi/beni vengono SEMPRE dalla piattaforma NSM: il tracciato
-        // Grenke non li contiene. Per gli outlier (contratto assente in
-        // piattaforma) restano a zero finché non si importa l'export NSM.
-        const canoneMaster = matchedNsm ? Number(matchedNsm.canone_mensile) : 0;
-        const mesiMaster = matchedNsm ? matchedNsm.numero_mesi : 0;
-        const beniMaster = matchedNsm ? matchedNsm.beni_json : '[]';
-
-        const pricing = await calcolaPricing(canoneMaster, mesiMaster, raw.pricing_grenke);
-        const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
-
-        const nsmId = row.matchedContractNsmId || `NSM-EOL-${Date.now()}-${row.index}`;
-
-        const contratto = await tx.contratto_EOL.create({
-          data: {
-            contratto_nsm_id: nsmId + (row.status === 'RICONCILIATO_AUTO' ? `-EOL` : ''),
-            contratto_grenke_id: raw.contratto_grenke_id,
-            cliente_id: clienteId,
-            data_stipula: matchedNsm ? matchedNsm.data_stipula : raw.data_stipula ? new Date(raw.data_stipula) : new Date(),
-            data_scadenza: new Date(raw.data_scadenza),
-            canone_mensile: canoneMaster,
-            numero_mesi: mesiMaster,
-            monte_canoni: pricing.monte_canoni,
-            valore_originario: null,
-            beni_json: beniMaster,
-            pricing_riacquisto: pricing.pricing_riacquisto,
-            pricing_grenke: pricing.pricing_grenke,
-            margine_lordo: pricing.margine_lordo,
-            valore_gift_card,
-            stato: 'LISTA_RICEVUTA',
-            origine: raw.origine || matchedNsm?.origine || 'Smartcom',
-            data_importazione: new Date(),
-            stato_riconciliazione: row.status === 'RICONCILIATO_AUTO' ? 'RICONCILIATO_AUTO' : 'OUTLIER_RISOLTO',
-            token_accesso_cliente: null,
-          },
-        });
-
-        const dataScadenza = new Date(raw.data_scadenza);
-        const exp = Math.floor((dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000);
-        const token = jwt.sign(
-          { contratto_eol_id: contratto.id, cliente_id: clienteId, exp },
-          JWT_SECRET,
-        );
-        await tx.contratto_EOL.update({
-          where: { id: contratto.id },
-          data: { token_accesso_cliente: token },
-        });
-
-        contrattiCreati.push(contratto.id);
-        creati++;
-      }
-
-      return { creati, scartati, errori, contrattiCreati };
-    }, { timeout: 120000, maxWait: 15000 }); // import lungo: molte query per riga verso Supabase
+    const result = await confirmCombinedImport(files.grenke, files.nsm, prisma);
 
     for (const cId of result.contrattiCreati) {
       await registraEvento(cId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'PRATICA_CREATA', {
-        origine: 'IMPORTAZIONE_EXCEL',
+        origine: 'IMPORT_COMBINATO_GRENKE_NSM',
       });
     }
+    await registraEvento(null, 'BACKOFFICE', (req.user as any)?.id || 'system', 'IMPORT_COMBINATO', {
+      creati: result.creati,
+      gia_presenti: result.gia_presenti,
+      senza_nsm: result.senza_nsm,
+      errori: result.errori,
+      nsm_scartati: result.nsm_scartati,
+    });
 
     res.json({
       success: true,
-      message: `Importazione completata: ${result.creati} contratti creati, ${result.scartati} scartati, ${result.errori} errori`,
+      message: `Importazione completata: ${result.creati} pratiche create` +
+        (result.gia_presenti ? `, ${result.gia_presenti} già presenti` : '') +
+        (result.senza_nsm ? `, ${result.senza_nsm} senza dati NSM` : '') +
+        (result.errori ? `, ${result.errori} errori` : ''),
       ...result,
     });
   } catch (err) {

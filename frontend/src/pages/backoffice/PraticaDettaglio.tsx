@@ -236,8 +236,12 @@ function parseBeni(json: string): string[] {
     if (Array.isArray(parsed)) {
       return parsed.map((b: any) => {
         if (typeof b === 'string') return b;
-        const parts = [b.descrizione, b.marca, b.modello, b.seriale].filter(Boolean);
-        return parts.length > 0 ? parts.join(' — ') : JSON.stringify(b);
+        const qta = b.quantita && b.quantita > 1 ? `${b.quantita}× ` : '';
+        const parts = [b.descrizione, b.marca, b.modello].filter(Boolean);
+        let riga = qta + (parts.length > 0 ? parts.join(' — ') : JSON.stringify(b));
+        if (b.seriale) riga += ` — S/N ${b.seriale}`;
+        if (b.canone_unitario) riga += ` — ${Number(b.canone_unitario).toLocaleString('it-IT', { minimumFractionDigits: 2 })} €/mese`;
+        return riga;
       });
     }
     return [String(parsed)];

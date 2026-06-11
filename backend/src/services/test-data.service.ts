@@ -1,26 +1,23 @@
 import * as XLSX from 'xlsx';
 import { prisma } from '../lib/db.js';
-import { calcolaPricing, calcolaValoreGiftCard } from './pricing.service.js';
 
 /**
  * SOLO PER LA FASE DI TEST — da rimuovere prima della produzione effettiva.
  *
  * Svuota tutti i dati operativi (pratiche, decisioni, pagamenti, comunicazioni,
- * audit, OTP, escalation, clienti) e ripristina lo scenario di partenza del
- * flusso reale:
- *   1. ricrea 15 contratti in stato FLEX_ATTIVO (pre-esistenti in piattaforma,
- *      come nella realtà prima dell'arrivo della lista Grenke)
- *   2. genera il file Excel "lista Grenke" con le stesse 15 righe, da importare
- *      manualmente da "Importa lista" per testare riconciliazione e workflow
+ * audit, OTP, escalation, clienti) e genera DUE file Excel di test da usare
+ * con l'import combinato:
+ *   1. lista Grenke (9 colonne) — 15 contratti + 1 senza dati NSM (eccezione)
+ *   2. export piattaforma NSM — gli stessi 15 contratti con dispositivi e
+ *      canoni + 2 contratti extra NON presenti nel file Grenke (scartati)
  *
  * NON tocca: Utente_NSM (utenti e password) e Impostazione (configurazione).
+ * Nessun contratto viene pre-creato: tutto entra dall'import combinato.
  *
  * Le email dei clienti di test usano il pattern g.ciardo+eolNN@gmail.com:
- * Gmail le recapita tutte nella casella g.ciardo@gmail.com, quindi le
- * comunicazioni inviate durante i test arrivano davvero e sono verificabili.
- * La PEC è un alias fittizio (+eolNNpec) che attiva il canale PEC nel flusso;
- * con TEST_MAIL_REDIRECT impostata gli invii PEC sono simulati via email
- * ordinaria con oggetto "(pec cliente) ..." — nessuna PEC reale consumata.
+ * Gmail le recapita tutte nella casella g.ciardo@gmail.com. La PEC è un alias
+ * fittizio (+eolNNpec); con TEST_MAIL_REDIRECT gli invii PEC sono simulati
+ * via email ordinaria — nessuna PEC reale consumata.
  */
 
 const AZIENDE_TEST = [
@@ -39,20 +36,27 @@ const AZIENDE_TEST = [
   { nome: 'Minerva Studio SNC',       piva: '11111111113', citta: 'Trento',   provincia: 'TN' },
   { nome: 'Nettuno Marine SRL',       piva: '11111111114', citta: 'Cagliari', provincia: 'CA' },
   { nome: 'Orione Robotics SPA',      piva: '11111111115', citta: 'Modena',   provincia: 'MO' },
+  // extra solo nel file NSM (devono risultare "scartati" all'import)
+  { nome: 'Pegaso Innovazione SRL',   piva: '11111111116', citta: 'Ancona',   provincia: 'AN' },
+  { nome: 'Quasar Servizi SNC',       piva: '11111111117', citta: 'Perugia',  provincia: 'PG' },
 ];
 
 // Giorni alla scadenza: coprono le fasce escalation (31-50), i solleciti e le fasi iniziali
-const GIORNI_SCADENZA = [32, 34, 38, 42, 47, 55, 62, 70, 80, 92, 105, 120, 135, 150, 165];
+const GIORNI_SCADENZA = [32, 34, 38, 42, 47, 55, 62, 70, 80, 92, 105, 120, 135, 150, 165, 90, 100];
 
-const BENI_TEST = [
-  'iPhone 15 Pro 256GB',
-  'MacBook Air M3 13"',
-  'iPad Pro 11" M4',
-  'iPhone 15 128GB + MacBook Pro 14" M3',
+const DEVICE_TEST = [
+  { descrizione: 'iPhone 17 Pro 256GB Deep Blue', prezzo: 42.07, servizi: 0 },
+  { descrizione: 'MacBook Air M4 13" Midnight', prezzo: 38.5, servizi: 4.33 },
+  { descrizione: 'iPad Pro 11" M5 Space Black', prezzo: 29.9, servizi: 0 },
+  { descrizione: 'Galaxy S26 12+256Gb Black', prezzo: 25.22, servizi: 6.16 },
+  { descrizione: 'iPhone 17 Pro Max 512GB Cosmic Orange', prezzo: 56.25, servizi: 4.33 },
 ];
 
-const CANONI_TEST = [89, 120, 150, 185, 220, 260, 310, 95, 140, 175, 205, 245, 280, 110, 160];
-const MESI_TEST = [24, 36, 48, 24, 36, 48, 36, 24, 48, 36, 24, 36, 48, 36, 24];
+const MESI_TEST = [24, 36, 48, 24, 36, 48, 36, 24, 48, 36, 24, 36, 48, 36, 24, 36, 36];
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
 
 function formatDateIt(d: Date): string {
   const dd = String(d.getDate()).padStart(2, '0');
@@ -61,9 +65,8 @@ function formatDateIt(d: Date): string {
 }
 
 export interface ResetTestDataResult {
-  buffer: Buffer;
-  filename: string;
-  contratti_creati: number;
+  files: Array<{ filename: string; base64: string }>;
+  contratti_importabili: number;
   record_eliminati: Record<string, number>;
 }
 
@@ -83,104 +86,130 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       prisma.counter.deleteMany(),
     ]);
 
-  // 2) Ricrea i 15 contratti FLEX_ATTIVO pre-esistenti in piattaforma
-  //    e prepara le righe Excel corrispondenti (match per contratto_grenke_id)
+  // 2) Prepara i dati dei 17 contratti (15 in entrambi i file, 2 solo NSM)
   const oggi = new Date();
   const anno = oggi.getFullYear();
-  const excelRows: Record<string, string | number>[] = [];
+  const grenkeRows: Record<string, string | number>[] = [];
+  // Il file NSM è per-dispositivo, con le colonne del tracciato export (50 col.)
+  const nsmHeader: unknown[] = new Array(50).fill('');
+  nsmHeader[0] = 'Agenzia'; nsmHeader[1] = 'Agente'; nsmHeader[4] = 'Finanziaria';
+  nsmHeader[5] = 'Numero contratto'; nsmHeader[6] = 'Numero contratto';
+  nsmHeader[13] = 'Numero rate'; nsmHeader[14] = 'Ragione sociale cliente';
+  nsmHeader[16] = 'partita IVA'; nsmHeader[17] = 'Codice fiscale';
+  nsmHeader[18] = 'Indirizzo'; nsmHeader[19] = 'Città'; nsmHeader[20] = 'CAP'; nsmHeader[21] = 'Provincia';
+  nsmHeader[22] = 'Email'; nsmHeader[23] = 'Pec'; nsmHeader[24] = 'Telefono';
+  nsmHeader[26] = 'Nome Firmatario'; nsmHeader[27] = 'Cognome Firmatario'; nsmHeader[28] = 'Telefono Firmatario';
+  nsmHeader[38] = 'Descrizione'; nsmHeader[39] = 'Quantità'; nsmHeader[40] = 'Seriale';
+  nsmHeader[43] = 'Prezzo mensile unitario'; nsmHeader[44] = 'Prezzo mensile servizi totale';
+  const nsmRows: unknown[][] = [nsmHeader];
 
   for (let i = 0; i < AZIENDE_TEST.length; i++) {
     const az = AZIENDE_TEST[i]!;
     const num = String(i + 1).padStart(2, '0');
-    const canone = CANONI_TEST[i]!;
     const mesi = MESI_TEST[i]!;
     const grenkeId = `G-FLEX-TEST-${num}`;
-    const beni = BENI_TEST[i % BENI_TEST.length]!;
+    const nsmId = `${anno}05${String(10000000000 + i * 7919)}${num}`;
     const email = `g.ciardo+eol${num}@gmail.com`;
-    const origine = i % 4 === 3 ? 'IOL' : 'Smartcom'; // qualche IOL per testare la colonna
+    const pec = `g.ciardo+eol${num}pec@gmail.com`;
+    const origine = i % 4 === 3 ? 'IOL' : 'Smartcom';
 
     const scadenza = new Date(oggi);
     scadenza.setDate(scadenza.getDate() + GIORNI_SCADENZA[i]!);
     const stipula = new Date(scadenza);
     stipula.setMonth(stipula.getMonth() - mesi);
 
-    // Prezzo Grenke→Smartcom simulato (nella realtà arriva dal file Grenke):
-    // ~60% del prezzo cliente, per avere margini realistici nei test
-    const prezzoGrenkeTest = Math.round(canone * (mesi / 12) * 0.6 * 100) / 100;
+    // 1-2 dispositivi per contratto
+    const dispositivi = [DEVICE_TEST[i % DEVICE_TEST.length]!];
+    if (i % 5 === 0) dispositivi.push(DEVICE_TEST[(i + 2) % DEVICE_TEST.length]!);
+    let canone = 0;
 
-    const pricing = await calcolaPricing(canone, mesi, prezzoGrenkeTest);
-    const giftCard = await calcolaValoreGiftCard(pricing.margine_lordo);
+    for (let d = 0; d < dispositivi.length; d++) {
+      const dev = dispositivi[d]!;
+      canone += dev.prezzo + dev.servizi;
+      const riga: unknown[] = new Array(50).fill(null);
+      riga[0] = 'Smartcom';
+      riga[4] = 'GRENKE';
+      riga[5] = nsmId;
+      riga[6] = grenkeId;
+      riga[13] = mesi;
+      riga[14] = az.nome;
+      riga[16] = az.piva;
+      riga[18] = `Via dei Test ${i + 1}`;
+      riga[19] = az.citta;
+      riga[20] = '10100';
+      riga[21] = az.provincia;
+      riga[22] = email;
+      riga[23] = pec;
+      riga[24] = `011${az.piva.slice(-7)}`;
+      riga[26] = 'Referente';
+      riga[27] = az.nome.split(' ')[0];
+      riga[28] = `333${az.piva.slice(-7)}`;
+      riga[38] = dev.descrizione;
+      riga[39] = 1;
+      riga[40] = `TEST-SN-${num}${d}`;
+      riga[43] = dev.prezzo;
+      riga[44] = dev.servizi;
+      nsmRows.push(riga);
+    }
+    canone = round2(canone);
 
-    const cliente = await prisma.cliente.create({
-      data: {
-        ragione_sociale: az.nome,
-        piva: az.piva,
-        email,
-        pec: `g.ciardo+eol${num}pec@gmail.com`,
-        telefono: `011${az.piva.slice(-7)}`,
-        referente_nome: `Referente ${az.nome.split(' ')[0]}`,
-        indirizzo_sede: `Via dei Test ${i + 1}`,
-        cap: '10100',
-        citta: az.citta,
-        provincia: az.provincia,
-      },
-    });
-
-    await prisma.contratto_EOL.create({
-      data: {
-        contratto_nsm_id: `NSM-TEST-${anno}-${num}`,
-        contratto_grenke_id: grenkeId,
-        cliente_id: cliente.id,
-        data_stipula: stipula,
-        data_scadenza: scadenza,
-        canone_mensile: canone,
-        numero_mesi: mesi,
-        monte_canoni: pricing.monte_canoni,
-        beni_json: JSON.stringify([{ descrizione: beni }]),
-        pricing_riacquisto: pricing.pricing_riacquisto,
-        pricing_grenke: pricing.pricing_grenke,
-        margine_lordo: pricing.margine_lordo,
-        valore_gift_card: giftCard,
-        stato: 'FLEX_ATTIVO',
-        origine,
-        data_importazione: oggi,
-        stato_riconciliazione: 'RICONCILIATO_AUTO',
-      },
-    });
-
-    // Tracciato concordato con Grenke (8 colonne)
-    excelRows.push({
-      'Numero Contratto Grenke': grenkeId,
-      'Denominazione Sociale': az.nome,
-      'P.IVA': az.piva,
-      'Email': email,
-      'PEC': `g.ciardo+eol${num}pec@gmail.com`,
-      'Data Inizio Contratto': formatDateIt(stipula),
-      'Data Fine Contratto': formatDateIt(scadenza),
-      'Importo Riacquisto Grenke': prezzoGrenkeTest,
-      'Origine': origine,
-    });
+    // Solo i primi 15 entrano nel file Grenke (gli altri 2 → "scartati")
+    if (i < 15) {
+      const prezzoGrenkeTest = round2(canone * (mesi / 12) * 0.6);
+      grenkeRows.push({
+        'Numero Contratto Grenke': grenkeId,
+        'Denominazione Sociale': az.nome,
+        'P.IVA': az.piva,
+        'Email': email,
+        'PEC': pec,
+        'Data Inizio Contratto': formatDateIt(stipula),
+        'Data Fine Contratto': formatDateIt(scadenza),
+        'Importo Riacquisto Grenke': prezzoGrenkeTest,
+        'Origine': origine,
+      });
+    }
   }
 
-  // 3) Genera il file Excel "lista Grenke" in memoria
-  const ws = XLSX.utils.json_to_sheet(excelRows);
-  ws['!cols'] = [
+  // Riga Grenke SENZA dati NSM (deve risultare eccezione "senza NSM")
+  const scadenzaX = new Date(oggi);
+  scadenzaX.setDate(scadenzaX.getDate() + 75);
+  grenkeRows.push({
+    'Numero Contratto Grenke': 'G-FLEX-TEST-99',
+    'Denominazione Sociale': 'Zenith Mancante SRL',
+    'P.IVA': '11111111199',
+    'Email': 'g.ciardo+eol99@gmail.com',
+    'PEC': '',
+    'Data Inizio Contratto': formatDateIt(new Date(scadenzaX.getFullYear() - 3, scadenzaX.getMonth(), scadenzaX.getDate())),
+    'Data Fine Contratto': formatDateIt(scadenzaX),
+    'Importo Riacquisto Grenke': 120,
+    'Origine': 'Smartcom',
+  });
+
+  // 3) Genera i due file in memoria
+  const wsGrenke = XLSX.utils.json_to_sheet(grenkeRows);
+  wsGrenke['!cols'] = [
     { wch: 26 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 28 },
     { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 12 },
   ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Contratti in scadenza');
-  const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  const wbGrenke = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbGrenke, wsGrenke, 'Contratti in scadenza');
+  const bufGrenke = XLSX.write(wbGrenke, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+
+  const wsNsm = XLSX.utils.aoa_to_sheet(nsmRows);
+  const wbNsm = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbNsm, wsNsm, 'Sheet 1');
+  const bufNsm = XLSX.write(wbNsm, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 
   const ts = `${anno}${String(oggi.getMonth() + 1).padStart(2, '0')}${String(oggi.getDate()).padStart(2, '0')}`;
-  const filename = `lista_grenke_test_${ts}.xlsx`;
 
-  console.log(`[TestData] Reset completato: 15 contratti FLEX_ATTIVO + Excel ${filename}`);
+  console.log(`[TestData] Reset completato: generati lista Grenke (16 righe) ed export NSM (17 contratti)`);
 
   return {
-    buffer,
-    filename,
-    contratti_creati: AZIENDE_TEST.length,
+    files: [
+      { filename: `lista_grenke_test_${ts}.xlsx`, base64: bufGrenke.toString('base64') },
+      { filename: `contratti_nsm_test_${ts}.xlsx`, base64: bufNsm.toString('base64') },
+    ],
+    contratti_importabili: 15,
     record_eliminati: {
       otp: otp.count,
       task_escalation: task.count,
