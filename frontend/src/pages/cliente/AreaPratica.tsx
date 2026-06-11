@@ -137,7 +137,7 @@ export default function AreaPratica() {
     {
       id: 'riacquisto',
       titolo: config?.titolo_opzione_riacquisto || 'Prenota l\'acquisto del bene',
-      descrizione: config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza del contratto.',
+      descrizione: config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.',
       icona: <ShoppingCart className="w-6 h-6" />,
       colore: 'border-[#2563eb]',
       bgColore: 'bg-blue-50',

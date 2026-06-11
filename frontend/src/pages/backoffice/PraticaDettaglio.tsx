@@ -95,7 +95,7 @@ interface Pratica {
   contratto_nsm_id: string;
   contratto_grenke_id: string;
   data_stipula: string;
-  data_scadenza: string;
+  data_scadenza: string | null;
   canone_mensile: number;
   numero_mesi: number;
   monte_canoni: number;
@@ -152,7 +152,8 @@ function formatEur(n: number): string {
   }).format(n);
 }
 
-function formatDate(d: string): string {
+function formatDate(d: string | null): string {
+  if (!d) return '—';
   try {
     return format(new Date(d), 'dd/MM/yyyy', { locale: it });
   } catch {

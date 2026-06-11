@@ -41,7 +41,7 @@ export async function previewExport(da: string, a: string): Promise<GrenkeExport
       contratto_grenke_id: p.contratto_grenke_id,
       ragione_sociale: p.cliente.ragione_sociale,
       piva: p.cliente.piva,
-      data_scadenza: new Date(p.data_scadenza).toLocaleDateString('it-IT'),
+      data_scadenza: new Date(p.data_scadenza!).toLocaleDateString('it-IT'),
       importo_netto: pag ? Number(pag.importo_netto) : Number(p.pricing_riacquisto),
       importo_iva: pag ? Number(pag.importo_iva) : 0,
       importo_totale: pag ? Number(pag.importo_totale) : Number(p.pricing_riacquisto),

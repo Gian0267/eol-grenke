@@ -135,7 +135,7 @@ export async function generaRicevutaPagamento(
   doc.fontSize(10).font('Helvetica');
   doc.text(`Contratto NSM: ${contratto.contratto_nsm_id}`);
   doc.text(`Contratto Grenke: ${contratto.contratto_grenke_id}`);
-  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza))}`);
+  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza!))}`);
   doc.moveDown(1);
 
   // Beni

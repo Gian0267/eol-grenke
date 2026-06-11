@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
 import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { parseAndReconcile, PreviewRow } from '../services/reconciliation.service.js';
+import { previewNsmImport, confirmNsmImport } from '../services/nsm-import.service.js';
 import { calcolaPricing, calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { createEmailProvider } from '../providers/notification/email.provider.js';
@@ -46,6 +47,52 @@ router.post('/import/preview', upload.single('file'), async (req: AuthenticatedR
     res.json(preview);
   } catch (err) {
     console.error('[import/preview] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// ─── IMPORT CONTRATTI NSM (export piattaforma di noleggio) ─────────
+// Va eseguito PRIMA dell'import del file Grenke: crea/aggiorna la base
+// dei contratti FLEX_ATTIVO con dispositivi, firmatario e canone reale.
+
+// POST /api/backoffice/import-nsm/preview
+router.post('/import-nsm/preview', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'Nessun file caricato' });
+      return;
+    }
+    if (!req.file.originalname.endsWith('.xlsx')) {
+      res.status(400).json({ error: 'Formato file non supportato. Caricare un file .xlsx' });
+      return;
+    }
+    const preview = await previewNsmImport(req.file.buffer, prisma);
+    res.json(preview);
+  } catch (err) {
+    console.error('[import-nsm/preview] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/import-nsm/confirm — ricarica il file e applica
+router.post('/import-nsm/confirm', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'Nessun file caricato' });
+      return;
+    }
+    const result = await confirmNsmImport(req.file.buffer, prisma);
+
+    await registraEvento(null, 'BACKOFFICE', req.user?.id || 'SCONOSCIUTO', 'IMPORT_CONTRATTI_NSM', {
+      creati: result.creati,
+      aggiornati: result.aggiornati,
+      scartati: result.scartati,
+      file: req.file.originalname,
+    });
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[import-nsm/confirm] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });
@@ -124,20 +171,27 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
         };
 
         let clienteId: string;
+        // Dati master dal contratto NSM matchato (file piattaforma di noleggio):
+        // canone, mesi e beni del file Grenke si IGNORANO quando c'è il match.
+        let matchedNsm: { canone_mensile: unknown; numero_mesi: number; beni_json: string; data_stipula: Date } | null = null;
 
         if (row.status === 'RICONCILIATO_AUTO' && row.matchedContractId) {
           const existingContract = await tx.contratto_EOL.findUnique({
             where: { id: row.matchedContractId },
-            select: { cliente_id: true },
+            select: { cliente_id: true, canone_mensile: true, numero_mesi: true, beni_json: true, data_stipula: true },
           });
           if (!existingContract) {
             throw new Error(`Contratto matchato ${row.matchedContractId} non trovato`);
           }
           clienteId = existingContract.cliente_id;
+          matchedNsm = existingContract;
 
-          await tx.cliente.update({
-            where: { id: clienteId },
-            data: clienteData,
+          // I dati anagrafici NON vengono sovrascritti dal file Grenke:
+          // la fonte master è l'export della piattaforma NSM.
+          // Aggiorniamo però la scadenza ufficiale sul contratto base.
+          await tx.contratto_EOL.update({
+            where: { id: row.matchedContractId },
+            data: { data_scadenza: new Date(raw.data_scadenza) },
           });
         } else if (row.status === 'OUTLIER_DA_GESTIRE') {
           const decision = decisionMap.get(row.index)!;
@@ -157,7 +211,14 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
           continue;
         }
 
-        const pricing = await calcolaPricing(raw.canone_mensile, raw.numero_mesi, raw.pricing_grenke);
+        // Canone/mesi/beni: master = contratto NSM se matchato, altrimenti file Grenke
+        const canoneMaster = matchedNsm ? Number(matchedNsm.canone_mensile) : raw.canone_mensile;
+        const mesiMaster = matchedNsm ? matchedNsm.numero_mesi : raw.numero_mesi;
+        const beniMaster = matchedNsm
+          ? matchedNsm.beni_json
+          : JSON.stringify(raw.beni_descrizione ? [{ descrizione: raw.beni_descrizione }] : []);
+
+        const pricing = await calcolaPricing(canoneMaster, mesiMaster, raw.pricing_grenke);
         const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
         const nsmId = row.matchedContractNsmId || `NSM-EOL-${Date.now()}-${row.index}`;
@@ -167,13 +228,13 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             contratto_nsm_id: nsmId + (row.status === 'RICONCILIATO_AUTO' ? `-EOL` : ''),
             contratto_grenke_id: raw.contratto_grenke_id,
             cliente_id: clienteId,
-            data_stipula: raw.data_stipula ? new Date(raw.data_stipula) : new Date(),
+            data_stipula: matchedNsm ? matchedNsm.data_stipula : raw.data_stipula ? new Date(raw.data_stipula) : new Date(),
             data_scadenza: new Date(raw.data_scadenza),
-            canone_mensile: raw.canone_mensile,
-            numero_mesi: raw.numero_mesi,
+            canone_mensile: canoneMaster,
+            numero_mesi: mesiMaster,
             monte_canoni: pricing.monte_canoni,
             valore_originario: raw.valore_originario ?? null,
-            beni_json: JSON.stringify(raw.beni_descrizione ? [{ descrizione: raw.beni_descrizione }] : []),
+            beni_json: beniMaster,
             pricing_riacquisto: pricing.pricing_riacquisto,
             pricing_grenke: pricing.pricing_grenke,
             margine_lordo: pricing.margine_lordo,
@@ -202,7 +263,7 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
       }
 
       return { creati, scartati, errori, contrattiCreati };
-    });
+    }, { timeout: 120000, maxWait: 15000 }); // import lungo: molte query per riga verso Supabase
 
     for (const cId of result.contrattiCreati) {
       await registraEvento(cId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'PRATICA_CREATA', {

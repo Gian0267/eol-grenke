@@ -179,10 +179,10 @@ async function main() {
 
     const contrattoId = crypto.randomUUID();
 
-    await prisma.contratto_EOL.upsert({
-      where: { contratto_nsm_id: cfg.nsmId },
-      update: {},
-      create: {
+    const giaPresente1 = await prisma.contratto_EOL.findFirst({ where: { contratto_nsm_id: cfg.nsmId } });
+    if (giaPresente1) continue;
+    await prisma.contratto_EOL.create({
+      data: {
         id: contrattoId,
         contratto_nsm_id: cfg.nsmId,
         contratto_grenke_id: cfg.grenkeId,
@@ -243,10 +243,10 @@ async function main() {
     const agenteRef = idx % 2 === 0 ? agente : junior;
     const contrattoId = crypto.randomUUID();
 
-    await prisma.contratto_EOL.upsert({
-      where: { contratto_nsm_id: nsmId },
-      update: {},
-      create: {
+    const giaPresente2 = await prisma.contratto_EOL.findFirst({ where: { contratto_nsm_id: nsmId } });
+    if (giaPresente2) continue;
+    await prisma.contratto_EOL.create({
+      data: {
         id: contrattoId,
         contratto_nsm_id: nsmId,
         contratto_grenke_id: grenkeId,

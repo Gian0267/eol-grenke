@@ -12,7 +12,7 @@
     "escalation_telefonica_3": 35,
     "deadline_decisione": 30,
     "consolidamento_lista_riacquisti": 20,
-    "pagamento_riacquisto": 7
+    "pagamento_riacquisto": 21
   },
   "giorni_post_scadenza": {
     "termine_consegna_bene": 10,

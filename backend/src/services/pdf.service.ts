@@ -96,7 +96,7 @@ export async function generaVerbaleRestituzione(
   doc.fontSize(10).font('Helvetica');
   doc.text(`Numero contratto NSM: ${contratto.contratto_nsm_id}`);
   doc.text(`Numero contratto Grenke: ${contratto.contratto_grenke_id}`);
-  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza))}`);
+  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza!))}`);
   doc.text(`Monte canoni: € ${formatEur(Number(contratto.monte_canoni))}`);
   doc.moveDown(1);
 
@@ -254,7 +254,7 @@ export async function generaConfermaRinnovo(
   doc.fontSize(10).font('Helvetica');
   doc.text(`Numero contratto NSM: ${contratto.contratto_nsm_id}`);
   doc.text(`Numero contratto Grenke: ${contratto.contratto_grenke_id}`);
-  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza))}`);
+  doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza!))}`);
   doc.text(`Monte canoni: EUR ${formatEur(Number(contratto.monte_canoni))}`);
   doc.text(`Beni attuali: ${beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto'}`);
   doc.moveDown(1);

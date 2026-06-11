@@ -117,7 +117,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
     const ivaPerc = pricingRules.iva_percentuale as number;
     const { iva, totale } = calcolaIvaAMargine(contratto.pricing_riacquisto, contratto.margine_lordo, ivaPerc);
 
-    const dataScadenza = new Date(contratto.data_scadenza);
+    const dataScadenza = new Date(contratto.data_scadenza!);
     const deadlineDecisione = calcolaDeadline(dataScadenza);
 
     let beni: Array<{ descrizione?: string }> = [];
@@ -438,7 +438,7 @@ router.post(
         ragione_sociale: contratto.cliente.ragione_sociale,
         numero_contratto_nsm: contratto.contratto_nsm_id,
         numero_contratto_grenke: contratto.contratto_grenke_id,
-        data_scadenza: new Date(contratto.data_scadenza).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        data_scadenza: new Date(contratto.data_scadenza!).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         beni: beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto',
       });
 
@@ -695,19 +695,19 @@ router.post(
         opzione: 'RIACQUISTO', decisione_id: decisione.id, ip,
       });
 
-      // Determina se il pagamento è immediato o differito (T-7)
+      // Determina se il pagamento è immediato o differito (T-21)
       const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
       const oggi = new Date();
-      const scadenza = new Date(contratto.data_scadenza);
+      const scadenza = new Date(contratto.data_scadenza!);
       const diffMs = scadenza.getTime() - oggi.getTime();
       const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
 
       if (giorniAllaScadenza <= giorniPagamento) {
-        // Pagamento immediato: siamo già entro T-7
+        // Pagamento immediato: siamo già entro T-21
         res.json({ success: true, decisione_id: decisione.id, pagamento_immediato: true });
       } else {
-        // Pagamento differito: invieremo il link a T-7
+        // Pagamento differito: invieremo il link a T-21
         const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
         res.json({
           success: true,
@@ -751,9 +751,9 @@ router.get(
       }
 
       const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
       const oggi = new Date();
-      const scadenza = new Date(contratto.data_scadenza);
+      const scadenza = new Date(contratto.data_scadenza!);
       const diffMs = scadenza.getTime() - oggi.getTime();
       const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
 
@@ -1433,9 +1433,9 @@ router.post(
       let pagamento_info: { pagamento_differito?: boolean; data_pagamento?: string; pagamento_immediato?: boolean } = {};
       if (scelta_beni === 'TENGO') {
         const configService = await import('../services/config.service.js');
-        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
         const oggi = new Date();
-        const scadenza = new Date(contratto.data_scadenza);
+        const scadenza = new Date(contratto.data_scadenza!);
         const diffMs = scadenza.getTime() - oggi.getTime();
         const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
 
@@ -1646,7 +1646,7 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Fai un nuovo contratto con noi'),
       desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze, e ricevi un premio fedeltà.'),
       titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),
-      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 7 giorni prima della scadenza del contratto.'),
+      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.'),
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
       desc_opzione_contatto: await configService.getTesto('cliente.desc_opzione_contatto', 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.'),
       titolo_opzione_restituzione: await configService.getTesto('cliente.titolo_opzione_restituzione', 'Restituisci i beni'),

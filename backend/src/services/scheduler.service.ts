@@ -137,6 +137,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
   console.log(`[Scheduler] ${pratiche.length} pratiche da analizzare (data di riferimento: ${formatDate(oggi)})`);
 
   for (const pratica of pratiche) {
+    if (!pratica.data_scadenza) continue;
     const giorni = diffDays(pratica.data_scadenza, oggi);
     console.log(`[Scheduler] Pratica ${pratica.contratto_nsm_id}: ${giorni} giorni a scadenza`);
 
@@ -219,15 +220,16 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     }
   }
 
-  // --- INVITI PAGAMENTO RIACQUISTO (T-7) ---
+  // --- INVITI PAGAMENTO RIACQUISTO (T-21) ---
   try {
-    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 7);
+    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
     const praticheRiacquisto = await prisma.contratto_EOL.findMany({
       where: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
       include: { cliente: true },
     });
 
     for (const pratica of praticheRiacquisto) {
+      if (!pratica.data_scadenza) continue;
       const giorniMancanti = diffDays(pratica.data_scadenza, oggi);
       if (giorniMancanti <= giorniPagamento) {
         const giàInviato = await prisma.comunicazione.findFirst({

@@ -55,7 +55,7 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     return result;
   }
 
-  const dataScadenza = new Date(contratto.data_scadenza);
+  const dataScadenza = new Date(contratto.data_scadenza!);
   const deadlineMs = dataScadenza.getTime() - JWT_EXPIRES_OFFSET_DAYS * 24 * 60 * 60 * 1000;
   const deadline = new Date(deadlineMs);
 

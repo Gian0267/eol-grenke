@@ -68,6 +68,7 @@ export interface PreviewRow {
   errors?: string[];
   matchedContractId?: string;
   matchedContractNsmId?: string;
+  warnings?: string[];
   pricing?: {
     monte_canoni: number;
     pricing_grenke: number;
@@ -114,9 +115,12 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
   }
 
   const existingContracts = await prisma.contratto_EOL.findMany({
-    select: { id: true, contratto_grenke_id: true, contratto_nsm_id: true },
+    select: { id: true, contratto_grenke_id: true, contratto_nsm_id: true, canone_mensile: true, numero_mesi: true },
   });
-  const grenkeIdMap = new Map(existingContracts.map(c => [c.contratto_grenke_id, { id: c.id, nsmId: c.contratto_nsm_id }]));
+  const grenkeIdMap = new Map(existingContracts.map(c => [
+    c.contratto_grenke_id,
+    { id: c.id, nsmId: c.contratto_nsm_id, canone: Number(c.canone_mensile), mesi: c.numero_mesi },
+  ]));
 
   const allClienti = await prisma.cliente.findMany({
     select: { id: true, ragione_sociale: true, piva: true },
@@ -139,12 +143,23 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
     }
 
     const parsed = parseResult.data;
-    const pricing = await calcolaPricing(parsed.canone_mensile, parsed.numero_mesi, parsed.pricing_grenke);
-    const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
-
     const match = grenkeIdMap.get(parsed.contratto_grenke_id);
 
+    // Il canone master è quello della piattaforma NSM (se il contratto è già
+    // in piattaforma); quello del file Grenke si usa solo in assenza di match.
+    const canoneMaster = match ? match.canone : parsed.canone_mensile;
+    const mesiMaster = match ? match.mesi : parsed.numero_mesi;
+    const pricing = await calcolaPricing(canoneMaster, mesiMaster, parsed.pricing_grenke);
+    const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
+
     if (match) {
+      const warnings: string[] = [];
+      if (Math.abs(match.canone - parsed.canone_mensile) > 0.01) {
+        warnings.push(`Canone diverso: NSM € ${match.canone.toFixed(2)} vs file Grenke € ${parsed.canone_mensile.toFixed(2)} — fa fede il canone NSM`);
+      }
+      if (match.mesi !== parsed.numero_mesi) {
+        warnings.push(`Durata diversa: NSM ${match.mesi} mesi vs file Grenke ${parsed.numero_mesi} mesi — fa fede la durata NSM`);
+      }
       rows.push({
         index: i,
         status: 'RICONCILIATO_AUTO',
@@ -152,6 +167,7 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
         matchedContractId: match.id,
         matchedContractNsmId: match.nsmId,
         pricing: { ...pricing, valore_gift_card },
+        warnings: warnings.length > 0 ? warnings : undefined,
       });
       riconciliatiAuto++;
     } else {

@@ -13,6 +13,7 @@ interface PreviewRow {
   errors?: string[]
   matchedContractId?: string
   matchedContractNsmId?: string
+  warnings?: string[]
   pricing?: {
     monte_canoni: number
     pricing_grenke: number
@@ -316,7 +317,14 @@ export default function ImportLista() {
                           </div>
                         </td>
                         <td className="px-4 py-3 font-mono text-xs">{row.raw.contratto_grenke_id}</td>
-                        <td className="px-4 py-3">{row.raw['cliente.ragione_sociale']}</td>
+                        <td className="px-4 py-3">
+                          {row.raw['cliente.ragione_sociale']}
+                          {row.warnings && row.warnings.length > 0 && (
+                            <ul className="mt-1 text-xs text-outlier-text list-disc list-inside">
+                              {row.warnings.map((w, wi) => <li key={wi}>{w}</li>)}
+                            </ul>
+                          )}
+                        </td>
                         <td className="px-4 py-3 font-mono text-xs">{row.raw['cliente.piva']}</td>
                         <td className="px-4 py-3 text-right">{fmt(row.raw.canone_mensile)}</td>
                         <td className="px-4 py-3 text-right">{row.raw.numero_mesi}</td>

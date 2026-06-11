@@ -34,7 +34,7 @@ function calcolaHash(
 }
 
 export async function registraEvento(
-  contratto_eol_id: string,
+  contratto_eol_id: string | null,
   attore_tipo: AttoreTipo,
   attore_id: string,
   azione: AzioneAudit | string,

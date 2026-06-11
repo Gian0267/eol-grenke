@@ -61,7 +61,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
 
     const now = new Date();
     let items = pratiche.map(p => {
-      const giorni_a_scadenza = diffDays(p.data_scadenza, now);
+      const giorni_a_scadenza = p.data_scadenza ? diffDays(p.data_scadenza, now) : null;
       return {
         id: p.id,
         contratto_nsm: p.contratto_nsm_id,
@@ -80,7 +80,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     });
 
     if (rischio_silenzio === 'true') {
-      items = items.filter(p => p.stato === 'IN_ATTESA_DECISIONE' && p.giorni_a_scadenza >= 31 && p.giorni_a_scadenza <= 50);
+      items = items.filter(p => p.stato === 'IN_ATTESA_DECISIONE' && p.giorni_a_scadenza !== null && p.giorni_a_scadenza >= 31 && p.giorni_a_scadenza <= 50);
     }
 
     if (decisione) {
@@ -123,7 +123,7 @@ router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, re
     const rows = pratiche.map(p => {
       const agente = p.agente_assegnato ? `${p.agente_assegnato.nome} ${p.agente_assegnato.cognome}` : '';
       const dec = p.decisioni[0]?.opzione_scelta || '';
-      const scad = p.data_scadenza.toISOString().split('T')[0];
+      const scad = p.data_scadenza ? p.data_scadenza.toISOString().split('T')[0] : '';
       return `${p.contratto_nsm_id};${p.contratto_grenke_id};${p.cliente.ragione_sociale};${p.cliente.piva};${p.cliente.email};${scad};${p.stato};${agente};${Number(p.pricing_riacquisto).toFixed(2)};${dec}`;
     }).join('\n');
 
@@ -167,7 +167,7 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
     }
 
     const now = new Date();
-    const giorni_a_scadenza = diffDays(pratica.data_scadenza, now);
+    const giorni_a_scadenza = pratica.data_scadenza ? diffDays(pratica.data_scadenza, now) : null;
 
     const timeline: any[] = [];
 
@@ -539,7 +539,7 @@ router.get('/reports/sintesi', async (req: AuthenticatedRequest, res: Response) 
     for (let m = start.getMonth(); m < (periodo === 'anno' ? 12 : start.getMonth() + (periodo === 'trimestre' ? 3 : 1)); m++) {
       const mStart = new Date(start.getFullYear(), m, 1);
       const mEnd = new Date(start.getFullYear(), m + 1, 1);
-      const mp = pratiche.filter(p => p.data_scadenza >= mStart && p.data_scadenza < mEnd);
+      const mp = pratiche.filter(p => p.data_scadenza && p.data_scadenza >= mStart && p.data_scadenza < mEnd);
       const mc = mp.filter(p => statiChiusi.includes(p.stato));
       const ms = mp.filter(p => p.stato === 'SILENZIO_PERDITA_DEFINITIVA').length;
       const tns = mc.length > 0 ? ((mc.length - ms) / mc.length) * 100 : 0;

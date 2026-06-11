@@ -23,6 +23,7 @@ router.get('/risk-silence-counts', async (_req: AuthenticatedRequest, res: Respo
     const t50Ids: string[] = [], t40Ids: string[] = [], t35Ids: string[] = [];
 
     for (const p of pratiche) {
+      if (!p.data_scadenza) continue;
       const giorni = diffDays(p.data_scadenza, now);
       if (giorni >= 31 && giorni <= 35) {
         t35++;

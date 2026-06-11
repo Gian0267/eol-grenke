@@ -30,7 +30,7 @@ interface PraticaRecente {
   id: string
   cliente: string
   contratto_nsm: string
-  data_scadenza: string
+  data_scadenza: string | null
   stato: string
   decisione: string
 }
@@ -46,7 +46,8 @@ function getStatoBadge(stato: string): { bg: string; text: string; label: string
   return { bg: 'bg-paper', text: 'text-stone', label: stato }
 }
 
-function formatDate(d: string): string {
+function formatDate(d: string | null): string {
+  if (!d) return '—'
   return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 

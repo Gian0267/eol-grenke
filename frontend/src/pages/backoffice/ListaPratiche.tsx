@@ -40,7 +40,7 @@ interface PraticaItem {
   contratto_nsm: string;
   contratto_grenke: string;
   cliente: string;
-  data_scadenza: string;
+  data_scadenza: string | null;
   stato: string;
   agente: string;
   pricing_grenke: number | null;
