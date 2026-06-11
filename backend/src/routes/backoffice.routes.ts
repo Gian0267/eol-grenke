@@ -180,7 +180,38 @@ router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Respo
       },
       orderBy: { updated_at: 'desc' },
     });
-    res.json(pratiche);
+
+    // Richieste di contatto aperte (contatto personalizzato, widget chiamami):
+    // quelle legate al riacquisto (STEP_PRE_PAGAMENTO) sono già nel blocco sopra
+    const richieste = await prisma.richiesta_Contatto.findMany({
+      where: { stato: 'DA_GESTIRE', origine: { not: 'STEP_PRE_PAGAMENTO' } },
+      include: {
+        contratto_eol: {
+          select: {
+            id: true,
+            contratto_nsm_id: true,
+            contratto_grenke_id: true,
+            data_scadenza: true,
+            canone_mensile: true,
+            numero_mesi: true,
+            pricing_riacquisto: true,
+            stato: true,
+            cliente: {
+              select: {
+                ragione_sociale: true,
+                piva: true,
+                telefono: true,
+                referente_nome: true,
+                referente_telefono: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    res.json({ riacquisti: pratiche, richieste });
   } catch (err) {
     console.error('[riacquisti-in-attesa] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
