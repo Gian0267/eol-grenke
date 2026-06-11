@@ -311,16 +311,6 @@ export async function generaConfermaRinnovo(
   doc.text(`OTP verificato: ${firma.otpVerificato ? 'Si' : 'No'}`);
   doc.moveDown(1);
 
-  // Nota mock
-  doc.rect(50, doc.y, 495, 50).fill('#fff3cd');
-  const noteY = doc.y + 10;
-  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#856404')
-    .text(
-      'Documento firmato elettronicamente in modalita MOCK. ' +
-      'Per uso in produzione integrare provider FEA certificato eIDAS (es. Namirial, InfoCert, Aruba).',
-      60, noteY, { width: 475 },
-    );
-
   doc.end();
   const pdfBuffer = await pdfDone;
 
