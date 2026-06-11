@@ -67,6 +67,9 @@ export async function generaVerbaleRestituzione(
     .text('NSM', 50, 50, { continued: true })
     .fontSize(10).font('Helvetica')
     .text('  Noleggio Su Misura', { continued: false });
+  doc.fontSize(8).fillColor('#666666')
+    .text('Noleggio Su Misura è la divisione rental di Smartcom Solutions Srl');
+  doc.fillColor('#000000');
 
   doc.moveDown(0.5);
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#1a3a52');
@@ -141,6 +144,15 @@ export async function generaVerbaleRestituzione(
     'secondo quanto previsto dalle condizioni contrattuali.',
     { align: 'justify' },
   );
+  doc.moveDown(0.5);
+  // Addebito per mancata restituzione: costo Grenke maggiorato del 20%
+  const importoAddebito = Math.round(Number(contratto.pricing_grenke) * 1.2 * 100) / 100;
+  doc.font('Helvetica-Bold').text(
+    `Sono consapevole che, se il o i prodotti non venissero restituiti, questi mi verranno ` +
+    `addebitati per l'importo di € ${formatEur(importoAddebito)}.`,
+    { align: 'justify' },
+  );
+  doc.font('Helvetica');
   doc.moveDown(1.5);
 
   // Sezione firma mock
@@ -155,16 +167,6 @@ export async function generaVerbaleRestituzione(
   doc.text(`Indirizzo IP: ${firma.ip}`);
   doc.text(`OTP verificato: ${firma.otpVerificato ? 'Si' : 'No'}`);
   doc.moveDown(1);
-
-  // Nota mock
-  doc.rect(50, doc.y, 495, 50).fill('#fff3cd');
-  const noteY = doc.y + 10;
-  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#856404')
-    .text(
-      'Documento firmato elettronicamente in modalita MOCK. ' +
-      'Per uso in produzione integrare provider FEA certificato eIDAS (es. Namirial, InfoCert, Aruba).',
-      60, noteY, { width: 475 },
-    );
 
   doc.end();
   const pdfBuffer = await pdfDone;
