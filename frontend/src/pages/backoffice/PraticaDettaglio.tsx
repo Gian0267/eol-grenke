@@ -833,9 +833,9 @@ function TabPanoramica({
       <div className="bg-card rounded-xl border border-border p-5">
         <h3 className="text-sm font-semibold text-graphite mb-3">Calcolo economico</h3>
         <dl className="space-y-2 text-sm">
-          <Row label="Pricing Grenke (5%)" value={formatEur(pratica.pricing_grenke)} />
-          <Row label="Pricing riacquisto (8%)" value={formatEur(pratica.pricing_riacquisto)} />
-          <Row label="Margine lordo (3%)" value={formatEur(pratica.margine_lordo)} highlight />
+          <Row label="Ns. costo (acquisto da Grenke)" value={formatEur(pratica.pricing_grenke)} />
+          <Row label="Prezzo riacquisto cliente" value={formatEur(pratica.pricing_riacquisto)} />
+          <Row label="Margine lordo" value={formatEur(pratica.margine_lordo)} highlight />
           <Row label="Valore gift card" value={formatEur(pratica.valore_gift_card)} highlight />
           <Row label="Valore originario" value={formatEur(pratica.valore_originario)} />
         </dl>

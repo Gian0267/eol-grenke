@@ -71,6 +71,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
         data_scadenza: p.data_scadenza,
         stato: p.stato,
         agente: p.agente_assegnato ? `${p.agente_assegnato.nome} ${p.agente_assegnato.cognome}` : null,
+        pricing_grenke: Number(p.pricing_grenke),
         pricing_riacquisto: Number(p.pricing_riacquisto),
         decisione: p.decisioni[0]?.opzione_scelta || null,
         giorni_a_scadenza,

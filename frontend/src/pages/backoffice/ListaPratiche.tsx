@@ -43,6 +43,7 @@ interface PraticaItem {
   data_scadenza: string;
   stato: string;
   agente: string;
+  pricing_grenke: number | null;
   pricing_riacquisto: number | null;
   decisione: string | null;
   giorni_a_scadenza: number | null;
@@ -544,7 +545,10 @@ export default function ListaPratiche() {
                   </ThSortable>
                   <th className="px-4 py-3 font-medium text-stone">Agente</th>
                   <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">
-                    Pricing riacquisto
+                    Ns. costo
+                  </th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">
+                    Riacquisto cliente
                   </th>
                   <th className="px-4 py-3 font-medium text-stone">Decisione</th>
                   <th className="px-4 py-3 font-medium text-stone text-center">Azioni</th>
@@ -570,6 +574,7 @@ export default function ListaPratiche() {
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{p.agente || '—'}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(p.pricing_grenke)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(p.pricing_riacquisto)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{p.decisione || '—'}</td>
                     <td className="px-4 py-3 text-center">
