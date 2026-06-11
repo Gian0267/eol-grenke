@@ -299,7 +299,9 @@ export default function ImportLista() {
                       <th className="text-right px-4 py-3 font-medium text-stone">Canone</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Mesi</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Monte Canoni</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Riacquisto</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Prezzo Grenke</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Riacquisto Cliente</th>
+                      <th className="text-right px-4 py-3 font-medium text-stone">Margine</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Gift Card</th>
                     </tr>
                   </thead>
@@ -319,7 +321,9 @@ export default function ImportLista() {
                         <td className="px-4 py-3 text-right">{fmt(row.raw.canone_mensile)}</td>
                         <td className="px-4 py-3 text-right">{row.raw.numero_mesi}</td>
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.monte_canoni) : '—'}</td>
+                        <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_grenke) : '—'}</td>
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_riacquisto) : '—'}</td>
+                        <td className={`px-4 py-3 text-right ${row.pricing && row.pricing.margine_lordo <= 0 ? 'text-err-text font-medium' : ''}`}>{row.pricing ? fmt(row.pricing.margine_lordo) : '—'}</td>
                         <td className="px-4 py-3 text-right">
                           {row.pricing ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ok text-ok-text">
