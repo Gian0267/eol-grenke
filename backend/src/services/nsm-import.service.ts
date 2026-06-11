@@ -20,6 +20,9 @@ import { calcolaValoreGiftCard } from './pricing.service.js';
  * - il canone del file NSM è il dato MASTER (quello del file Grenke si ignora)
  * - la data di scadenza NON è in questo file: resta null finché il contratto
  *   non compare in un file Grenke
+ * - REGOLA 1:1 — a ogni contratto NSM corrisponde UN solo contratto Grenke:
+ *   se un numero NSM compare su più contratti Grenke il file è errato e i
+ *   gruppi coinvolti finiscono in errore
  */
 
 // Indici colonna (0-based) del tracciato export NSM
@@ -105,10 +108,9 @@ export function parseNsmExport(buffer: Buffer): {
     defval: null,
   });
 
-  // Salta intestazione; raggruppa per numero contratto GRENKE (col. G):
-  // è l'unità di gestione EOL (ogni contratto Grenke ha la sua scadenza e il
-  // suo prezzo). Lo stesso contratto NSM (col. F) può coprire più contratti
-  // Grenke: in quel caso si creano più record che condividono il numero NSM.
+  // Salta intestazione; raggruppa per numero contratto GRENKE (col. G),
+  // l'unità di gestione EOL. La corrispondenza NSM↔Grenke è 1:1: la
+  // violazione viene segnalata come errore in fase di anteprima.
   const gruppi = new Map<string, Record<string, unknown>[]>();
   let righeNonGrenke = 0;
   let totalRows = 0;
@@ -164,6 +166,17 @@ export async function previewNsmImport(buffer: Buffer, prisma: PrismaClient): Pr
 
   const contratti: NsmContractPreview[] = [];
 
+  // Regola 1:1 — mappa numero NSM → contratti Grenke in cui compare
+  const nsmToGrenke = new Map<string, Set<string>>();
+  for (const [grenkeKey, righe] of gruppi.entries()) {
+    for (const r of righe) {
+      const n = str(r.contratto_nsm);
+      if (!n) continue;
+      if (!nsmToGrenke.has(n)) nsmToGrenke.set(n, new Set());
+      nsmToGrenke.get(n)!.add(grenkeKey);
+    }
+  }
+
   for (const [grenkeKey, righe] of gruppi.entries()) {
     const prima = righe[0]!;
     const errors: string[] = [];
@@ -172,6 +185,10 @@ export async function previewNsmImport(buffer: Buffer, prisma: PrismaClient): Pr
     if (!grenkeId) errors.push('Numero contratto Grenke (col. G) mancante');
     const nsmId = str(prima.contratto_nsm);
     if (!nsmId) errors.push('Numero contratto NSM (col. F) mancante');
+    if (nsmId && (nsmToGrenke.get(nsmId)?.size ?? 0) > 1) {
+      const altri = [...nsmToGrenke.get(nsmId)!].join(', ');
+      errors.push(`Il contratto NSM ${nsmId} compare su più contratti Grenke (${altri}): la corrispondenza deve essere 1:1 — verificare il file`);
+    }
     const mesi = Number(prima.numero_rate);
     if (!Number.isInteger(mesi) || mesi <= 0) errors.push('Numero rate (col. N) mancante o non valido');
     const ragioneSociale = str(prima.ragione_sociale);

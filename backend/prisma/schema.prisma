@@ -14,7 +14,7 @@ datasource db {
 
 model Contratto_EOL {
   id                    String               @id @default(uuid())
-  contratto_nsm_id      String               // NON unico: un contratto NSM può coprire più contratti Grenke
+  contratto_nsm_id      String               @unique // corrispondenza 1:1 con il contratto Grenke
   contratto_grenke_id   String
   cliente_id            String
   cliente               Cliente              @relation(fields: [cliente_id], references: [id])
@@ -48,7 +48,6 @@ model Contratto_EOL {
   audit_events          Audit_Event[]
   task_escalation       Task_Escalation[]
 
-  @@index([contratto_nsm_id])
   @@index([contratto_grenke_id])
   @@index([stato])
   @@index([data_scadenza])
