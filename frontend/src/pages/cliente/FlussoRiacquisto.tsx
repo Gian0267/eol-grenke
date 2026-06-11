@@ -31,7 +31,7 @@ type Action =
   | { type: 'SCEGLI_CONTATTATEMI' }
   | { type: 'CONTATTO_INVIATO' }
   | { type: 'SCEGLI_PROCEDI' }
-  | { type: 'OTP_INVIATO'; metodo: 'SMS' | 'EMAIL' }
+  | { type: 'OTP_INVIATO'; metodo: 'EMAIL' }
   | { type: 'OTP_VERIFICATO'; decisione_id: string }
   | { type: 'PAGAMENTO_DIFFERITO'; data_pagamento: string }
   | { type: 'PAGAMENTO_DISPONIBILE'; decisione_id: string }
@@ -43,7 +43,7 @@ type Action =
 interface State {
   step: Step;
   tcAccettati: boolean;
-  metodoOtp: 'SMS' | 'EMAIL' | null;
+  metodoOtp: 'EMAIL' | null;
   decisione_id: string | null;
   data_pagamento: string | null;
   metodo_pagamento: 'FABRICK' | 'STRIPE' | null;
@@ -208,7 +208,7 @@ export default function FlussoRiacquisto() {
     finally { setSubmitting(false); }
   };
 
-  const handleInviaOtp = async (metodo: 'SMS' | 'EMAIL') => {
+  const handleInviaOtp = async (metodo: 'EMAIL') => {
     setSubmitting(true); setErrore(null);
     try {
       await apiCall('/api/cliente/decisione/riacquisto/richiedi-otp', { metodo });
@@ -503,7 +503,7 @@ export default function FlussoRiacquisto() {
                   Per confermare il riacquisto, inviamo un codice di verifica a 6 cifre.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="max-w-xs mx-auto">
                   <button
                     onClick={() => handleInviaOtp('EMAIL')}
                     disabled={submitting}
@@ -511,14 +511,6 @@ export default function FlussoRiacquisto() {
                   >
                     <Mail className="w-8 h-8 text-[#2563eb] mx-auto mb-2" />
                     <p className="font-semibold text-[#2563eb]">Ricevi via Email</p>
-                  </button>
-                  <button
-                    onClick={() => handleInviaOtp('SMS')}
-                    disabled={submitting}
-                    className="border-2 border-[#16a34a] rounded-xl p-5 text-center hover:bg-green-50 transition-colors disabled:opacity-50"
-                  >
-                    <Smartphone className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
-                    <p className="font-semibold text-[#16a34a]">Ricevi via SMS</p>
                   </button>
                 </div>
 
@@ -538,7 +530,7 @@ export default function FlussoRiacquisto() {
             <div className="bg-white rounded-xl border p-6 text-center">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Inserisci il codice</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Abbiamo inviato un codice a 6 cifre via {state.metodoOtp === 'EMAIL' ? 'email' : 'SMS'}.
+                Abbiamo inviato un codice a 6 cifre via email.
               </p>
 
               <input

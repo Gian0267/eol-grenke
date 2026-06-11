@@ -57,7 +57,7 @@ export default function FlussoRinnovo() {
   const [note, setNote] = useState('');
 
   // Step 3 — OTP
-  const [metodoOtp, setMetodoOtp] = useState<'SMS' | 'EMAIL' | null>(null);
+  const [metodoOtp, setMetodoOtp] = useState<'EMAIL' | null>(null);
   const [codiceOtp, setCodiceOtp] = useState('');
   const [countdown, setCountdown] = useState(600);
   const otpInputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +103,7 @@ export default function FlussoRinnovo() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [step, metodoOtp]);
 
-  const inviaOtp = async (metodo: 'SMS' | 'EMAIL') => {
+  const inviaOtp = async (metodo: 'EMAIL') => {
     setMetodoOtp(metodo);
     setErrore(null);
     setSubmitting(true);
@@ -504,7 +504,7 @@ export default function FlussoRinnovo() {
                   <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{errore}</div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="max-w-xs mx-auto">
                   <button
                     onClick={() => inviaOtp('EMAIL')}
                     disabled={submitting}
@@ -512,14 +512,6 @@ export default function FlussoRinnovo() {
                   >
                     <Mail className="w-8 h-8 text-[#2563eb] mx-auto mb-2" />
                     <p className="font-semibold text-[#2563eb]">Ricevi via Email</p>
-                  </button>
-                  <button
-                    onClick={() => inviaOtp('SMS')}
-                    disabled={submitting}
-                    className="bg-white border-2 border-[#16a34a] rounded-xl p-5 text-center hover:bg-green-50 transition-colors disabled:opacity-50"
-                  >
-                    <Smartphone className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
-                    <p className="font-semibold text-[#16a34a]">Ricevi via SMS</p>
                   </button>
                 </div>
                 {submitting && (
@@ -533,7 +525,7 @@ export default function FlussoRinnovo() {
                 <div className="bg-white rounded-xl border p-6 text-center">
                   <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Inserisci il codice</h2>
                   <p className="text-sm text-gray-600 mb-6">
-                    Abbiamo inviato un codice a 6 cifre via {metodoOtp === 'EMAIL' ? 'email' : 'SMS'}.
+                    Abbiamo inviato un codice a 6 cifre via email.
                   </p>
                   <input
                     ref={otpInputRef}

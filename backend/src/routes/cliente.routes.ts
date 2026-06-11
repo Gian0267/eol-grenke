@@ -283,7 +283,7 @@ router.post(
 
 // POST /api/cliente/decisione/restituzione/inizia
 const iniziaRestituzioneSchema = z.object({
-  metodo: z.enum(['SMS', 'EMAIL']),
+  metodo: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -345,7 +345,7 @@ router.post(
 // POST /api/cliente/decisione/restituzione/conferma
 const confermaRestituzioneSchema = z.object({
   codice: z.string().length(6),
-  metodo: z.enum(['SMS', 'EMAIL']),
+  metodo: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -634,7 +634,7 @@ router.post(
 // POST /api/cliente/decisione/riacquisto/conferma-tc
 const confermaTcSchema = z.object({
   codice: z.string().length(6),
-  metodo: z.enum(['SMS', 'EMAIL']),
+  metodo: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -779,7 +779,7 @@ router.get(
 
 // POST /api/cliente/decisione/riacquisto/richiedi-otp
 const richiediOtpRiacquistoSchema = z.object({
-  metodo: z.enum(['SMS', 'EMAIL']),
+  metodo: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -907,7 +907,7 @@ const iniziaRinnovoSchema = z.object({
   durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
   budget_mensile: z.number().optional(),
   note: z.string().optional(),
-  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  metodo_otp: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -974,7 +974,7 @@ router.post(
 
 const confermaRinnovoSchema = z.object({
   codice: z.string().length(6),
-  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  metodo_otp: z.enum(['EMAIL']),
   tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
   durata_desiderata: z.number().int(),
@@ -1170,7 +1170,7 @@ const iniziaRinnovoCompletoSchema = z.object({
   durata_desiderata: z.enum(['24', '36', '48']).transform(Number),
   budget_mensile: z.number().optional(),
   note: z.string().optional(),
-  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  metodo_otp: z.enum(['EMAIL']),
 });
 
 router.post(
@@ -1237,7 +1237,7 @@ router.post(
 
 const confermaRinnovoCompletoSchema = z.object({
   codice: z.string().length(6),
-  metodo_otp: z.enum(['SMS', 'EMAIL']),
+  metodo_otp: z.enum(['EMAIL']),
   scelta_beni: z.enum(['TENGO', 'RESTITUISCO']),
   tipo_device: z.enum(['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro']),
   numero_device: z.number().int().min(1).default(1),
