@@ -158,27 +158,23 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
         }
 
         const raw = row.raw;
+        // Il tracciato Grenke porta solo denominazione, P.IVA, email e PEC:
+        // gli altri dati anagrafici restano quelli della piattaforma NSM.
         const clienteData = {
           ragione_sociale: raw['cliente.ragione_sociale'],
           email: raw['cliente.email'],
           pec: raw['cliente.pec'] || null,
-          codice_fiscale: raw['cliente.codice_fiscale'] || null,
-          telefono: raw['cliente.telefono'] || null,
-          indirizzo_sede: raw['cliente.indirizzo_sede'] || null,
-          cap: raw['cliente.cap'] || null,
-          citta: raw['cliente.citta'] || null,
-          provincia: raw['cliente.provincia'] || null,
         };
 
         let clienteId: string;
         // Dati master dal contratto NSM matchato (file piattaforma di noleggio):
         // canone, mesi e beni del file Grenke si IGNORANO quando c'è il match.
-        let matchedNsm: { canone_mensile: unknown; numero_mesi: number; beni_json: string; data_stipula: Date } | null = null;
+        let matchedNsm: { canone_mensile: unknown; numero_mesi: number; beni_json: string; data_stipula: Date; origine: string } | null = null;
 
         if (row.status === 'RICONCILIATO_AUTO' && row.matchedContractId) {
           const existingContract = await tx.contratto_EOL.findUnique({
             where: { id: row.matchedContractId },
-            select: { cliente_id: true, canone_mensile: true, numero_mesi: true, beni_json: true, data_stipula: true },
+            select: { cliente_id: true, canone_mensile: true, numero_mesi: true, beni_json: true, data_stipula: true, origine: true },
           });
           if (!existingContract) {
             throw new Error(`Contratto matchato ${row.matchedContractId} non trovato`);
@@ -211,12 +207,12 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
           continue;
         }
 
-        // Canone/mesi/beni: master = contratto NSM se matchato, altrimenti file Grenke
-        const canoneMaster = matchedNsm ? Number(matchedNsm.canone_mensile) : raw.canone_mensile;
-        const mesiMaster = matchedNsm ? matchedNsm.numero_mesi : raw.numero_mesi;
-        const beniMaster = matchedNsm
-          ? matchedNsm.beni_json
-          : JSON.stringify(raw.beni_descrizione ? [{ descrizione: raw.beni_descrizione }] : []);
+        // Canone/mesi/beni vengono SEMPRE dalla piattaforma NSM: il tracciato
+        // Grenke non li contiene. Per gli outlier (contratto assente in
+        // piattaforma) restano a zero finché non si importa l'export NSM.
+        const canoneMaster = matchedNsm ? Number(matchedNsm.canone_mensile) : 0;
+        const mesiMaster = matchedNsm ? matchedNsm.numero_mesi : 0;
+        const beniMaster = matchedNsm ? matchedNsm.beni_json : '[]';
 
         const pricing = await calcolaPricing(canoneMaster, mesiMaster, raw.pricing_grenke);
         const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
@@ -233,14 +229,14 @@ router.post('/import/confirm', async (req: AuthenticatedRequest, res: Response) 
             canone_mensile: canoneMaster,
             numero_mesi: mesiMaster,
             monte_canoni: pricing.monte_canoni,
-            valore_originario: raw.valore_originario ?? null,
+            valore_originario: null,
             beni_json: beniMaster,
             pricing_riacquisto: pricing.pricing_riacquisto,
             pricing_grenke: pricing.pricing_grenke,
             margine_lordo: pricing.margine_lordo,
             valore_gift_card,
             stato: 'LISTA_RICEVUTA',
-            origine: raw.origine || 'Smartcom',
+            origine: matchedNsm?.origine || 'Smartcom',
             data_importazione: new Date(),
             stato_riconciliazione: row.status === 'RICONCILIATO_AUTO' ? 'RICONCILIATO_AUTO' : 'OUTLIER_RISOLTO',
             token_accesso_cliente: null,

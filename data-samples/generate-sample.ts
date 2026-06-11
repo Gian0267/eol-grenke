@@ -152,19 +152,16 @@ const excelRows = allRows.map(r => {
   const stipula = new Date(scadenza);
   stipula.setFullYear(stipula.getFullYear() - Math.floor(r.mesi / 12));
 
+  // Tracciato concordato con Grenke (8 colonne)
   return {
     'Numero Contratto Grenke': r.grenkeId,
-    'Data Stipula': formatDate(stipula),
-    'Data Scadenza': formatDate(scadenza),
-    'Ragione Sociale': r.ragSoc,
+    'Denominazione Sociale': r.ragSoc,
     'P.IVA': r.piva,
     'Email': r.email,
     'PEC': r.pec,
-    'Canone Mensile': r.canone,
-    'Numero Mesi': r.mesi,
-    'Prezzo Riacquisto Grenke': Number((r.canone * (r.mesi / 12) * 0.6).toFixed(2)),
-    'Descrizione Beni': r.beni,
-    'Origine': r.origine,
+    'Data Inizio Contratto': formatDate(stipula),
+    'Data Fine Contratto': formatDate(scadenza),
+    'Importo Riacquisto Grenke': Number((r.canone * (r.mesi / 12) * 0.6).toFixed(2)),
   };
 });
 
@@ -173,16 +170,13 @@ const ws = XLSX.utils.json_to_sheet(excelRows);
 // Imposta larghezze colonne
 ws['!cols'] = [
   { wch: 26 }, // Numero Contratto Grenke
-  { wch: 14 }, // Data Stipula
-  { wch: 14 }, // Data Scadenza
-  { wch: 30 }, // Ragione Sociale
+  { wch: 30 }, // Denominazione Sociale
   { wch: 14 }, // P.IVA
   { wch: 30 }, // Email
-  { wch: 22 }, // PEC
-  { wch: 16 }, // Canone Mensile
-  { wch: 14 }, // Numero Mesi
-  { wch: 35 }, // Descrizione Beni
-  { wch: 12 }, // Origine
+  { wch: 28 }, // PEC
+  { wch: 18 }, // Data Inizio Contratto
+  { wch: 18 }, // Data Fine Contratto
+  { wch: 24 }, // Importo Riacquisto Grenke
 ];
 
 const wb = XLSX.utils.book_new();

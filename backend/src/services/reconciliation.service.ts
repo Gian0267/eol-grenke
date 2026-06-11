@@ -31,30 +31,20 @@ function parseDate(v: unknown): Date {
 
 const flexDate = z.union([z.date(), z.string(), z.number()]).transform(parseDate);
 
+// Tracciato Grenke concordato: 8 colonne. Canone, durata e dispositivi NON
+// sono nel file: arrivano dall'export della piattaforma NSM (import NSM).
 const rowSchema = z.object({
   contratto_grenke_id: z.string().min(1, 'Numero Contratto Grenke obbligatorio'),
-  data_stipula: flexDate.optional(),
-  data_scadenza: flexDate,
-  'cliente.ragione_sociale': z.string().min(1, 'Ragione Sociale obbligatoria'),
+  'cliente.ragione_sociale': z.string().min(1, 'Denominazione Sociale obbligatoria'),
   'cliente.piva': z.string().regex(/^\d{11}$/, 'P.IVA deve essere di 11 cifre'),
-  'cliente.codice_fiscale': z.string().optional(),
   'cliente.email': z.string().email('Email non valida'),
   'cliente.pec': z.string().email('PEC non valida').optional().or(z.literal('')),
-  'cliente.telefono': z.string().optional(),
-  'cliente.indirizzo_sede': z.string().optional(),
-  'cliente.cap': z.string().optional(),
-  'cliente.citta': z.string().optional(),
-  'cliente.provincia': z.string().optional(),
-  canone_mensile: z.coerce.number().positive('Canone Mensile deve essere positivo'),
-  numero_mesi: z.coerce.number().int().positive('Numero Mesi deve essere intero positivo'),
-  // Importo che Grenke addebita a Smartcom: arriva dal file, obbligatorio.
-  // Se assente o non valido la riga finisce tra gli errori dell'import.
+  data_stipula: flexDate.optional(),
+  data_scadenza: flexDate,
+  // Importo che Grenke addebita a Smartcom: obbligatorio.
   pricing_grenke: z.coerce
-    .number({ error: 'Prezzo Riacquisto Grenke mancante o non numerico (colonna obbligatoria del file Grenke)' })
-    .positive('Prezzo Riacquisto Grenke deve essere positivo'),
-  beni_descrizione: z.string().optional(),
-  valore_originario: z.coerce.number().optional(),
-  origine: z.string().optional(),
+    .number({ error: 'Importo Riacquisto Grenke mancante o non numerico (colonna obbligatoria del file Grenke)' })
+    .positive('Importo Riacquisto Grenke deve essere positivo'),
 });
 
 export type ParsedRow = z.infer<typeof rowSchema>;
@@ -145,21 +135,14 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
     const parsed = parseResult.data;
     const match = grenkeIdMap.get(parsed.contratto_grenke_id);
 
-    // Il canone master è quello della piattaforma NSM (se il contratto è già
-    // in piattaforma); quello del file Grenke si usa solo in assenza di match.
-    const canoneMaster = match ? match.canone : parsed.canone_mensile;
-    const mesiMaster = match ? match.mesi : parsed.numero_mesi;
+    // Canone e durata vengono SEMPRE dalla piattaforma NSM (il file Grenke
+    // non li contiene). Senza match il pricing cliente non è calcolabile.
+    const canoneMaster = match ? match.canone : 0;
+    const mesiMaster = match ? match.mesi : 0;
     const pricing = await calcolaPricing(canoneMaster, mesiMaster, parsed.pricing_grenke);
     const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     if (match) {
-      const warnings: string[] = [];
-      if (Math.abs(match.canone - parsed.canone_mensile) > 0.01) {
-        warnings.push(`Canone diverso: NSM € ${match.canone.toFixed(2)} vs file Grenke € ${parsed.canone_mensile.toFixed(2)} — fa fede il canone NSM`);
-      }
-      if (match.mesi !== parsed.numero_mesi) {
-        warnings.push(`Durata diversa: NSM ${match.mesi} mesi vs file Grenke ${parsed.numero_mesi} mesi — fa fede la durata NSM`);
-      }
       rows.push({
         index: i,
         status: 'RICONCILIATO_AUTO',
@@ -167,7 +150,6 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
         matchedContractId: match.id,
         matchedContractNsmId: match.nsmId,
         pricing: { ...pricing, valore_gift_card },
-        warnings: warnings.length > 0 ? warnings : undefined,
       });
       riconciliatiAuto++;
     } else {
@@ -189,6 +171,7 @@ export async function parseAndReconcile(buffer: Buffer, prisma: PrismaClient): P
         raw: parsed,
         pricing: { ...pricing, valore_gift_card },
         suggestedMatches: suggested,
+        warnings: ['Contratto non presente in piattaforma: canone e dispositivi mancanti — importare prima i contratti NSM'],
       });
       outlier++;
     }

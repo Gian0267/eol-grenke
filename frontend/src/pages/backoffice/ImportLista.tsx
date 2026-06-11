@@ -297,8 +297,6 @@ export default function ImportLista() {
                       <th className="text-left px-4 py-3 font-medium text-stone">Contratto Grenke</th>
                       <th className="text-left px-4 py-3 font-medium text-stone">Ragione Sociale</th>
                       <th className="text-left px-4 py-3 font-medium text-stone">P.IVA</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Canone</th>
-                      <th className="text-right px-4 py-3 font-medium text-stone">Mesi</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Monte Canoni</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Prezzo Grenke</th>
                       <th className="text-right px-4 py-3 font-medium text-stone">Riacquisto Cliente</th>
@@ -326,8 +324,6 @@ export default function ImportLista() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs">{row.raw['cliente.piva']}</td>
-                        <td className="px-4 py-3 text-right">{fmt(row.raw.canone_mensile)}</td>
-                        <td className="px-4 py-3 text-right">{row.raw.numero_mesi}</td>
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.monte_canoni) : '—'}</td>
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_grenke) : '—'}</td>
                         <td className="px-4 py-3 text-right">{row.pricing ? fmt(row.pricing.pricing_riacquisto) : '—'}</td>
@@ -366,7 +362,7 @@ export default function ImportLista() {
                                 <span className="ml-2 text-sm text-stone">P.IVA {row.raw['cliente.piva']}</span>
                               </p>
                               <p className="text-sm text-stone">
-                                Contratto: {row.raw.contratto_grenke_id} — Canone {fmt(row.raw.canone_mensile)}/mese × {row.raw.numero_mesi} mesi
+                                Contratto: {row.raw.contratto_grenke_id} — Importo Grenke {fmt(row.raw.pricing_grenke)} €
                               </p>
                             </div>
                             {row.pricing && (

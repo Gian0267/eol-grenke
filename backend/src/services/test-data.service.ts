@@ -147,27 +147,24 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       },
     });
 
+    // Tracciato concordato con Grenke (8 colonne)
     excelRows.push({
       'Numero Contratto Grenke': grenkeId,
-      'Data Stipula': formatDateIt(stipula),
-      'Data Scadenza': formatDateIt(scadenza),
-      'Ragione Sociale': az.nome,
+      'Denominazione Sociale': az.nome,
       'P.IVA': az.piva,
       'Email': email,
       'PEC': `g.ciardo+eol${num}pec@gmail.com`,
-      'Canone Mensile': canone,
-      'Numero Mesi': mesi,
-      'Prezzo Riacquisto Grenke': prezzoGrenkeTest,
-      'Descrizione Beni': beni,
-      'Origine': 'Smartcom',
+      'Data Inizio Contratto': formatDateIt(stipula),
+      'Data Fine Contratto': formatDateIt(scadenza),
+      'Importo Riacquisto Grenke': prezzoGrenkeTest,
     });
   }
 
   // 3) Genera il file Excel "lista Grenke" in memoria
   const ws = XLSX.utils.json_to_sheet(excelRows);
   ws['!cols'] = [
-    { wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 14 },
-    { wch: 30 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 22 }, { wch: 40 }, { wch: 12 },
+    { wch: 26 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 28 },
+    { wch: 18 }, { wch: 18 }, { wch: 24 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contratti in scadenza');
