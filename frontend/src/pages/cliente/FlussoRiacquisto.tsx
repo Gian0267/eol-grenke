@@ -457,12 +457,6 @@ export default function FlussoRiacquisto() {
                 Ti contatteremo a breve. Riceverai un'email per riprendere il pagamento quando vorrai.
               </p>
             </div>
-            <Link
-              to={`/pratica/${token}`}
-              className="block text-center text-sm text-[#2563eb] hover:underline"
-            >
-              Torna all'area cliente
-            </Link>
           </div>
         )}
 
@@ -609,13 +603,6 @@ export default function FlussoRiacquisto() {
                 </li>
               </ul>
             </div>
-
-            <Link
-              to={`/pratica/${token}`}
-              className="block text-center text-sm text-[#2563eb] hover:underline"
-            >
-              Torna all'area cliente
-            </Link>
           </div>
         )}
 
@@ -756,13 +743,6 @@ export default function FlussoRiacquisto() {
                 </li>
               </ul>
             </div>
-
-            <Link
-              to={`/pratica/${token}`}
-              className="block text-center text-sm text-[#2563eb] hover:underline"
-            >
-              Torna all'area cliente
-            </Link>
           </div>
         )}
 

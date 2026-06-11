@@ -350,13 +350,6 @@ export default function FlussoRestituzione() {
                 Hai tempo fino a <strong>10 giorni dalla scadenza del contratto</strong> per consegnare i beni.
               </p>
             </div>
-
-            <Link
-              to={`/pratica/${token}`}
-              className="block text-center text-sm text-[#2563eb] hover:underline"
-            >
-              Torna all'area cliente
-            </Link>
           </div>
         )}
       </main>

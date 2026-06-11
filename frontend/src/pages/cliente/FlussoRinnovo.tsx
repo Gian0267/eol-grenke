@@ -683,13 +683,6 @@ export default function FlussoRinnovo() {
                 </li>
               </ol>
             </div>
-
-            <Link
-              to={`/pratica/${token}`}
-              className="block w-full bg-[#1a3a52] text-white py-3 rounded-lg font-medium hover:bg-[#15304a] transition-colors text-center"
-            >
-              Torna all'area cliente
-            </Link>
           </div>
         )}
       </main>
