@@ -532,7 +532,7 @@ export default function FlussoRinnovo() {
                     type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
                     value={codiceOtp}
                     onChange={e => { setCodiceOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrore(null); }}
-                    className="w-48 mx-auto block text-center text-3xl tracking-[0.5em] font-mono border-2 border-gray-300 rounded-lg py-3 focus:border-[#16a34a] focus:outline-none"
+                    className="w-64 mx-auto block text-center text-3xl tracking-[0.4em] pl-[0.4em] font-mono border-2 border-gray-300 rounded-lg py-3 focus:border-[#16a34a] focus:outline-none"
                     placeholder="______"
                   />
                   <div className={`mt-4 text-sm ${countdown <= 60 ? 'text-red-500' : 'text-gray-500'}`}>
