@@ -84,12 +84,18 @@
                 {{/if}}
               </table>
 
-              <!-- Gift card -->
+              <!-- Premio Fedeltà: Sconto Copertura Bronze -->
               <table width="100%" cellpadding="10" cellspacing="0" style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;margin-bottom:20px;">
                 <tr>
                   <td style="font-size:13px;color:#166534;text-align:center;">
-                    Valore gift card promessa: <strong>&euro; {{valore_gift_card}}</strong>
-                    (erogazione alla firma del nuovo contratto)
+                    Premio Fedelt&agrave; promesso: sconto di <strong>&euro; {{valore_gift_card}}</strong>
+                    sulla copertura danni accidentali BRONZE del nuovo contratto FLEX
+                    {{#if codice_sconto}}
+                    <br>Codice sconto generato:
+                    <strong style="font-family:'Courier New',Courier,monospace;font-size:15px;letter-spacing:2px;">{{codice_sconto}}</strong>
+                    {{#if scadenza_codice}}(valido fino al {{scadenza_codice}}){{/if}}
+                    <br><span style="font-size:12px;">Il cliente lo comunicher&agrave; alla firma: applica lo sconto sulla piattaforma noleggio.</span>
+                    {{/if}}
                   </td>
                 </tr>
               </table>

@@ -358,7 +358,7 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
           <div><span className="text-blue-600">Pricing riacquisto ({riacquistoPerc}%):</span> <strong>{fmt(pRiacquisto)}</strong></div>
           <div><span className="text-blue-600">Margine lordo:</span> <strong>{fmt(margine)}</strong></div>
           <div><span className="text-blue-600">IVA ({ivaPerc}%):</span> <strong>{fmt(iva)}</strong></div>
-          <div><span className="text-blue-600">Gift card:</span> <strong>{fmt(giftCard)}</strong></div>
+          <div><span className="text-blue-600">Sconto Bronze:</span> <strong>{fmt(giftCard)}</strong></div>
         </div>
       </div>
 
@@ -374,7 +374,7 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
         </FieldRow>
       ))}
 
-      {/* Gift card tagli editor */}
+      {/* Tagli Sconto Bronze editor (chiave interna: pricing.gift_card_tagli) */}
       {jsonItem && (
         <div className="py-3 border-b border-slate-100">
           <div className="flex items-center justify-between mb-2">
@@ -438,7 +438,8 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
 
   const VARIABILI = [
     '{{ragione_sociale}}', '{{data_scadenza}}', '{{beni}}',
-    '{{pricing_riacquisto}}', '{{valore_gift_card}}',
+    '{{pricing_riacquisto}}', '{{valore_gift_card}}', '{{valore_sconto_bronze}}',
+    '{{codice_sconto}}', '{{scadenza_codice}}',
     '{{link_area_cliente}}', '{{deadline_decisione}}',
   ];
 

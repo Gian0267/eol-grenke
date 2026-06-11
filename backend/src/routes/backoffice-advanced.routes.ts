@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
+import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 
 const router = Router();
@@ -214,6 +215,8 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
 
     timeline.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
+    const codiceSconto = await getCodicePerContratto(pratica.id);
+
     res.json({
       ...pratica,
       canone_mensile: Number(pratica.canone_mensile),
@@ -225,6 +228,18 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
       valore_originario: pratica.valore_originario ? Number(pratica.valore_originario) : null,
       giorni_a_scadenza,
       timeline,
+      codice_sconto: codiceSconto
+        ? {
+            id: codiceSconto.id,
+            codice: codiceSconto.codice,
+            valore_eur: Number(codiceSconto.valore_eur),
+            stato: codiceSconto.stato,
+            data_generazione: codiceSconto.data_generazione,
+            data_scadenza: codiceSconto.data_scadenza,
+            data_utilizzo: codiceSconto.data_utilizzo,
+            note: codiceSconto.note,
+          }
+        : null,
     });
   } catch (err) {
     console.error('[pratiche-dettaglio] Errore:', err);
@@ -329,6 +344,16 @@ router.post('/pratiche-dettaglio/:id/decisione-manuale', async (req: Authenticat
       'MODIFICA_BACKOFFICE',
       { sotto_azione: 'DECISIONE_MANUALE', decisione, note },
     );
+
+    // Anche per le decisioni manuali RINNOVO il cliente ha diritto allo Sconto
+    // Copertura Bronze: genera il codice (idempotente, errore non bloccante)
+    if (decisione === 'RINNOVO') {
+      try {
+        await generaCodice(req.params.id as string);
+      } catch (err) {
+        console.error('[decisione-manuale] Generazione codice sconto fallita:', err);
+      }
+    }
 
     res.json({ success: true, messaggio: `Decisione ${decisione} registrata manualmente` });
   } catch (err) {

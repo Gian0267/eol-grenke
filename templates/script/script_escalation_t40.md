@@ -16,7 +16,7 @@
 
 "Le ricordo brevemente le possibilità:
 
-1. **Rinnovo** con gift card da [VALORE_GIFT_CARD]€ come premio fedeltà
+1. **Rinnovo** con sconto di [VALORE_GIFT_CARD]€ sulla copertura Bronze come Premio Fedeltà
 2. **Riacquisto** del bene a [PRICING_RIACQUISTO]€ + IVA
 3. **Contatto** per una consulenza personalizzata
 4. **Restituzione** del bene

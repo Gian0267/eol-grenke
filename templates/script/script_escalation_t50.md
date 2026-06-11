@@ -12,7 +12,7 @@
 
 "Come anticipato nella comunicazione, ha a disposizione quattro opzioni per la gestione del fine contratto:
 
-1. **Rinnovo** — Può stipulare un nuovo contratto FLEX su dispositivi aggiornati. Come premio fedeltà, riceverà una gift card Smartcom Solutions da [VALORE_GIFT_CARD]€ alla firma.
+1. **Rinnovo** — Può stipulare un nuovo contratto FLEX su dispositivi aggiornati. Come Premio Fedeltà, alla firma riceverà uno sconto di [VALORE_GIFT_CARD]€ sulla copertura danni accidentali BRONZE del nuovo contratto.
 
 2. **Riacquisto** — Può acquistare i beni attualmente in uso al prezzo di [PRICING_RIACQUISTO]€ + IVA, con pagamento online tramite bonifico o carta.
 

@@ -6,6 +6,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
+import { scadiCodici } from './codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
@@ -77,6 +78,7 @@ export interface SchedulerReport {
   escalation_skippati: number;
   silenzio_marcati: number;
   inviti_pagamento_inviati: number;
+  codici_sconto_scaduti: number;
   errori: string[];
 }
 
@@ -93,6 +95,7 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     escalation_skippati: 0,
     silenzio_marcati: 0,
     inviti_pagamento_inviati: 0,
+    codici_sconto_scaduti: 0,
     errori: [],
   };
 
@@ -256,7 +259,16 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     console.error(`[Scheduler] ${msg}`);
   }
 
-  console.log(`[Scheduler] Completato: ${report.solleciti_inviati} solleciti, ${report.escalation_creati} escalation, ${report.silenzio_marcati} silenzio, ${report.inviti_pagamento_inviati} inviti pagamento, ${report.errori.length} errori`);
+  // Scadenza automatica codici Sconto Bronze (idempotente: filtra su stato GENERATO)
+  try {
+    report.codici_sconto_scaduti = await scadiCodici(inizioGiornata);
+  } catch (err) {
+    const msg = `Errore scadenza codici sconto: ${err instanceof Error ? err.message : String(err)}`;
+    report.errori.push(msg);
+    console.error(`[Scheduler] ${msg}`);
+  }
+
+  console.log(`[Scheduler] Completato: ${report.solleciti_inviati} solleciti, ${report.escalation_creati} escalation, ${report.silenzio_marcati} silenzio, ${report.inviti_pagamento_inviati} inviti pagamento, ${report.codici_sconto_scaduti} codici sconto scaduti, ${report.errori.length} errori`);
   return report;
 }
 
@@ -291,6 +303,7 @@ async function inviaSollecito(
     monte_canoni: formatEur(Number(pratica.monte_canoni)),
     pricing_riacquisto: formatEur(Number(pratica.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(pratica.valore_gift_card)),
+    valore_sconto_bronze: formatEur(Number(pratica.valore_gift_card)),
     link_area_cliente: linkAreaCliente,
     deadline_decisione: formatDate(deadline),
     link_opt_out: `${BACKEND_URL}/api/clienti/opt-out?token=${optOutToken}`,

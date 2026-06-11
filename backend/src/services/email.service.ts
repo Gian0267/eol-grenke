@@ -92,6 +92,7 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     monte_canoni: formatEur(Number(contratto.monte_canoni)),
     pricing_riacquisto: formatEur(Number(contratto.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+    valore_sconto_bronze: formatEur(Number(contratto.valore_gift_card)),
     link_area_cliente: `${FRONTEND_URL}/pratica/${token}`,
     deadline_decisione: formatDate(deadline),
     link_opt_out: `${BACKEND_URL}/api/clienti/opt-out?token=${optOutToken}`,

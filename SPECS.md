@@ -353,9 +353,11 @@ function calcolaPricing(canone_mensile, numero_mesi) {
 
 ### 5.2 Premio fedeltà rinnovo
 
-Il cliente che sceglie "Rinnovo con nuovo contratto FLEX" e firma effettivamente il nuovo contratto riceve una **gift card Smartcom Solutions** spendibile sul catalogo Smartcom Distribution.
+> **AGGIORNAMENTO (giugno 2026):** la gift card è stata sostituita dal **"Premio Fedeltà: Sconto Copertura Bronze"** — uno sconto sul canone della copertura danni accidentali BRONZE del nuovo contratto FLEX. Il valore si calcola con le stesse fasce della gift card (tabella sotto). Alla conferma del rinnovo l'app genera un **codice sconto opaco monouso** (formato `NSM-XXXX-XXXX`, charset senza 0/O/1/I/L, tabella `Codice_Sconto`, stati GENERATO/UTILIZZATO/SCADUTO/ANNULLATO) mostrato al cliente, incluso nelle email di conferma e gestibile dal backoffice (pagina "Codici Sconto"). Il calcolo della riduzione canone (valore vs coefficiente finanziaria 18/24/36/48 mesi, floor a zero) avviene sulla piattaforma noleggio esterna, fuori perimetro. Le chiavi interne (`valore_gift_card`, `pricing.gift_card_tagli`, `pricing.gift_card_validita_mesi`, `flags.abilita_gift_card`) restano invariate per retrocompatibilità. I riferimenti a "gift card" nel resto di questo documento sono storici.
 
-**Caratteristiche della gift card:**
+Il cliente che sceglie "Rinnovo con nuovo contratto FLEX" e firma effettivamente il nuovo contratto riceve lo **Sconto Copertura Bronze** (storicamente: gift card Smartcom Solutions).
+
+**Caratteristiche dell'incentivo:**
 
 - **A carico di:** Smartcom Solutions Srl
 - **Valore:** dinamico, calcolato come **arrotondamento per difetto al taglio standard più vicino del margine lordo del vecchio contratto**
@@ -389,11 +391,11 @@ function calcolaValoreGiftCard(margine_lordo) {
 }
 ```
 
-**Quando viene erogata:** alla firma del nuovo contratto FLEX (NON al momento della scelta dell'opzione rinnovo, per evitare frodi e tutelare Smartcom in caso di mancata finalizzazione).
+**Quando viene applicato lo sconto:** alla firma del nuovo contratto FLEX, sulla piattaforma noleggio (il codice da solo non eroga nulla: è una chiave opaca, il valore vive solo nel DB).
 
-**Come viene erogata:** email con codice univoco gift card e link al portale Smartcom Distribution.
+**Come viene comunicato:** il codice sconto viene generato alla conferma della decisione di rinnovo, mostrato nello step finale del flusso cliente e incluso nelle email di conferma al cliente e di notifica all'agente.
 
-**Validità:** 12 mesi dalla data di emissione (configurabile in `config/loyalty_program.json`).
+**Validità del codice:** 12 mesi dalla generazione (impostazione "Validità codice sconto (mesi)", chiave `pricing.gift_card_validita_mesi`). Lo scheduler giornaliero porta a SCADUTO i codici GENERATO oltre la scadenza.
 
 ### 5.3 Regole di assegnazione opzione "Contatto personalizzato"
 

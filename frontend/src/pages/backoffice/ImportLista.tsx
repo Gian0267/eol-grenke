@@ -289,7 +289,7 @@ export default function ImportLista() {
                   <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Ns. costo</th>
                   <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Riacquisto cliente</th>
                   <th className="px-4 py-3 font-medium text-stone text-right">Margine</th>
-                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Gift card</th>
+                  <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">Sconto Bronze</th>
                 </tr>
               </thead>
               <tbody>

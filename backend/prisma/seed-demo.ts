@@ -114,6 +114,7 @@ async function main() {
   await prisma.richiesta_Contatto.deleteMany({});
   await prisma.pagamento.deleteMany({});
   await prisma.decisione_Cliente.deleteMany({});
+  await prisma.codice_Sconto.deleteMany({});
   await prisma.contratto_EOL.deleteMany({});
   await prisma.otpCode.deleteMany({});
   console.log('OK\n');
@@ -227,6 +228,25 @@ async function main() {
         data: { contratto_eol_id: contrattoId, opzione_scelta: 'RINNOVO', otp_verificato: true, otp_metodo: 'EMAIL', note_cliente: JSON.stringify({ tipo_device: 'Apple MacBook', numero_device: 2, durata_desiderata: 36 }) },
       });
       lastHash = await addAudit(contrattoId, 'CLIENTE', cliente.id, 'DECISIONE_PRESA', { opzione: 'RINNOVO' }, lastHash);
+
+      // Premio Fedeltà: codice Sconto Copertura Bronze generato alla conferma
+      const scadenzaCodice = new Date(today);
+      scadenzaCodice.setMonth(scadenzaCodice.getMonth() + 12);
+      // Suffisso deterministico dal charset valido (niente 0/O/1/I/L)
+      const CHARSET_CODICE = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      const suffisso = Array.from({ length: 4 }, (_, i) => CHARSET_CODICE[(s.idx * 7 + i * 11) % CHARSET_CODICE.length]).join('');
+      const codiceDemo = await prisma.codice_Sconto.create({
+        data: {
+          codice: `NSM-FEDE-${suffisso}`,
+          valore_eur: p.valore_gift_card,
+          contratto_eol_id: contrattoId,
+          cliente_id: cliente.id,
+          piva_cliente: cliente.piva,
+          stato: 'GENERATO',
+          data_scadenza: scadenzaCodice,
+        },
+      });
+      lastHash = await addAudit(contrattoId, 'SISTEMA', 'CODICE_SCONTO_SERVICE', 'CODICE_SCONTO_GENERATO', { codice: codiceDemo.codice, valore_eur: p.valore_gift_card, data_scadenza: scadenzaCodice.toISOString() }, lastHash);
     }
 
     // Riacquisto pagato

@@ -72,7 +72,7 @@ export interface ResetTestDataResult {
 
 export async function resetTestData(): Promise<ResetTestDataResult> {
   // 1) Svuota i dati operativi in ordine FK-safe (utenti e impostazioni esclusi)
-  const [otp, task, richieste, pagamenti, decisioni, comunicazioni, audit, contratti, clienti, counter] =
+  const [otp, task, richieste, pagamenti, decisioni, comunicazioni, audit, codiciSconto, contratti, clienti, counter] =
     await prisma.$transaction([
       prisma.otpCode.deleteMany(),
       prisma.task_Escalation.deleteMany(),
@@ -81,6 +81,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       prisma.decisione_Cliente.deleteMany(),
       prisma.comunicazione.deleteMany(),
       prisma.audit_Event.deleteMany(),
+      prisma.codice_Sconto.deleteMany(),
       prisma.contratto_EOL.deleteMany(),
       prisma.cliente.deleteMany(),
       prisma.counter.deleteMany(),
@@ -218,6 +219,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       decisioni: decisioni.count,
       comunicazioni: comunicazioni.count,
       audit: audit.count,
+      codici_sconto: codiciSconto.count,
       contratti: contratti.count,
       clienti: clienti.count,
       counter: counter.count,

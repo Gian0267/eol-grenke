@@ -47,6 +47,7 @@ model Contratto_EOL {
   richieste_contatto    Richiesta_Contatto[]
   audit_events          Audit_Event[]
   task_escalation       Task_Escalation[]
+  codici_sconto         Codice_Sconto[]
 
   @@index([contratto_grenke_id])
   @@index([stato])
@@ -221,6 +222,27 @@ model Impostazione {
   updated_by     Utente_NSM? @relation(fields: [updated_by_id], references: [id])
 
   @@index([categoria])
+}
+
+model Codice_Sconto {
+  id               String        @id @default(uuid())
+  codice           String        @unique // formato NSM-XXXX-XXXX (charset senza 0/O/1/I/L)
+  valore_eur       Decimal
+  contratto_eol_id String
+  contratto_eol    Contratto_EOL @relation(fields: [contratto_eol_id], references: [id])
+  cliente_id       String
+  piva_cliente     String // denormalizzata per lookup rapido dalla piattaforma noleggio
+  stato            String        @default("GENERATO") // GENERATO | UTILIZZATO | SCADUTO | ANNULLATO
+  data_generazione DateTime      @default(now())
+  data_scadenza    DateTime
+  data_utilizzo    DateTime?
+  note             String?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  @@index([contratto_eol_id])
+  @@index([stato])
+  @@index([piva_cliente])
 }
 
 model Task_Escalation {

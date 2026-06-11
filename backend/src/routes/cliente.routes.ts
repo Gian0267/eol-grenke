@@ -23,6 +23,8 @@ import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf
 import { loadDocument } from '../services/storage.service.js';
 import { assegnaPratica } from '../services/assignment.service.js';
 import { registraEvento } from '../services/audit.service.js';
+import { generaCodice } from '../services/codice-sconto.service.js';
+import type { Codice_Sconto } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -77,6 +79,24 @@ function formatEur(n: number): string {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDataIt(d: Date): string {
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// Genera il codice "Sconto Copertura Bronze"; se fallisce la decisione resta valida
+// (il blocco codice nei template è condizionale) e il backoffice vede l'assenza in pratica.
+async function generaCodiceScontoSafe(contrattoEolId: string): Promise<Codice_Sconto | null> {
+  try {
+    return await generaCodice(contrattoEolId);
+  } catch (err) {
+    console.error('[rinnovo/conferma] Generazione codice sconto fallita:', err);
+    await registraEvento(contrattoEolId, 'SISTEMA', 'CODICE_SCONTO_SERVICE', 'CODICE_SCONTO_GENERAZIONE_FALLITA', {
+      errore: String(err),
+    });
+    return null;
+  }
+}
+
 // I4 fix: IVA a margine — l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
 function calcolaIvaAMargine(
   prezzoVendita: Prisma.Decimal,
@@ -125,7 +145,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
       beni = JSON.parse(contratto.beni_json);
     } catch {}
 
-    // Leggi feature flag gift card dal config service
+    // Leggi feature flag Premio Fedeltà (chiave interna: flags.abilita_gift_card)
     const configService = await import('../services/config.service.js');
     const abilitaGiftCard = await configService.getBooleano('flags.abilita_gift_card', true);
 
@@ -1060,12 +1080,16 @@ router.post(
         },
       });
 
+      // Genera il codice Sconto Copertura Bronze (idempotente)
+      const codiceSconto = await generaCodiceScontoSafe(contratto.id);
+
       // Genera PDF conferma rinnovo
       const { hash, buffer: pdfBuffer } = await generaConfermaRinnovo(
         contratto.id,
         decisione.id,
         prequalificazione,
         { nome: contratto.cliente.ragione_sociale, ip, userAgent, otpVerificato: true },
+        codiceSconto,
       );
 
       // Invia email al cliente con PDF allegato
@@ -1082,6 +1106,9 @@ router.post(
         budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
         note: note || null,
         valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+        valore_sconto_bronze: formatEur(Number(contratto.valore_gift_card)),
+        codice_sconto: codiceSconto?.codice ?? null,
+        scadenza_codice: codiceSconto ? formatDataIt(codiceSconto.data_scadenza) : null,
       });
 
       const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
@@ -1122,6 +1149,9 @@ router.post(
             budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
             note: note || null,
             valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+            valore_sconto_bronze: formatEur(Number(contratto.valore_gift_card)),
+            codice_sconto: codiceSconto?.codice ?? null,
+            scadenza_codice: codiceSconto ? formatDataIt(codiceSconto.data_scadenza) : null,
             motivo_assegnazione: motivoAssegnazione,
           });
 
@@ -1153,6 +1183,9 @@ router.post(
         decisione_id: decisione.id,
         pdf_hash: hash,
         valore_gift_card: Number(contratto.valore_gift_card),
+        valore_sconto_bronze: Number(contratto.valore_gift_card),
+        codice_sconto: codiceSconto?.codice ?? null,
+        scadenza_codice: codiceSconto?.data_scadenza?.toISOString() ?? null,
       });
     } catch (err) {
       console.error('[POST /api/cliente/decisione/rinnovo/conferma] Errore:', err);
@@ -1342,12 +1375,16 @@ router.post(
         },
       });
 
+      // Genera il codice Sconto Copertura Bronze (idempotente)
+      const codiceSconto = await generaCodiceScontoSafe(contratto.id);
+
       // Genera PDF conferma rinnovo
       const { hash, buffer: pdfBuffer } = await generaConfermaRinnovo(
         contratto.id,
         decisioneRinnovo.id,
         prequalificazione,
         { nome: contratto.cliente.ragione_sociale, ip, userAgent, otpVerificato: true },
+        codiceSconto,
       );
 
       // Invia email al cliente con PDF allegato
@@ -1364,6 +1401,9 @@ router.post(
         budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
         note: note || null,
         valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+        valore_sconto_bronze: formatEur(Number(contratto.valore_gift_card)),
+        codice_sconto: codiceSconto?.codice ?? null,
+        scadenza_codice: codiceSconto ? formatDataIt(codiceSconto.data_scadenza) : null,
         scelta_beni: scelta_beni === 'TENGO' ? 'Acquisto beni attuali' : 'Restituzione beni attuali',
         prezzo_riacquisto: scelta_beni === 'TENGO' ? formatEur(Number(contratto.pricing_riacquisto)) : null,
       });
@@ -1406,6 +1446,9 @@ router.post(
             budget_mensile: budget_mensile ? formatEur(budget_mensile) : null,
             note: note || null,
             valore_gift_card: formatEur(Number(contratto.valore_gift_card)),
+            valore_sconto_bronze: formatEur(Number(contratto.valore_gift_card)),
+            codice_sconto: codiceSconto?.codice ?? null,
+            scadenza_codice: codiceSconto ? formatDataIt(codiceSconto.data_scadenza) : null,
             motivo_assegnazione: motivoAssegnazione,
             scelta_beni: scelta_beni === 'TENGO' ? 'Acquisto beni attuali' : 'Restituzione beni attuali',
             prezzo_riacquisto: scelta_beni === 'TENGO' ? formatEur(Number(contratto.pricing_riacquisto)) : null,
@@ -1463,6 +1506,9 @@ router.post(
         scelta_beni,
         pdf_hash: hash,
         valore_gift_card: Number(contratto.valore_gift_card),
+        valore_sconto_bronze: Number(contratto.valore_gift_card),
+        codice_sconto: codiceSconto?.codice ?? null,
+        scadenza_codice: codiceSconto?.data_scadenza?.toISOString() ?? null,
         ...pagamento_info,
       });
     } catch (err) {
@@ -1644,7 +1690,7 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
     res.json({
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Fai un nuovo contratto con noi'),
-      desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze, e ricevi un premio fedeltà.'),
+      desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.'),
       titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),
       desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.'),
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),

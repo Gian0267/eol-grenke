@@ -22,7 +22,7 @@ Questo significa che le condizioni vantaggiose che Le abbiamo proposto non saran
 
 "Possiamo risolvere la questione adesso in pochi minuti. Le riassumo le opzioni:
 
-1. **Rinnovo** — nuovo contratto su dispositivi aggiornati + gift card da [VALORE_GIFT_CARD]€
+1. **Rinnovo** — nuovo contratto su dispositivi aggiornati + sconto copertura Bronze da [VALORE_GIFT_CARD]€ (Premio Fedeltà)
 2. **Riacquisto** — i beni diventano Suoi a [PRICING_RIACQUISTO]€ + IVA
 3. **Contatto** — fissiamo subito un appuntamento con un consulente
 4. **Restituzione** — Le indichiamo come procedere alla riconsegna

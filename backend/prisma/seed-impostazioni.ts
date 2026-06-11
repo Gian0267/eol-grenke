@@ -52,11 +52,11 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'pricing.riacquisto_percentuale', valore: '8', tipo: 'NUMERO', categoria: 'PRICING', label: 'Percentuale riacquisto cliente', descrizione: 'Percentuale del monte canoni per il prezzo di rivendita al cliente' },
     { chiave: 'pricing.iva_percentuale', valore: '22', tipo: 'NUMERO', categoria: 'PRICING', label: 'IVA', descrizione: 'Aliquota IVA applicata al riacquisto' },
     { chiave: 'pricing.soglia_alto_valore', valore: '5000', tipo: 'NUMERO', categoria: 'PRICING', label: 'Soglia alto valore', descrizione: 'Soglia in euro oltre la quale la pratica viene assegnata al Capo Area' },
-    { chiave: 'pricing.gift_card_validita_mesi', valore: '12', tipo: 'NUMERO', categoria: 'PRICING', label: 'Validita gift card (mesi)', descrizione: 'Mesi di validita della gift card Smartcom Solutions' },
-    { chiave: 'pricing.gift_card_tagli', valore: JSON.stringify([25, 50, 75, 100, 125, 150, 200, 250, 300]), tipo: 'JSON', categoria: 'PRICING', label: 'Tagli gift card', descrizione: 'Tagli standard della gift card in euro' },
+    { chiave: 'pricing.gift_card_validita_mesi', valore: '12', tipo: 'NUMERO', categoria: 'PRICING', label: 'Validita codice sconto (mesi)', descrizione: 'Mesi di validita del codice Sconto Copertura Bronze (Premio Fedelta)' },
+    { chiave: 'pricing.gift_card_tagli', valore: JSON.stringify([25, 50, 75, 100, 125, 150, 200, 250, 300]), tipo: 'JSON', categoria: 'PRICING', label: 'Tagli Sconto Bronze (€)', descrizione: 'Tagli standard dello Sconto Copertura Bronze in euro (chiave interna invariata per retrocompatibilita)' },
 
     // ─── FEATURE FLAGS ────────────────────────────────────────────────
-    { chiave: 'flags.abilita_gift_card', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita gift card', descrizione: 'Se attivo, il sistema mostra il badge gift card nell\'area cliente per i rinnovi' },
+    { chiave: 'flags.abilita_gift_card', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita Premio Fedelta (Sconto Bronze)', descrizione: 'Se attivo, il sistema mostra il badge Premio Fedelta (Sconto Copertura Bronze) nell\'area cliente per i rinnovi' },
     { chiave: 'flags.abilita_escalation_telefonica', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita escalation telefonica', descrizione: 'Se attivo, il sistema crea task di escalation telefonica per gli agenti a T-50/T-40/T-35' },
     { chiave: 'flags.abilita_widget_chiamami', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita widget Chiamami', descrizione: 'Se attivo, il widget "Chiamami" e visibile nell\'area cliente' },
     { chiave: 'flags.abilita_step_pre_pagamento', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita step pre-pagamento', descrizione: 'Se attivo, mostra lo step "Hai dubbi?" prima del pagamento nel flusso riacquisto' },
@@ -86,7 +86,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
 
     // ─── AREA CLIENTE ─────────────────────────────────────────────────
     { chiave: 'cliente.titolo_opzione_rinnovo', valore: 'Fai un nuovo contratto con noi', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione rinnovo', descrizione: 'Titolo della card rinnovo nell\'area cliente' },
-    { chiave: 'cliente.desc_opzione_rinnovo', valore: 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantita e durata in base alle tue esigenze, e ricevi un premio fedelta.', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Descrizione opzione rinnovo', descrizione: 'Testo descrittivo della card rinnovo' },
+    { chiave: 'cliente.desc_opzione_rinnovo', valore: 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantita e durata in base alle tue esigenze: grazie al Premio Fedelta ricevi uno sconto sulla copertura danni accidentali BRONZE.', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Descrizione opzione rinnovo', descrizione: 'Testo descrittivo della card rinnovo' },
     { chiave: 'cliente.titolo_opzione_riacquisto', valore: 'Prenota l\'acquisto del bene', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione riacquisto', descrizione: 'Titolo della card riacquisto nell\'area cliente' },
     { chiave: 'cliente.desc_opzione_riacquisto', valore: 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Descrizione opzione riacquisto', descrizione: 'Testo descrittivo della card riacquisto' },
     { chiave: 'cliente.titolo_opzione_contatto', valore: 'Contatto personalizzato', tipo: 'TESTO', categoria: 'AREA_CLIENTE', label: 'Titolo opzione contatto', descrizione: 'Titolo della card contatto nell\'area cliente' },
@@ -103,21 +103,42 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'script.t35', valore: readTemplate('script', 'script_escalation_t35.md'), tipo: 'TESTO', categoria: 'SCRIPT_TELEFONICI', label: 'Script T-35', descrizione: 'Script per la terza chiamata di escalation, gestita dal Capo Area per contratti di alto valore (T-35)' },
   ];
 
+  let personalizzate = 0;
   for (const imp of impostazioni) {
-    await prisma.impostazione.upsert({
+    const esistente = await prisma.impostazione.findUnique({ where: { chiave: imp.chiave } });
+    if (!esistente) {
+      await prisma.impostazione.create({
+        data: {
+          chiave: imp.chiave,
+          valore: imp.valore,
+          tipo: imp.tipo,
+          categoria: imp.categoria,
+          label: imp.label,
+          descrizione: imp.descrizione,
+          valore_default: imp.valore,
+        },
+      });
+      continue;
+    }
+
+    // Smart upsert: label/descrizione/valore_default sempre allineati al seed;
+    // il valore corrente viene sovrascritto SOLO se l'admin non l'ha mai
+    // personalizzato (cioè coincide ancora con il vecchio default).
+    const nonPersonalizzata = esistente.valore === esistente.valore_default;
+    if (!nonPersonalizzata && esistente.valore_default !== imp.valore) {
+      personalizzate++;
+      console.log(`   ⚠️  ${imp.chiave}: valore personalizzato dall'admin, NON sovrascritto (aggiornare manualmente da Impostazioni se serve)`);
+    }
+    await prisma.impostazione.update({
       where: { chiave: imp.chiave },
-      update: {},
-      create: {
-        chiave: imp.chiave,
-        valore: imp.valore,
-        tipo: imp.tipo,
-        categoria: imp.categoria,
+      data: {
         label: imp.label,
         descrizione: imp.descrizione,
         valore_default: imp.valore,
+        ...(nonPersonalizzata ? { valore: imp.valore } : {}),
       },
     });
   }
 
-  console.log(`✅ ${impostazioni.length} impostazioni create/aggiornate`);
+  console.log(`✅ ${impostazioni.length} impostazioni create/aggiornate${personalizzate ? ` (${personalizzate} personalizzate preservate)` : ''}`);
 }

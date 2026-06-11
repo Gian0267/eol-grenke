@@ -1,16 +1,18 @@
 {
-  "version": "1.0",
-  "_description": "Regole del programma di fedeltà: gift card Smartcom Solutions emessa al rinnovo del contratto FLEX. Vedi SPECS.md sezione 5.2.",
+  "version": "2.0",
+  "_description": "Regole del programma di fedeltà: Premio Fedeltà = Sconto Copertura Bronze (sconto sul canone della copertura danni accidentali BRONZE del nuovo contratto FLEX), erogato tramite codice sconto opaco monouso generato alla conferma del rinnovo. Sostituisce la gift card (la chiave interna 'gift_card' resta per retrocompatibilità). Vedi SPECS.md sezione 5.2.",
   "gift_card": {
+    "_nome_commerciale": "Premio Fedeltà: Sconto Copertura Bronze",
     "abilitato": true,
     "calcolo_dinamico": true,
     "a_carico_di": "Smartcom Solutions",
-    "spendibile_su": "Smartcom Distribution",
+    "applicato_su": "Canone copertura danni accidentali BRONZE del nuovo contratto FLEX",
     "tagli_standard_eur": [25, 50, 75, 100, 125, 150, 200, 250, 300],
     "metodo_arrotondamento": "per_difetto",
     "validita_mesi": 12,
-    "trigger_emissione": "alla_firma_nuovo_contratto_flex",
-    "messaggio_marketing": "Rinnova il tuo contratto FLEX e ricevi una gift card Smartcom Solutions di {{valore}}€ spendibile sul catalogo Smartcom Distribution.",
-    "_note": "La gift card NON viene erogata al momento della scelta dell'opzione rinnovo, ma solo alla firma effettiva del nuovo contratto FLEX (per evitare frodi)."
+    "trigger_emissione": "alla_conferma_rinnovo",
+    "formato_codice": "NSM-XXXX-XXXX (alfanumerico maiuscolo, esclusi 0/O/1/I/L)",
+    "messaggio_marketing": "Grazie al Premio Fedeltà riduciamo il canone della copertura danni accidentali Bronze: rinnova e ricevi uno sconto di {{valore}}€.",
+    "_note": "Il codice sconto viene generato alla conferma della decisione di rinnovo ed è una chiave opaca: il valore vive solo nel DB. Il calcolo della riduzione canone (valore vs coefficiente finanziaria, floor a zero) avviene sulla piattaforma noleggio esterna (app.smartcomsolutions.it), fuori dal perimetro di questa app."
   }
 }

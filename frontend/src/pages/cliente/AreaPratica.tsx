@@ -112,7 +112,7 @@ export default function AreaPratica() {
     giorniMancanti > 15 ? 'text-yellow-600 bg-yellow-50' :
     'text-red-600 bg-red-50';
 
-  // Determina se mostrare il badge gift card:
+  // Determina se mostrare il badge Premio Fedeltà (Sconto Copertura Bronze):
   // priorità: config.abilita_gift_card (dal nuovo endpoint), fallback su data.economica.abilita_gift_card
   const giftCardAbilitata = config?.abilita_gift_card ?? data.economica.abilita_gift_card ?? true;
 
@@ -126,7 +126,7 @@ export default function AreaPratica() {
     {
       id: 'rinnovo',
       titolo: config?.titolo_opzione_rinnovo || 'Fai un nuovo contratto con noi',
-      descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze, e ricevi un premio fedeltà.',
+      descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.',
       icona: <Gift className="w-6 h-6" />,
       colore: 'border-[#16a34a]',
       bgColore: 'bg-green-50',

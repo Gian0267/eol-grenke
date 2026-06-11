@@ -66,6 +66,8 @@ export default function FlussoRinnovo() {
   // Step 4 — Confirmation
   const [valoreGiftCard, setValoreGiftCard] = useState(0);
   const [giftCardAbilitata, setGiftCardAbilitata] = useState(true);
+  const [codiceSconto, setCodiceSconto] = useState<string | null>(null);
+  const [scadenzaCodice, setScadenzaCodice] = useState<string | null>(null);
   const [risultatoSceltaBeni, setRisultatoSceltaBeni] = useState<'TENGO' | 'RESTITUISCO' | null>(null);
   const [pagamentoDifferito, setPagamentoDifferito] = useState<{ differito: boolean; data?: string } | null>(null);
 
@@ -152,6 +154,8 @@ export default function FlussoRinnovo() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.errore || 'Errore conferma');
       setValoreGiftCard(body.valore_gift_card || valoreGiftCard);
+      setCodiceSconto(body.codice_sconto || null);
+      setScadenzaCodice(body.scadenza_codice || null);
       setRisultatoSceltaBeni(body.scelta_beni || sceltaBeni);
       if (body.pagamento_differito) {
         setPagamentoDifferito({ differito: true, data: body.data_pagamento });
@@ -358,17 +362,19 @@ export default function FlussoRinnovo() {
         {/* ═══════════ STEP 2 — Pre-qualificazione rinnovo ═══════════ */}
         {step === 2 && (
           <div className="space-y-6">
-            {/* Banner gift card */}
+            {/* Banner Premio Fedeltà: Sconto Copertura Bronze */}
             {giftCardAbilitata && pratica.economica.valore_gift_card > 0 && (
               <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
                 <Gift className="w-10 h-10 text-[#16a34a] mx-auto mb-2" />
                 <p className="font-bold text-[#16a34a] text-lg">
-                  Rinnova e ricevi una gift card Smartcom Solutions
+                  Premio Fedeltà: Sconto Copertura Bronze
                 </p>
                 <p className="text-[#16a34a] text-2xl font-bold mt-1">
-                  da &euro; {formatEur(pratica.economica.valore_gift_card)}
+                  &euro; {formatEur(pratica.economica.valore_gift_card)}
                 </p>
-                <p className="text-sm text-green-700 mt-1">alla firma del nuovo contratto FLEX!</p>
+                <p className="text-sm text-green-700 mt-1">
+                  Rinnova e ricevi uno sconto sulla copertura danni accidentali BRONZE del nuovo contratto FLEX!
+                </p>
               </div>
             )}
 
@@ -636,17 +642,37 @@ export default function FlussoRinnovo() {
               </div>
             </div>
 
-            {/* Gift card reminder */}
+            {/* Premio Fedeltà: codice Sconto Copertura Bronze */}
             {giftCardAbilitata && valoreGiftCard > 0 && (
               <div className="bg-green-50 border-2 border-[#16a34a] rounded-xl p-5 text-center">
                 <Gift className="w-8 h-8 text-[#16a34a] mx-auto mb-2" />
                 <p className="font-bold text-[#16a34a]">
-                  Alla firma del nuovo contratto riceverai una gift card Smartcom Solutions
+                  Premio Fedeltà: Sconto Copertura Bronze
                 </p>
                 <p className="text-[#16a34a] text-2xl font-bold mt-1">
-                  da &euro; {formatEur(valoreGiftCard)}
+                  &euro; {formatEur(valoreGiftCard)}
                 </p>
-                <p className="text-xs text-green-700 mt-1">Spendibile sul catalogo Smartcom Distribution</p>
+                {codiceSconto ? (
+                  <>
+                    <p className="text-sm text-green-700 mt-3">Il tuo codice sconto:</p>
+                    <p className="font-mono text-2xl sm:text-3xl font-bold tracking-widest text-[#1a3a52] bg-white border border-[#16a34a] rounded-lg py-3 px-4 mt-1 inline-block select-all">
+                      {codiceSconto}
+                    </p>
+                    {scadenzaCodice && (
+                      <p className="text-xs text-green-700 mt-2">
+                        Valido fino al {new Date(scadenzaCodice).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </p>
+                    )}
+                    <p className="text-sm text-green-800 mt-3">
+                      Comunica questo codice al tuo agente alla firma del nuovo contratto FLEX per ottenere
+                      lo sconto sulla copertura danni accidentali BRONZE.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-green-700 mt-1">
+                    Alla firma del nuovo contratto FLEX riceverai uno sconto sulla copertura danni accidentali BRONZE.
+                  </p>
+                )}
               </div>
             )}
 
@@ -678,7 +704,7 @@ export default function FlussoRinnovo() {
                     {(risultatoSceltaBeni || sceltaBeni) ? '4' : '3'}
                   </span>
                   {giftCardAbilitata
-                    ? 'Alla firma riceverai la gift card Smartcom Solutions'
+                    ? 'Alla firma comunica il codice sconto al tuo agente per lo sconto sulla copertura BRONZE'
                     : 'Alla firma del nuovo contratto sarai subito operativo'}
                 </li>
               </ol>
