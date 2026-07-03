@@ -25,7 +25,14 @@ interface PraticaData {
   economica: { pricing_riacquisto: number; pricing_riacquisto_iva: number; pricing_riacquisto_totale: number };
 }
 
-type Step = 'STEP_A' | 'STEP_A_CONTATTO' | 'STEP_B_OTP_SCELTA' | 'STEP_B_OTP_VERIFICA' | 'STEP_DIFFERITO' | 'STEP_C' | 'STEP_D' | 'STEP_E_SUCCESSO' | 'STEP_E_FALLIMENTO';
+interface ConfigPagamento {
+  abilita_pagamento_online?: boolean;
+  pagamento_intestatario?: string;
+  pagamento_iban?: string;
+  pagamento_banca?: string;
+}
+
+type Step = 'STEP_A' | 'STEP_A_CONTATTO' | 'STEP_B_OTP_SCELTA' | 'STEP_B_OTP_VERIFICA' | 'STEP_DIFFERITO' | 'STEP_C' | 'STEP_D' | 'STEP_BONIFICO_OK' | 'STEP_E_SUCCESSO' | 'STEP_E_FALLIMENTO';
 
 type Action =
   | { type: 'SCEGLI_CONTATTATEMI' }
@@ -38,6 +45,7 @@ type Action =
   | { type: 'SCEGLI_METODO'; metodo: 'FABRICK' | 'STRIPE'; session_id: string }
   | { type: 'PAGAMENTO_SUCCESSO'; pagamento_id: string; fattura_path: string }
   | { type: 'PAGAMENTO_FALLITO' }
+  | { type: 'BONIFICO_DICHIARATO' }
   | { type: 'RIPROVA' };
 
 interface State {
@@ -74,6 +82,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, step: 'STEP_E_SUCCESSO', pagamento_id: action.pagamento_id, fattura_path: action.fattura_path };
     case 'PAGAMENTO_FALLITO':
       return { ...state, step: 'STEP_E_FALLIMENTO' };
+    case 'BONIFICO_DICHIARATO':
+      return { ...state, step: 'STEP_BONIFICO_OK' };
     case 'RIPROVA':
       return { ...state, step: 'STEP_C', session_id: null, metodo_pagamento: null };
     default:
@@ -103,6 +113,7 @@ const STEP_MAP: Record<Step, number> = {
   STEP_B_OTP_SCELTA: 2, STEP_B_OTP_VERIFICA: 2,
   STEP_DIFFERITO: 3,
   STEP_C: 3, STEP_D: 4,
+  STEP_BONIFICO_OK: 5,
   STEP_E_SUCCESSO: 5, STEP_E_FALLIMENTO: 5,
 };
 
@@ -110,6 +121,8 @@ export default function FlussoRiacquisto() {
   const { token } = useParams<{ token: string }>();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [pratica, setPratica] = useState<PraticaData | null>(null);
+  const [configPagamento, setConfigPagamento] = useState<ConfigPagamento | null>(null);
+  const [ibanCopiato, setIbanCopiato] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errore, setErrore] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -127,18 +140,23 @@ export default function FlussoRiacquisto() {
   const otpInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch pratica + check stato riacquisto
+  // Fetch pratica + config pagamento + check stato riacquisto
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/api/cliente/pratica`, { headers: { Authorization: `Bearer ${token}` } })
+    const headers = { Authorization: `Bearer ${token}` };
+
+    fetch(`${API_BASE}/api/cliente/configurazione`, { headers })
+      .then(r => r.ok ? r.json() as Promise<ConfigPagamento> : null)
+      .then(cfg => { if (cfg) setConfigPagamento(cfg); })
+      .catch(() => {});
+
+    fetch(`${API_BASE}/api/cliente/pratica`, { headers })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Errore caricamento')))
       .then(data => {
         setPratica(data);
         // Se la pratica è già in stato riacquisto, controlla se il pagamento è disponibile
         if (data.contratto.stato === 'DECISIONE_RIACQUISTO_IN_CORSO') {
-          fetch(`${API_BASE}/api/cliente/decisione/riacquisto/stato`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          fetch(`${API_BASE}/api/cliente/decisione/riacquisto/stato`, { headers })
             .then(r => r.ok ? r.json() : null)
             .then(statoData => {
               if (!statoData) return;
@@ -146,6 +164,8 @@ export default function FlussoRiacquisto() {
                 dispatch({ type: 'PAGAMENTO_DISPONIBILE', decisione_id: statoData.decisione_id });
               } else if (statoData.stato === 'PAGAMENTO_DIFFERITO') {
                 dispatch({ type: 'PAGAMENTO_DIFFERITO', data_pagamento: statoData.data_pagamento });
+              } else if (statoData.stato === 'BONIFICO_DICHIARATO') {
+                dispatch({ type: 'BONIFICO_DICHIARATO' });
               }
             });
         }
@@ -243,6 +263,23 @@ export default function FlussoRiacquisto() {
       dispatch({ type: 'SCEGLI_METODO', metodo, session_id: data.session_id });
     } catch (err: any) { setErrore(err.message); }
     finally { setSubmitting(false); }
+  };
+
+  const handleBonificoDichiarato = async () => {
+    setSubmitting(true); setErrore(null);
+    try {
+      await apiCall('/api/cliente/decisione/riacquisto/bonifico-dichiarato', {});
+      dispatch({ type: 'BONIFICO_DICHIARATO' });
+    } catch (err: any) { setErrore(err.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleCopiaIban = () => {
+    const iban = configPagamento?.pagamento_iban || '';
+    navigator.clipboard?.writeText(iban).then(() => {
+      setIbanCopiato(true);
+      setTimeout(() => setIbanCopiato(false), 2500);
+    }).catch(() => {});
   };
 
   const handleSimulaPagamento = async (esito: 'success' | 'failure') => {
@@ -606,8 +643,94 @@ export default function FlussoRiacquisto() {
           </div>
         )}
 
-        {/* ===== STEP C — Scelta metodo pagamento ===== */}
-        {state.step === 'STEP_C' && (
+        {/* ===== STEP C (bonifico) — Dati bancari per il pagamento ===== */}
+        {state.step === 'STEP_C' && !(configPagamento?.abilita_pagamento_online ?? false) && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border p-6 text-center">
+              <Landmark className="w-12 h-12 text-[#2563eb] mx-auto mb-3" />
+              <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Paga con bonifico bancario</h2>
+              <p className="text-sm text-gray-600">
+                Totale da pagare: <strong className="text-[#2563eb]">&euro; {formatEur(pratica.economica.pricing_riacquisto_totale)}</strong>
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl border p-6">
+              <h3 className="font-semibold text-[#1a3a52] text-sm mb-4 uppercase tracking-wide">Coordinate bancarie</h3>
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-gray-400">Intestatario</dt>
+                  <dd className="font-medium text-[#1a3a52]">{configPagamento?.pagamento_intestatario || 'Smartcom Solutions S.r.l.'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">IBAN</dt>
+                  <dd className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-semibold text-[#1a3a52] text-base break-all">{configPagamento?.pagamento_iban || 'IT96S0853001002000000267119'}</span>
+                    <button
+                      onClick={handleCopiaIban}
+                      className="text-xs px-2 py-1 rounded border border-[#2563eb] text-[#2563eb] hover:bg-blue-50 transition-colors"
+                    >
+                      {ibanCopiato ? 'Copiato ✓' : 'Copia'}
+                    </button>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">Banca</dt>
+                  <dd className="font-medium text-[#1a3a52]">{configPagamento?.pagamento_banca || 'Banca d\'Alba'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">Importo</dt>
+                  <dd className="font-medium text-[#1a3a52]">&euro; {formatEur(pratica.economica.pricing_riacquisto_totale)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">Causale</dt>
+                  <dd className="font-medium text-[#1a3a52]">Riacquisto contratto {pratica.contratto.numero_nsm}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl border border-blue-200 p-5 text-sm text-gray-700">
+              Esegui il bonifico dalla tua banca con i dati indicati sopra, poi premi il pulsante qui sotto.
+              Verificheremo l'accredito e ti invieremo la ricevuta via email.
+            </div>
+
+            <button
+              onClick={handleBonificoDichiarato}
+              disabled={submitting}
+              className="w-full bg-[#2563eb] text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Ho effettuato il bonifico
+            </button>
+          </div>
+        )}
+
+        {/* ===== STEP BONIFICO OK — Bonifico dichiarato, in attesa di verifica ===== */}
+        {state.step === 'STEP_BONIFICO_OK' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border p-6 text-center">
+              <CheckCircle2 className="w-16 h-16 text-[#16a34a] mx-auto mb-4" />
+              <h2 className="font-semibold text-[#1a3a52] text-xl mb-2">Grazie, bonifico registrato</h2>
+              <p className="text-sm text-gray-600">
+                Abbiamo registrato la tua dichiarazione di pagamento di
+                {' '}<strong>&euro; {formatEur(pratica.economica.pricing_riacquisto_totale)}</strong>.
+              </p>
+              <p className="text-sm text-gray-600 mt-3">
+                Verificheremo l'accredito sul nostro conto nei prossimi giorni lavorativi:
+                appena confermato riceverai la <strong>ricevuta di pagamento via email</strong>.
+              </p>
+            </div>
+
+            <Link
+              to={`/pratica/${token}`}
+              className="block text-center text-sm text-gray-500 hover:underline"
+            >
+              Torna alla tua pratica
+            </Link>
+          </div>
+        )}
+
+        {/* ===== STEP C (online) — Scelta metodo pagamento ===== */}
+        {state.step === 'STEP_C' && (configPagamento?.abilita_pagamento_online ?? false) && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border p-6 text-center">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Scegli il metodo di pagamento</h2>

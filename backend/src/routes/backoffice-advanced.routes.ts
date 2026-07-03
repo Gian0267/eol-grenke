@@ -4,6 +4,9 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
+import { confermaBonificoRicevuto } from '../services/payment.service.js';
+import { loadDocument } from '../services/storage.service.js';
+import { createEmailProvider } from '../providers/notification/email.provider.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 
@@ -389,6 +392,68 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
   } catch (err) {
     console.error('[segna-richiamato] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/registra-pagamento — il backoffice
+// ha verificato l'accredito del bonifico e registra il pagamento del riacquisto:
+// pratica → RIACQUISTO_PAGATO, ricevuta generata e inviata al cliente.
+router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { riferimento } = req.body as { riferimento?: string };
+    const contrattoId = req.params.id as string;
+
+    const result = await confermaBonificoRicevuto(contrattoId, (req.user as any)?.id || 'system', riferimento);
+
+    // Invia la ricevuta al cliente via email (best effort: la registrazione
+    // del pagamento resta valida anche se l'invio fallisce)
+    let email_inviata = false;
+    try {
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: contrattoId },
+        include: { cliente: true },
+      });
+      if (contratto && !contratto.cliente.opt_out_comunicazioni) {
+        const pdfBuffer = await loadDocument(result.fattura_path);
+        const emailProvider = createEmailProvider();
+        const html = `
+          <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
+            <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
+            <p>confermiamo di aver ricevuto il pagamento per il riacquisto dei beni del contratto
+            n. <strong>${contratto.contratto_nsm_id}</strong>.</p>
+            <p>In allegato trova la ricevuta n. ${result.fattura_numero}.</p>
+            <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
+            <span style="font-size:13px;color:#6b7280;">Divisione Rental di Smartcom Solutions Srl</span></p>
+          </div>`;
+        const sendResult = await emailProvider.sendWithAttachment(
+          contratto.cliente.email,
+          `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_nsm_id}`,
+          html,
+          [{ filename: `ricevuta_${result.fattura_numero}.pdf`, content: pdfBuffer }],
+        );
+        email_inviata = sendResult.success;
+      }
+    } catch (emailErr) {
+      console.error('[registra-pagamento] Invio ricevuta fallito:', emailErr);
+    }
+
+    res.json({
+      success: true,
+      messaggio: 'Pagamento registrato, pratica in stato RIACQUISTO_PAGATO',
+      pagamento_id: result.pagamento_id,
+      fattura_numero: result.fattura_numero,
+      email_inviata,
+    });
+  } catch (err) {
+    console.error('[registra-pagamento] Errore:', err);
+    const msg = err instanceof Error ? err.message : 'Errore interno';
+    res.status(msg === 'Pratica già pagata' ? 409 : 500).json({ error: msg });
   }
 });
 

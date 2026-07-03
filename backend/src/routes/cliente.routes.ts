@@ -18,6 +18,7 @@ import {
   initiatePayment,
   verifyPayment as verifyPaymentService,
   handlePaymentCallback,
+  dichiaraBonifico,
 } from '../services/payment.service.js';
 import { generaConfermaRinnovo, PrequalificazioneRinnovo } from '../services/pdf.service.js';
 import { loadDocument } from '../services/storage.service.js';
@@ -789,6 +790,19 @@ router.get(
         return;
       }
 
+      // Bonifico già dichiarato dal cliente: in attesa di verifica dell'accredito
+      const bonificoDichiarato = await prisma.pagamento.findFirst({
+        where: { contratto_eol_id: contratto.id, metodo: 'BONIFICO', stato: 'DICHIARATO' },
+      });
+      if (bonificoDichiarato) {
+        res.json({
+          stato: 'BONIFICO_DICHIARATO',
+          decisione_id: decisioneRiacquisto.id,
+          data_dichiarazione: bonificoDichiarato.data_iniziato.toISOString(),
+        });
+        return;
+      }
+
       const configService = await import('../services/config.service.js');
       const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
       const oggi = new Date();
@@ -887,6 +901,44 @@ router.post(
       });
     } catch (err) {
       console.error('[POST /api/cliente/decisione/riacquisto/scegli-metodo] Errore:', err);
+      res.status(500).json({ errore: 'Errore interno' });
+    }
+  },
+);
+
+// POST /api/cliente/decisione/riacquisto/bonifico-dichiarato — il cliente dichiara
+// di aver eseguito il bonifico verso l'IBAN mostrato nella mascherina di pagamento
+router.post(
+  '/decisione/riacquisto/bonifico-dichiarato',
+  verifyClienteToken,
+  async (req: ClienteAuthenticatedRequest, res: Response) => {
+    try {
+      const contratto = await prisma.contratto_EOL.findUnique({
+        where: { id: req.contrattoEolId },
+        include: { decisioni: true },
+      });
+      if (!contratto) {
+        res.status(404).json({ errore: 'Contratto non trovato' });
+        return;
+      }
+      if (!contratto.decisioni.some((d) => d.opzione_scelta === 'RIACQUISTO')) {
+        res.status(400).json({ errore: 'Nessuna decisione di riacquisto registrata' });
+        return;
+      }
+      if (contratto.stato === 'RIACQUISTO_PAGATO') {
+        res.status(409).json({ errore: 'Pagamento già registrato' });
+        return;
+      }
+
+      const result = await dichiaraBonifico(req.contrattoEolId!);
+      res.json({
+        success: true,
+        pagamento_id: result.pagamento_id,
+        gia_dichiarato: result.gia_dichiarato,
+        importi: result.importi,
+      });
+    } catch (err) {
+      console.error('[POST /api/cliente/decisione/riacquisto/bonifico-dichiarato] Errore:', err);
       res.status(500).json({ errore: 'Errore interno' });
     }
   },
@@ -1713,6 +1765,10 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
     res.json({
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
       abilita_opzione_rinnovo: await configService.getBooleano('flags.abilita_opzione_rinnovo', true),
+      abilita_pagamento_online: await configService.getBooleano('flags.abilita_pagamento_online', false),
+      pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Smartcom Solutions S.r.l.'),
+      pagamento_iban: await configService.getTesto('pagamenti.iban', 'IT96S0853001002000000267119'),
+      pagamento_banca: await configService.getTesto('pagamenti.banca', 'Banca d\'Alba'),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Fai un nuovo contratto con noi'),
       desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.'),
       titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),

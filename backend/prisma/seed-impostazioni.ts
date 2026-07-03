@@ -59,6 +59,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     // ─── FEATURE FLAGS ────────────────────────────────────────────────
     { chiave: 'flags.abilita_gift_card', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita Premio Fedelta (Sconto Bronze)', descrizione: 'Se attivo, il sistema mostra il badge Premio Fedelta (Sconto Copertura Bronze) nell\'area cliente per i rinnovi' },
     { chiave: 'flags.abilita_opzione_rinnovo', valore: 'false', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Opzione Rinnovo attiva', descrizione: 'Se attivo, l\'opzione Rinnovo compare in email/PEC/solleciti e nell\'area cliente. Se disattivo, le altre opzioni vengono rinumerate 1-2-3 e il flusso di rinnovo e bloccato' },
+    { chiave: 'flags.abilita_pagamento_online', valore: 'false', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Pagamento online attivo', descrizione: 'Se attivo, il cliente paga il riacquisto online (Fabrick/Stripe). Se disattivo, la mascherina mostra i dati bancari (IBAN) per il bonifico manuale e il backoffice registra l\'incasso' },
     { chiave: 'flags.abilita_escalation_telefonica', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita escalation telefonica', descrizione: 'Se attivo, il sistema crea task di escalation telefonica per gli agenti a T-50/T-40/T-35' },
     { chiave: 'flags.abilita_widget_chiamami', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita widget Chiamami', descrizione: 'Se attivo, il widget "Chiamami" e visibile nell\'area cliente' },
     { chiave: 'flags.abilita_step_pre_pagamento', valore: 'true', tipo: 'BOOLEANO', categoria: 'FEATURE_FLAGS', label: 'Abilita step pre-pagamento', descrizione: 'Se attivo, mostra lo step "Hai dubbi?" prima del pagamento nel flusso riacquisto' },
@@ -74,6 +75,9 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'recapiti.email', valore: 'info@noleggiosumisura.it', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Email info', descrizione: 'Email di contatto generale' },
     { chiave: 'recapiti.email_mittente', valore: 'noreply@noleggiosumisura.it', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Email mittente', descrizione: 'Indirizzo mittente per le email automatiche' },
     { chiave: 'recapiti.nome_mittente', valore: 'Noleggio Su Misura', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Nome mittente', descrizione: 'Nome visualizzato come mittente nelle email' },
+    { chiave: 'pagamenti.intestatario', valore: 'Smartcom Solutions S.r.l.', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Intestatario conto incassi', descrizione: 'Intestatario del conto corrente mostrato al cliente per il bonifico di riacquisto' },
+    { chiave: 'pagamenti.iban', valore: 'IT96S0853001002000000267119', tipo: 'TESTO', categoria: 'RECAPITI', label: 'IBAN incassi', descrizione: 'IBAN mostrato al cliente nella mascherina di pagamento e nella mail di invito al pagamento' },
+    { chiave: 'pagamenti.banca', valore: 'Banca d\'Alba', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Banca incassi', descrizione: 'Nome della banca del conto incassi' },
 
     // ─── EMAIL (HTML) ─────────────────────────────────────────────────
     { chiave: 'email.comunicazione_iniziale', valore: readTemplate('email', 'comunicazione_iniziale.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Comunicazione iniziale', descrizione: 'Template email della prima comunicazione al cliente con le 4 opzioni di fine contratto' },

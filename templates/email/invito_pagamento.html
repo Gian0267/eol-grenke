@@ -66,11 +66,48 @@
                 </tr>
               </table>
 
+              {{#unless pagamento_online_attivo}}
+              <!-- Dati bancari per bonifico (pagamento online disattivato) -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin:16px 0;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="color:#1a3a52;font-size:13px;font-weight:bold;margin:0 0 10px 0;">COORDINATE PER IL BONIFICO BANCARIO:</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="color:#666;font-size:13px;padding:3px 0;width:120px;">Intestatario</td>
+                        <td style="color:#333;font-size:13px;font-weight:bold;padding:3px 0;">{{pagamento_intestatario}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#666;font-size:13px;padding:3px 0;">IBAN</td>
+                        <td style="color:#1a3a52;font-size:14px;font-weight:bold;font-family:monospace;padding:3px 0;">{{pagamento_iban}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#666;font-size:13px;padding:3px 0;">Banca</td>
+                        <td style="color:#333;font-size:13px;font-weight:bold;padding:3px 0;">{{pagamento_banca}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#666;font-size:13px;padding:3px 0;">Importo</td>
+                        <td style="color:#333;font-size:13px;font-weight:bold;padding:3px 0;">&euro; {{pricing_totale}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#666;font-size:13px;padding:3px 0;">Causale</td>
+                        <td style="color:#333;font-size:13px;font-weight:bold;padding:3px 0;">Riacquisto contratto {{numero_contratto_nsm}}</td>
+                      </tr>
+                    </table>
+                    <p style="color:#666;font-size:12px;line-height:1.5;margin:10px 0 0;">
+                      Dopo aver effettuato il bonifico, acceda alla Sua area riservata e prema
+                      &laquo;Ho effettuato il bonifico&raquo;: verificheremo l'accredito e Le invieremo la ricevuta.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              {{/unless}}
+
               <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
                 <tr>
                   <td align="center">
                     <a href="{{link_pagamento}}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-size:16px;font-weight:bold;padding:14px 32px;border-radius:8px;text-decoration:none;">
-                      Procedi con il pagamento
+                      {{#if pagamento_online_attivo}}Procedi con il pagamento{{else}}Vai alla tua area riservata{{/if}}
                     </a>
                   </td>
                 </tr>

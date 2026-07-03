@@ -325,6 +325,9 @@ export default function PraticaDettaglio() {
   const [decisioneScelta, setDecisioneScelta] = useState<string>('');
   const [decisioneNote, setDecisioneNote] = useState('');
 
+  // Registra pagamento (bonifico verificato)
+  const [riferimentoBonifico, setRiferimentoBonifico] = useState('');
+
   // Segna richiamato loading
   const [richiamatoLoading, setRichiamatoLoading] = useState<string | null>(null);
 
@@ -405,6 +408,7 @@ export default function PraticaDettaglio() {
     setMotivazione('');
     setDecisioneScelta('');
     setDecisioneNote('');
+    setRiferimentoBonifico('');
     if (key === 'cambia-agente') loadAgenti();
   }
 
@@ -567,6 +571,14 @@ export default function PraticaDettaglio() {
                     onClick={() => openModal('sblocca')}
                   />
                 )}
+                {['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato) &&
+                  ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<CreditCard className="w-4 h-4" />}
+                    label="Registra pagamento ricevuto"
+                    onClick={() => openModal('registra-pagamento')}
+                  />
+                )}
                 <ActionBtn
                   icon={<ClipboardEdit className="w-4 h-4" />}
                   label="Decisione manuale"
@@ -719,6 +731,45 @@ export default function PraticaDettaglio() {
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
+          </button>
+        </div>
+      </Modal>
+
+      {/* Registra pagamento (bonifico verificato) */}
+      <Modal open={modalOpen === 'registra-pagamento'} title="Registra pagamento ricevuto" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-4">
+          Confermi di aver <strong>verificato l'accredito del bonifico</strong> per il riacquisto di{' '}
+          <strong>{pratica.cliente.ragione_sociale}</strong>? La pratica passerà in stato
+          "Riacquisto pagato" e il cliente riceverà la ricevuta via email.
+        </p>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-graphite mb-1">Riferimento bonifico (CRO/TRN, opzionale)</label>
+          <input
+            type="text"
+            value={riferimentoBonifico}
+            onChange={(e) => setRiferimentoBonifico(e.target.value)}
+            placeholder="Es. TRN 1234567890"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+          />
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            Annulla
+          </button>
+          <button
+            disabled={actionLoading}
+            onClick={() =>
+              doAction(`/api/backoffice/pratiche-dettaglio/${id}/registra-pagamento`, {
+                riferimento: riferimentoBonifico.trim() || undefined,
+              })
+            }
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Conferma incasso
           </button>
         </div>
       </Modal>

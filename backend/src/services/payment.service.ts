@@ -70,6 +70,116 @@ export async function initiatePayment(
   return { session_id: session.session_id, importi };
 }
 
+// --- Bonifico bancario manuale ---
+// Il cliente vede l'IBAN nella mascherina di pagamento, esegue il bonifico
+// dalla propria banca e lo dichiara nell'app; il backoffice verifica l'accredito
+// e lo registra con confermaBonificoRicevuto. I provider online (Fabrick/Stripe)
+// restano nel codice, disattivati dal flag flags.abilita_pagamento_online.
+
+export async function dichiaraBonifico(contrattoEolId: string): Promise<{
+  pagamento_id: string;
+  gia_dichiarato: boolean;
+  importi: { importo_netto: number; importo_iva: number; importo_totale: number };
+}> {
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contrattoEolId },
+    include: { cliente: true },
+  });
+  if (!contratto) throw new Error('Contratto non trovato');
+
+  const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
+
+  // Idempotenza: una sola dichiarazione di bonifico attiva per pratica
+  const esistente = await prisma.pagamento.findFirst({
+    where: {
+      contratto_eol_id: contrattoEolId,
+      metodo: 'BONIFICO',
+      stato: { in: ['DICHIARATO', 'COMPLETATO'] },
+    },
+  });
+  if (esistente) {
+    return { pagamento_id: esistente.id, gia_dichiarato: true, importi };
+  }
+
+  const pagamento = await prisma.pagamento.create({
+    data: {
+      contratto_eol_id: contrattoEolId,
+      importo_netto: new Prisma.Decimal(importi.importo_netto),
+      importo_iva: new Prisma.Decimal(importi.importo_iva),
+      importo_totale: new Prisma.Decimal(importi.importo_totale),
+      metodo: 'BONIFICO',
+      stato: 'DICHIARATO',
+      natura_giuridica: 'ACCONTO',
+    },
+  });
+
+  await registraEvento(contrattoEolId, 'CLIENTE', contratto.cliente_id, 'BONIFICO_DICHIARATO', {
+    pagamento_id: pagamento.id,
+    importo_totale: importi.importo_totale,
+  });
+
+  return { pagamento_id: pagamento.id, gia_dichiarato: false, importi };
+}
+
+export async function confermaBonificoRicevuto(
+  contrattoEolId: string,
+  utenteId: string,
+  riferimento?: string,
+): Promise<{ pagamento_id: string; fattura_path: string; fattura_numero: string }> {
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contrattoEolId },
+    include: { cliente: true },
+  });
+  if (!contratto) throw new Error('Contratto non trovato');
+  if (contratto.stato === 'RIACQUISTO_PAGATO') throw new Error('Pratica già pagata');
+
+  // Se il cliente non ha dichiarato il bonifico nell'app (ha pagato e basta),
+  // il pagamento viene creato al volo al momento della registrazione.
+  let pagamento = await prisma.pagamento.findFirst({
+    where: { contratto_eol_id: contrattoEolId, metodo: 'BONIFICO', stato: 'DICHIARATO' },
+  });
+  if (!pagamento) {
+    const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
+    pagamento = await prisma.pagamento.create({
+      data: {
+        contratto_eol_id: contrattoEolId,
+        importo_netto: new Prisma.Decimal(importi.importo_netto),
+        importo_iva: new Prisma.Decimal(importi.importo_iva),
+        importo_totale: new Prisma.Decimal(importi.importo_totale),
+        metodo: 'BONIFICO',
+        stato: 'DICHIARATO',
+        natura_giuridica: 'ACCONTO',
+      },
+    });
+  }
+
+  const fattura = await generaRicevutaPagamento(pagamento.id);
+
+  await prisma.$transaction([
+    prisma.pagamento.update({
+      where: { id: pagamento.id },
+      data: {
+        stato: 'COMPLETATO',
+        data_completato: new Date(),
+        riferimento_transazione: riferimento || null,
+      },
+    }),
+    prisma.contratto_EOL.update({
+      where: { id: contrattoEolId },
+      data: { stato: 'RIACQUISTO_PAGATO' },
+    }),
+  ]);
+
+  await registraEvento(contrattoEolId, 'BACKOFFICE', utenteId, 'PAGAMENTO_COMPLETATO', {
+    pagamento_id: pagamento.id,
+    metodo: 'BONIFICO',
+    importo_totale: Number(pagamento.importo_totale),
+    riferimento_transazione: riferimento || null,
+  });
+
+  return { pagamento_id: pagamento.id, fattura_path: fattura.pdfPath, fattura_numero: fattura.fatturaNumero };
+}
+
 export async function verifyPayment(sessionId: string): Promise<{
   stato: string;
   transaction_id?: string;

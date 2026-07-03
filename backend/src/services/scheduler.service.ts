@@ -524,6 +524,9 @@ async function inviaInvitoPagamento(pratica: any): Promise<void> {
     ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}/riacquisto`
     : FRONTEND_URL;
 
+  // Pagamento online disattivato → la mail include le coordinate per il bonifico
+  const pagamentoOnlineAttivo = await configService.getBooleano('flags.abilita_pagamento_online', false);
+
   const templateVars = {
     ragione_sociale: pratica.cliente.ragione_sociale,
     numero_contratto_nsm: pratica.contratto_nsm_id,
@@ -534,6 +537,10 @@ async function inviaInvitoPagamento(pratica: any): Promise<void> {
     pricing_iva: formatEur(iva),
     pricing_totale: formatEur(totale),
     link_pagamento: linkPagamento,
+    pagamento_online_attivo: pagamentoOnlineAttivo,
+    pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Smartcom Solutions S.r.l.'),
+    pagamento_iban: await configService.getTesto('pagamenti.iban', 'IT96S0853001002000000267119'),
+    pagamento_banca: await configService.getTesto('pagamenti.banca', 'Banca d\'Alba'),
   };
 
   const html = invitoPagamentoTemplate(templateVars);
