@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 const API_BASE = '';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessioneScaduta = searchParams.get('scaduta') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errore, setErrore] = useState<string | null>(null);
@@ -44,6 +46,12 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-flex-dark">Backoffice NSM</h1>
           <p className="text-sm text-stone mt-1">Accedi alla gestione EOL Grenke</p>
         </div>
+
+        {sessioneScaduta && !errore && (
+          <div className="bg-amber-50 border border-amber-300 text-amber-800 rounded-lg p-3 text-sm mb-4">
+            La sessione è scaduta: accedi di nuovo per continuare.
+          </div>
+        )}
 
         <form onSubmit={handleLogin} className="bg-card rounded-xl border border-border p-6 space-y-4">
           <div>
