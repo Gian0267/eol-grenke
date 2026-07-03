@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 import { toast, Toaster } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -380,7 +381,7 @@ export default function PraticaDettaglio() {
 
   /* ---- Action handlers ---- */
 
-  async function doAction(url: string, body?: object) {
+  async function doAction(url: string, body?: object): Promise<boolean> {
     setActionLoading(true);
     try {
       const res = await fetch(url, {
@@ -393,11 +394,30 @@ export default function PraticaDettaglio() {
       toast.success('Azione completata con successo');
       setModalOpen(null);
       await loadPratica();
+      return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Errore');
+      return false;
     } finally {
       setActionLoading(false);
     }
+  }
+
+  // Coriandoli "realistic look" (preset canvas-confetti) alla registrazione di un incasso
+  function festeggiaIncasso() {
+    const fire = (particleRatio: number, opts: confetti.Options) => {
+      confetti({
+        origin: { y: 0.7 },
+        disableForReducedMotion: true,
+        ...opts,
+        particleCount: Math.floor(200 * particleRatio),
+      });
+    };
+    fire(0.25, { spread: 26, startVelocity: 55 });
+    fire(0.2, { spread: 60 });
+    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+    fire(0.1, { spread: 120, startVelocity: 45 });
   }
 
   function openModal(key: string) {
@@ -761,11 +781,12 @@ export default function PraticaDettaglio() {
           </button>
           <button
             disabled={actionLoading}
-            onClick={() =>
-              doAction(`/api/backoffice/pratiche-dettaglio/${id}/registra-pagamento`, {
+            onClick={async () => {
+              const ok = await doAction(`/api/backoffice/pratiche-dettaglio/${id}/registra-pagamento`, {
                 riferimento: riferimentoBonifico.trim() || undefined,
-              })
-            }
+              });
+              if (ok) festeggiaIncasso();
+            }}
             className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
