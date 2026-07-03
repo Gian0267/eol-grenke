@@ -141,7 +141,7 @@ export async function generaVerbaleRestituzione(
     'restituire i beni in stato integro e funzionante, comprensivi di tutti gli accessori originali, ' +
     'entro 10 giorni dalla data di scadenza del contratto. In caso di restituzione non conforme ' +
     '(danni, accessori mancanti, dispositivo non resettato), potranno essere applicati addebiti ' +
-    'secondo quanto previsto dalle condizioni contrattuali.',
+    'a seconda dell\'entità del danno.',
     { align: 'justify' },
   );
   doc.moveDown(0.5);
