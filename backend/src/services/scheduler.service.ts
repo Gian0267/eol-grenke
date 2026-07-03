@@ -223,9 +223,10 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     }
   }
 
-  // --- INVITI PAGAMENTO RIACQUISTO (T-23) ---
+  // --- INVITI PAGAMENTO RIACQUISTO (invito a T-26, promemoria a T-23) ---
   try {
-    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
+    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
+    const giorniPromemoria = await configService.getNumero('timeline.invito_pagamento_promemoria', 23);
     const praticheRiacquisto = await prisma.contratto_EOL.findMany({
       where: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
       include: { cliente: true },
@@ -234,6 +235,8 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     for (const pratica of praticheRiacquisto) {
       if (!pratica.data_scadenza) continue;
       const giorniMancanti = diffDays(pratica.data_scadenza, oggi);
+
+      // Primo invito al pagamento (T-26)
       if (giorniMancanti <= giorniPagamento) {
         const giàInviato = await prisma.comunicazione.findFirst({
           where: {
@@ -241,13 +244,49 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
             tipo: 'INVITO_PAGAMENTO',
           },
         });
-        if (giàInviato) continue;
+        if (!giàInviato) {
+          try {
+            await inviaInvitoPagamento(pratica);
+            report.inviti_pagamento_inviati++;
+          } catch (err) {
+            const msg = `Errore invito pagamento per ${pratica.contratto_nsm_id}: ${err instanceof Error ? err.message : String(err)}`;
+            report.errori.push(msg);
+            console.error(`[Scheduler] ${msg}`);
+          }
+          continue; // il promemoria parte in un giro successivo, mai lo stesso giorno del primo invito
+        }
+      }
+
+      // Promemoria (T-23): stesso testo del primo invito + avviso "ignora se hai già pagato".
+      // Non parte se il cliente ha già dichiarato il bonifico (o il pagamento è completato),
+      // né se il primo invito è stato inviato oggi stesso.
+      if (giorniMancanti <= giorniPromemoria) {
+        const promemoriaInviato = await prisma.comunicazione.findFirst({
+          where: { contratto_eol_id: pratica.id, tipo: 'INVITO_PAGAMENTO_PROMEMORIA' },
+        });
+        if (promemoriaInviato) continue;
+
+        const invitoOggi = await prisma.comunicazione.findFirst({
+          where: { contratto_eol_id: pratica.id, tipo: 'INVITO_PAGAMENTO', data_invio: { gte: inizioGiornata } },
+        });
+        if (invitoOggi) continue;
+
+        const bonificoAttivo = await prisma.pagamento.findFirst({
+          where: {
+            contratto_eol_id: pratica.id,
+            stato: { in: ['DICHIARATO', 'COMPLETATO'] },
+          },
+        });
+        if (bonificoAttivo) {
+          console.log(`[Scheduler] Skip promemoria pagamento per ${pratica.contratto_nsm_id}: pagamento già dichiarato/completato`);
+          continue;
+        }
 
         try {
-          await inviaInvitoPagamento(pratica);
+          await inviaInvitoPagamento(pratica, { promemoria: true });
           report.inviti_pagamento_inviati++;
         } catch (err) {
-          const msg = `Errore invito pagamento per ${pratica.contratto_nsm_id}: ${err instanceof Error ? err.message : String(err)}`;
+          const msg = `Errore promemoria pagamento per ${pratica.contratto_nsm_id}: ${err instanceof Error ? err.message : String(err)}`;
           report.errori.push(msg);
           console.error(`[Scheduler] ${msg}`);
         }
@@ -507,7 +546,8 @@ async function marcaSilenzio(pratica: any): Promise<void> {
   console.log(`[Scheduler] Pratica ${pratica.contratto_nsm_id} marcata SILENZIO_PERDITA_DEFINITIVA`);
 }
 
-async function inviaInvitoPagamento(pratica: any): Promise<void> {
+async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean }): Promise<void> {
+  const promemoria = opts?.promemoria === true;
   const invitoPagamentoTemplate = await loadTemplateFromDb('email.invito_pagamento');
 
   const beni = pratica.beni_json ? JSON.parse(pratica.beni_json) : [];
@@ -541,17 +581,20 @@ async function inviaInvitoPagamento(pratica: any): Promise<void> {
     pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Smartcom Solutions S.r.l.'),
     pagamento_iban: await configService.getTesto('pagamenti.iban', 'IT96S0853001002000000267119'),
     pagamento_banca: await configService.getTesto('pagamenti.banca', 'Banca d\'Alba'),
+    promemoria,
   };
 
   const html = invitoPagamentoTemplate(templateVars);
-  const oggetto = `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_nsm_id})`;
+  const oggetto = promemoria
+    ? `Promemoria: pagamento riacquisto beni (contratto ${pratica.contratto_nsm_id})`
+    : `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_nsm_id})`;
 
   const sendResult = await emailProvider.send(pratica.cliente.email, oggetto, html);
 
   await prisma.comunicazione.create({
     data: {
       contratto_eol_id: pratica.id,
-      tipo: 'INVITO_PAGAMENTO',
+      tipo: promemoria ? 'INVITO_PAGAMENTO_PROMEMORIA' : 'INVITO_PAGAMENTO',
       canale: 'EMAIL',
       destinatario: pratica.cliente.email,
       oggetto,
@@ -561,7 +604,7 @@ async function inviaInvitoPagamento(pratica: any): Promise<void> {
     },
   });
 
-  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', 'INVITO_PAGAMENTO_INVIATO', {
+  await registraEvento(pratica.id, 'SISTEMA', 'SCHEDULER', promemoria ? 'PROMEMORIA_PAGAMENTO_INVIATO' : 'INVITO_PAGAMENTO_INVIATO', {
     canale: 'EMAIL',
     destinatario: pratica.cliente.email,
     esito: sendResult.success ? 'INVIATO' : 'ERRORE',

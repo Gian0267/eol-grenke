@@ -292,7 +292,7 @@ export default function FlussoRinnovo() {
                       </div>
                       <p className="text-xs text-amber-700 bg-amber-50 rounded mt-2 px-2 py-1 text-center">
                         <AlertTriangle className="w-3 h-3 inline mr-1" />
-                        NON paghi ora! Il pagamento ti sarà richiesto 23 giorni prima della scadenza.
+                        NON paghi ora! Il pagamento ti sarà richiesto 26 giorni prima della scadenza.
                       </p>
                     </div>
                   </div>
@@ -698,7 +698,7 @@ export default function FlussoRinnovo() {
                 {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' && (
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                    Riceverai una email con le istruzioni per il pagamento dei beni 23 giorni prima della scadenza
+                    Riceverai una email con le istruzioni per il pagamento dei beni 26 giorni prima della scadenza
                   </li>
                 )}
                 {(risultatoSceltaBeni || sceltaBeni) === 'RESTITUISCO' && (

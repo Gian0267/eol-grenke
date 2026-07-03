@@ -26,7 +26,22 @@
           <!-- Content -->
           <tr>
             <td style="padding:32px;">
-              <h1 style="color:#2563eb;font-size:22px;margin:0 0 16px 0;">Completa il riacquisto del bene</h1>
+              {{#if promemoria}}
+              <!-- Avviso promemoria: mostrato solo nella seconda mail (T-23) -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin:0 0 20px 0;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="color:#92400e;font-size:14px;font-weight:bold;margin:0 0 4px 0;">&#9888;&#65039; Ha gi&agrave; effettuato il bonifico?</p>
+                    <p style="color:#92400e;font-size:13px;line-height:1.5;margin:0;">
+                      Se ha gi&agrave; provveduto al pagamento, La preghiamo di <strong>non considerare questa comunicazione</strong>:
+                      stiamo verificando l'accredito e Le invieremo la ricevuta appena confermato.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              {{/if}}
+
+              <h1 style="color:#2563eb;font-size:22px;margin:0 0 16px 0;">{{#if promemoria}}Promemoria: completa il riacquisto del bene{{else}}Completa il riacquisto del bene{{/if}}</h1>
 
               <p style="color:#333333;font-size:14px;line-height:1.6;">
                 Gentile <strong>{{ragione_sociale}}</strong>,

@@ -12,7 +12,8 @@
     "escalation_telefonica_3": 35,
     "deadline_decisione": 30,
     "consolidamento_lista_riacquisti": 20,
-    "pagamento_riacquisto": 23
+    "pagamento_riacquisto": 26,
+    "invito_pagamento_promemoria": 23
   },
   "giorni_post_scadenza": {
     "termine_consegna_bene": 10,
