@@ -607,7 +607,9 @@ export default function FlussoRiacquisto() {
                 La tua decisione di riacquisto e' stata registrata con successo.
               </p>
               <p className="text-sm text-gray-600 mt-4">
-                Riceverai il <strong>link per il pagamento</strong> il giorno
+                Riceverai {(configPagamento?.abilita_pagamento_online ?? false)
+                  ? <>il <strong>link per il pagamento</strong></>
+                  : <>le <strong>istruzioni per il pagamento</strong> (IBAN e coordinate bancarie)</>} il giorno
                 {' '}<strong className="text-[#2563eb]">
                   {state.data_pagamento ? new Date(state.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''}
                 </strong>,
@@ -619,7 +621,9 @@ export default function FlussoRiacquisto() {
               <h3 className="font-semibold text-[#1a3a52] text-sm mb-3">Perche' il pagamento non e' immediato?</h3>
               <p className="text-sm text-gray-600">
                 Per tua comodita, non ti chiediamo di pagare con largo anticipo.
-                Ti invieremo una email con il link per completare il pagamento pochi giorni prima della scadenza del contratto.
+                {(configPagamento?.abilita_pagamento_online ?? false)
+                  ? ' Ti invieremo una email con il link per completare il pagamento pochi giorni prima della scadenza del contratto.'
+                  : ' Ti invieremo una email con le istruzioni per completare il pagamento (IBAN, banca e causale del bonifico) pochi giorni prima della scadenza del contratto.'}
               </p>
             </div>
 

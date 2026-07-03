@@ -698,7 +698,7 @@ export default function FlussoRinnovo() {
                 {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' && (
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                    Riceverai il link per il pagamento dei beni 23 giorni prima della scadenza
+                    Riceverai una email con le istruzioni per il pagamento dei beni 23 giorni prima della scadenza
                   </li>
                 )}
                 {(risultatoSceltaBeni || sceltaBeni) === 'RESTITUISCO' && (

@@ -747,7 +747,7 @@ router.post(
         // Pagamento immediato: siamo già entro T-21
         res.json({ success: true, decisione_id: decisione.id, pagamento_immediato: true });
       } else {
-        // Pagamento differito: invieremo il link a T-21
+        // Pagamento differito: invieremo le istruzioni di pagamento a T-23
         const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
         res.json({
           success: true,
