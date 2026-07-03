@@ -16,8 +16,8 @@ export default function OpzionePlaceholder() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-[#1a3a52] text-white">
         <div className="max-w-4xl mx-auto px-4 py-5 flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center font-bold text-lg">
-            NSM
+          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center">
+            <img src="/nsm-logo.png" alt="Noleggio Su Misura" className="h-6" />
           </div>
           <h1 className="text-lg font-semibold">{titolo}</h1>
         </div>

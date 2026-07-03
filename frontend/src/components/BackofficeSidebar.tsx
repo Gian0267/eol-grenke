@@ -118,15 +118,15 @@ export default function BackofficeSidebar() {
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* Logo + brand */}
+      {/* Logo + brand — logo su targhetta bianca (sfondo sidebar scuro) */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-flex-light rounded-xl flex items-center justify-center font-mono font-bold text-sm text-flex-dark shrink-0">
-            NSM
+          <div className="bg-white rounded-xl px-2 py-1.5 flex items-center justify-center shrink-0">
+            <img src="/nsm-logo.png" alt="Noleggio Su Misura" className={collapsed ? 'h-5' : 'h-6'} />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="font-medium text-sm truncate text-white">Backoffice NSM</p>
+              <p className="font-medium text-sm truncate text-white">Backoffice</p>
               <p className="text-xs text-white/50 truncate">EOL Grenke — FLEX</p>
             </div>
           )}

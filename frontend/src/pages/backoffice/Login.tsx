@@ -40,10 +40,8 @@ export default function Login() {
     <div className="min-h-screen bg-paper flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-flex-dark rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">NSM</span>
-          </div>
-          <h1 className="text-2xl font-bold text-flex-dark">Backoffice NSM</h1>
+          <img src="/nsm-logo.png" alt="Noleggio Su Misura" className="w-48 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-flex-dark">Backoffice</h1>
           <p className="text-sm text-stone mt-1">Accedi alla gestione EOL Grenke</p>
         </div>
 

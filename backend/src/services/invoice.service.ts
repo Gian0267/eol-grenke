@@ -1,7 +1,11 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
+import { resolve as pathResolve, dirname as pathDirname } from 'path';
+import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
 import { saveDocument } from './storage.service.js';
+
+const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
 
 /** Raccoglie l'output di un documento PDFKit in un Buffer in memoria. */
 function collectPdf(doc: InstanceType<typeof PDFDocument>): Promise<Buffer> {
@@ -84,11 +88,10 @@ export async function generaRicevutaPagamento(
 
   const pdfDone = collectPdf(doc);
 
-  // Header
-  doc.fontSize(16).font('Helvetica-Bold')
-    .text('NSM', 50, 50, { continued: true })
-    .fontSize(10).font('Helvetica')
-    .text('  Noleggio Su Misura', { continued: false });
+  // Header: logo Noleggio Su Misura al posto del titolo testuale
+  doc.image(LOGO_PATH, 50, 45, { height: 28 });
+  doc.x = 50;
+  doc.y = 78;
 
   doc.moveDown(0.5);
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#1a3a52');

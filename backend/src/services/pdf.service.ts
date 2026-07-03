@@ -1,8 +1,19 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
+import { resolve as pathResolve, dirname as pathDirname } from 'path';
+import { fileURLToPath } from 'url';
 import { verificaCatena } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import { saveDocument } from './storage.service.js';
+
+const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
+
+// Header comune dei PDF: logo Noleggio Su Misura (PNG 400×124) al posto del titolo testuale
+function drawLogoHeader(doc: PDFKit.PDFDocument): void {
+  doc.image(LOGO_PATH, 50, 45, { height: 28 });
+  doc.x = 50;
+  doc.y = 78;
+}
 
 /** Raccoglie l'output di un documento PDFKit in un Buffer in memoria. */
 function collectPdf(doc: InstanceType<typeof PDFDocument>): Promise<Buffer> {
@@ -63,10 +74,7 @@ export async function generaVerbaleRestituzione(
   const pdfDone = collectPdf(doc);
 
   // Header
-  doc.fontSize(16).font('Helvetica-Bold')
-    .text('NSM', 50, 50, { continued: true })
-    .fontSize(10).font('Helvetica')
-    .text('  Noleggio Su Misura', { continued: false });
+  drawLogoHeader(doc);
   doc.fontSize(8).fillColor('#666666')
     .text('Noleggio Su Misura è la divisione rental di Smartcom Solutions Srl');
   doc.fillColor('#000000');
@@ -372,10 +380,7 @@ export async function generaAuditExport(
 
   const pdfDone = collectPdf(doc);
 
-  doc.fontSize(16).font('Helvetica-Bold')
-    .text('NSM', 50, 50, { continued: true })
-    .fontSize(10).font('Helvetica')
-    .text('  Noleggio Su Misura', { continued: false });
+  drawLogoHeader(doc);
   doc.moveDown(0.5);
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#1a3a52');
   doc.moveDown(0.8);
