@@ -44,7 +44,7 @@
                     </p>
                     <p style="margin:0;color:#991b1b;font-size:14px;line-height:1.6;">
                       Al termine della proroga, <strong>non sar&agrave; pi&ugrave; possibile</strong>
-                      esercitare le opzioni di riacquisto, rinnovo o restituzione agevolata
+                      esercitare le opzioni di {{#if opzione_rinnovo_attiva}}riacquisto, rinnovo o restituzione agevolata{{else}}riacquisto o restituzione agevolata{{/if}}
                       attraverso Noleggio Su Misura.
                     </p>
                   </td>
@@ -61,7 +61,7 @@
                 <tr>
                   <td style="padding:0;">
                     <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.8;">
-                      <strong>Rinnovo</strong> &mdash; nuovo contratto + sconto copertura Bronze da {{valore_gift_card}}&euro;<br>
+                      {{#if opzione_rinnovo_attiva}}<strong>Rinnovo</strong> &mdash; nuovo contratto + sconto copertura Bronze da {{valore_gift_card}}&euro;<br>{{/if}}
                       <strong>Riacquisto</strong> &mdash; &euro;{{pricing_riacquisto}} + IVA<br>
                       <strong>Contatto</strong> &mdash; consulenza personalizzata<br>
                       <strong>Restituzione</strong> &mdash; riconsegna del bene

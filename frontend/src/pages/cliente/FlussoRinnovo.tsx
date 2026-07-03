@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Gift, Shield, Mail, Smartphone, Loader2, CheckCircle2,
   ArrowRight, ShoppingBag, Undo2, Package, AlertTriangle,
@@ -21,6 +21,7 @@ interface PraticaData {
 
 interface ConfigPubblica {
   abilita_gift_card: boolean;
+  abilita_opzione_rinnovo?: boolean;
 }
 
 const TIPI_DEVICE = ['Prodotti Apple', 'Prodotti Samsung', 'Computer Windows', 'Laptop Windows', 'Altro'] as const;
@@ -40,6 +41,7 @@ function formatEur(n: number): string {
 
 export default function FlussoRinnovo() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [pratica, setPratica] = useState<PraticaData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,12 @@ export default function FlussoRinnovo() {
         .catch(() => null),
     ])
       .then(([praticaData, configData]) => {
+        // Opzione Rinnovo disattivata: torna all'area pratica (chi arriva da
+        // vecchi link non deve poter avviare il flusso).
+        if (configData?.abilita_opzione_rinnovo === false) {
+          navigate(`/pratica/${token}`, { replace: true });
+          return;
+        }
         setPratica(praticaData);
         setValoreGiftCard(praticaData.economica.valore_gift_card);
         const flagAbilitato = configData?.abilita_gift_card ?? praticaData.economica.abilita_gift_card ?? true;
@@ -284,7 +292,7 @@ export default function FlussoRinnovo() {
                       </div>
                       <p className="text-xs text-amber-700 bg-amber-50 rounded mt-2 px-2 py-1 text-center">
                         <AlertTriangle className="w-3 h-3 inline mr-1" />
-                        NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza.
+                        NON paghi ora! Il pagamento ti sarà richiesto 23 giorni prima della scadenza.
                       </p>
                     </div>
                   </div>
@@ -690,7 +698,7 @@ export default function FlussoRinnovo() {
                 {(risultatoSceltaBeni || sceltaBeni) === 'TENGO' && (
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-green-100 text-[#16a34a] text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                    Riceverai il link per il pagamento dei beni 21 giorni prima della scadenza
+                    Riceverai il link per il pagamento dei beni 23 giorni prima della scadenza
                   </li>
                 )}
                 {(risultatoSceltaBeni || sceltaBeni) === 'RESTITUISCO' && (

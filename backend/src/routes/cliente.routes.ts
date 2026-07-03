@@ -47,6 +47,25 @@ const contattoLimiter = rateLimit({
   message: { errore: 'Troppe richieste di contatto, riprova tra 5 minuti' },
 });
 
+// Guardia flag "Opzione Rinnovo attiva": quando è OFF il flusso di rinnovo è
+// bloccato anche lato server (protegge chi arriva da vecchi link/email).
+async function verificaOpzioneRinnovoAttiva(
+  _req: ClienteAuthenticatedRequest,
+  res: Response,
+  next: () => void,
+): Promise<void> {
+  const configService = await import('../services/config.service.js');
+  const attiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
+  if (!attiva) {
+    res.status(403).json({
+      errore: 'Opzione non disponibile',
+      messaggio: 'L\'opzione di rinnovo non è al momento disponibile. Ti invitiamo a valutare le altre opzioni o a richiedere un contatto personalizzato.',
+    });
+    return;
+  }
+  next();
+}
+
 const configDir = resolve(__dirname, '../../../config');
 const templateDir = resolve(__dirname, '../../../templates/email');
 const pricingRules = JSON.parse(readFileSync(resolve(configDir, 'pricing_rules.json'), 'utf-8'));
@@ -715,9 +734,9 @@ router.post(
         opzione: 'RIACQUISTO', decisione_id: decisione.id, ip,
       });
 
-      // Determina se il pagamento è immediato o differito (T-21)
+      // Determina se il pagamento è immediato o differito (T-23)
       const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
       const oggi = new Date();
       const scadenza = new Date(contratto.data_scadenza!);
       const diffMs = scadenza.getTime() - oggi.getTime();
@@ -771,7 +790,7 @@ router.get(
       }
 
       const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
+      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
       const oggi = new Date();
       const scadenza = new Date(contratto.data_scadenza!);
       const diffMs = scadenza.getTime() - oggi.getTime();
@@ -934,6 +953,7 @@ router.post(
   '/decisione/rinnovo/inizia',
   otpLimiter,
   verifyClienteToken,
+  verificaOpzioneRinnovoAttiva,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
       const parsed = iniziaRinnovoSchema.safeParse(req.body);
@@ -1005,6 +1025,7 @@ const confermaRinnovoSchema = z.object({
 router.post(
   '/decisione/rinnovo/conferma',
   verifyClienteToken,
+  verificaOpzioneRinnovoAttiva,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
       const parsed = confermaRinnovoSchema.safeParse(req.body);
@@ -1210,6 +1231,7 @@ router.post(
   '/decisione/rinnovo-completo/inizia',
   otpLimiter,
   verifyClienteToken,
+  verificaOpzioneRinnovoAttiva,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
       const parsed = iniziaRinnovoCompletoSchema.safeParse(req.body);
@@ -1282,6 +1304,7 @@ const confermaRinnovoCompletoSchema = z.object({
 router.post(
   '/decisione/rinnovo-completo/conferma',
   verifyClienteToken,
+  verificaOpzioneRinnovoAttiva,
   async (req: ClienteAuthenticatedRequest, res: Response) => {
     try {
       const parsed = confermaRinnovoCompletoSchema.safeParse(req.body);
@@ -1476,7 +1499,7 @@ router.post(
       let pagamento_info: { pagamento_differito?: boolean; data_pagamento?: string; pagamento_immediato?: boolean } = {};
       if (scelta_beni === 'TENGO') {
         const configService = await import('../services/config.service.js');
-        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
+        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
         const oggi = new Date();
         const scadenza = new Date(contratto.data_scadenza!);
         const diffMs = scadenza.getTime() - oggi.getTime();
@@ -1689,10 +1712,11 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
 
     res.json({
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
+      abilita_opzione_rinnovo: await configService.getBooleano('flags.abilita_opzione_rinnovo', true),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Fai un nuovo contratto con noi'),
       desc_opzione_rinnovo: await configService.getTesto('cliente.desc_opzione_rinnovo', 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.'),
       titolo_opzione_riacquisto: await configService.getTesto('cliente.titolo_opzione_riacquisto', 'Prenota l\'acquisto del bene'),
-      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.'),
+      desc_opzione_riacquisto: await configService.getTesto('cliente.desc_opzione_riacquisto', 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 23 giorni prima della scadenza del contratto.'),
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
       desc_opzione_contatto: await configService.getTesto('cliente.desc_opzione_contatto', 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.'),
       titolo_opzione_restituzione: await configService.getTesto('cliente.titolo_opzione_restituzione', 'Restituisci i beni'),

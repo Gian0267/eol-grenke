@@ -83,7 +83,15 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
   const beni = contratto.beni_json ? JSON.parse(contratto.beni_json) : [];
   const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
 
+  // Flag "Opzione Rinnovo attiva": quando è OFF i template nascondono l'opzione
+  // rinnovo e le altre opzioni vengono rinumerate 1-2-3.
+  const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
+
   const templateVars = {
+    opzione_rinnovo_attiva: opzioneRinnovoAttiva,
+    num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
+    num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
+    num_opzione_restituzione: opzioneRinnovoAttiva ? 4 : 3,
     ragione_sociale: contratto.cliente.ragione_sociale,
     numero_contratto_grenke: contratto.contratto_grenke_id,
     numero_contratto_nsm: contratto.contratto_nsm_id,

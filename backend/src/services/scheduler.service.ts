@@ -223,9 +223,9 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
     }
   }
 
-  // --- INVITI PAGAMENTO RIACQUISTO (T-21) ---
+  // --- INVITI PAGAMENTO RIACQUISTO (T-23) ---
   try {
-    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 21);
+    const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 23);
     const praticheRiacquisto = await prisma.contratto_EOL.findMany({
       where: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
       include: { cliente: true },
@@ -294,7 +294,14 @@ async function inviaSollecito(
     ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}`
     : FRONTEND_URL;
 
+  // Flag "Opzione Rinnovo attiva": quando è OFF i solleciti nascondono la riga rinnovo.
+  const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
+
   const templateVars = {
+    opzione_rinnovo_attiva: opzioneRinnovoAttiva,
+    num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
+    num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
+    num_opzione_restituzione: opzioneRinnovoAttiva ? 4 : 3,
     ragione_sociale: pratica.cliente.ragione_sociale,
     numero_contratto_nsm: pratica.contratto_nsm_id,
     numero_contratto_grenke: pratica.contratto_grenke_id,

@@ -51,7 +51,8 @@
               <!-- Opzioni -->
               <p style="margin:0 0 16px;color:#1a3a52;font-size:17px;font-weight:700;">Le Sue opzioni:</p>
 
-              <!-- Opzione 1 — Rinnovo (verde) -->
+              {{#if opzione_rinnovo_attiva}}
+              <!-- Opzione Rinnovo (verde) — visibile solo se il flag "Opzione Rinnovo attiva" è ON -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
                 <tr>
                   <td style="background-color:#f0fdf4;padding:16px 20px;border-radius:6px;border-left:4px solid #16a34a;">
@@ -65,12 +66,13 @@
                   </td>
                 </tr>
               </table>
+              {{/if}}
 
-              <!-- Opzione 2 — Riacquisto (blu) -->
+              <!-- Opzione Riacquisto (blu) -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
                 <tr>
                   <td style="background-color:#eff6ff;padding:16px 20px;border-radius:6px;border-left:4px solid #2563eb;">
-                    <p style="margin:0 0 6px;color:#2563eb;font-size:14px;font-weight:700;">OPZIONE 2 &mdash; ACQUISTA IL BENE ATTUALE</p>
+                    <p style="margin:0 0 6px;color:#2563eb;font-size:14px;font-weight:700;">OPZIONE {{num_opzione_riacquisto}} &mdash; ACQUISTA IL BENE ATTUALE</p>
                     <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
                       Prezzo: <strong>&euro;{{pricing_riacquisto}} + IVA</strong><br>
                       Pagamento online sicuro tramite bonifico istantaneo o carta.
@@ -79,11 +81,11 @@
                 </tr>
               </table>
 
-              <!-- Opzione 3 — Contatto (giallo) -->
+              <!-- Opzione Contatto (giallo) -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
                 <tr>
                   <td style="background-color:#fefce8;padding:16px 20px;border-radius:6px;border-left:4px solid #ca8a04;">
-                    <p style="margin:0 0 6px;color:#ca8a04;font-size:14px;font-weight:700;">OPZIONE 3 &mdash; RICHIEDI UN CONTATTO PERSONALIZZATO</p>
+                    <p style="margin:0 0 6px;color:#ca8a04;font-size:14px;font-weight:700;">OPZIONE {{num_opzione_contatto}} &mdash; RICHIEDI UN CONTATTO PERSONALIZZATO</p>
                     <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
                       Un nostro consulente La contatter&agrave; per valutare insieme la soluzione migliore.
                     </p>
@@ -91,11 +93,11 @@
                 </tr>
               </table>
 
-              <!-- Opzione 4 — Restituzione (rosso) -->
+              <!-- Opzione Restituzione (rosso) -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                 <tr>
                   <td style="background-color:#fef2f2;padding:16px 20px;border-radius:6px;border-left:4px solid #dc2626;">
-                    <p style="margin:0 0 6px;color:#dc2626;font-size:14px;font-weight:700;">OPZIONE 4 &mdash; RESTITUISCI IL BENE</p>
+                    <p style="margin:0 0 6px;color:#dc2626;font-size:14px;font-weight:700;">OPZIONE {{num_opzione_restituzione}} &mdash; RESTITUISCI IL BENE</p>
                     <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
                       Riconsegna il bene secondo le istruzioni che Le forniremo.
                     </p>

@@ -31,6 +31,7 @@
                 n. <strong>{{numero_contratto_nsm}}</strong>, in scadenza
                 il <strong>{{data_scadenza}}</strong>.
               </p>
+              {{#if opzione_rinnovo_attiva}}
               <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
                 Non abbiamo ancora ricevuto la Sua preferenza. Desideriamo richiamare
                 la Sua attenzione in particolare sull&rsquo;opzione di <strong>rinnovo</strong>,
@@ -66,6 +67,24 @@
                   </td>
                 </tr>
               </table>
+              {{else}}
+              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                Non abbiamo ancora ricevuto la Sua preferenza. La invitiamo a valutare
+                le opzioni disponibili e a comunicarci la Sua scelta.
+              </p>
+
+              <!-- Opzioni disponibili (rinnovo disattivato) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#f0f4f8;padding:16px 20px;border-radius:6px;">
+                    <p style="margin:0 0 8px;color:#1a3a52;font-size:14px;font-weight:700;">Le opzioni disponibili:</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:13px;line-height:1.5;">Riacquisto del bene a &euro;{{pricing_riacquisto}} + IVA</p>
+                    <p style="margin:0 0 4px;color:#374151;font-size:13px;line-height:1.5;">Contatto personalizzato con un nostro consulente</p>
+                    <p style="margin:0;color:#374151;font-size:13px;line-height:1.5;">Restituzione del bene</p>
+                  </td>
+                </tr>
+              </table>
+              {{/if}}
 
               <!-- CTA Button -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">

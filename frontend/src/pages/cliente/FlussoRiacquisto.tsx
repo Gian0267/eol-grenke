@@ -574,7 +574,7 @@ export default function FlussoRiacquisto() {
                 {' '}<strong className="text-[#2563eb]">
                   {state.data_pagamento ? new Date(state.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''}
                 </strong>,
-                {' '}21 giorni prima della scadenza del contratto.
+                {' '}23 giorni prima della scadenza del contratto.
               </p>
             </div>
 

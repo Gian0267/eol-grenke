@@ -33,6 +33,7 @@ interface PraticaData {
 
 interface ConfigPubblica {
   abilita_gift_card: boolean;
+  abilita_opzione_rinnovo?: boolean;
   titolo_opzione_rinnovo: string;
   desc_opzione_rinnovo: string;
   titolo_opzione_riacquisto: string;
@@ -116,6 +117,10 @@ export default function AreaPratica() {
   // priorità: config.abilita_gift_card (dal nuovo endpoint), fallback su data.economica.abilita_gift_card
   const giftCardAbilitata = config?.abilita_gift_card ?? data.economica.abilita_gift_card ?? true;
 
+  // Flag "Opzione Rinnovo attiva": se OFF la card rinnovo non viene mostrata
+  // (l'opzione resta nel codice per una futura riattivazione da Impostazioni).
+  const opzioneRinnovoAttiva = config?.abilita_opzione_rinnovo ?? true;
+
   const rinnovoBadges: { testo: string; stile: string }[] = [];
   if (giftCardAbilitata && data.economica.valore_gift_card > 0) {
     rinnovoBadges.push({ testo: `Premio Fedeltà € ${formatEur(data.economica.valore_gift_card)}`, stile: 'bg-green-100 text-green-800' });
@@ -123,7 +128,7 @@ export default function AreaPratica() {
   rinnovoBadges.push({ testo: 'Consigliata', stile: 'bg-[#16a34a] text-white' });
 
   const opzioni = [
-    {
+    ...(opzioneRinnovoAttiva ? [{
       id: 'rinnovo',
       titolo: config?.titolo_opzione_rinnovo || 'Fai un nuovo contratto con noi',
       descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.',
@@ -133,11 +138,11 @@ export default function AreaPratica() {
       testoColore: 'text-[#16a34a]',
       btnColore: 'bg-[#16a34a] hover:bg-green-700',
       badges: rinnovoBadges,
-    },
+    }] : []),
     {
       id: 'riacquisto',
       titolo: config?.titolo_opzione_riacquisto || 'Prenota l\'acquisto del bene',
-      descrizione: config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 21 giorni prima della scadenza del contratto.',
+      descrizione: config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. NON paghi ora! Il pagamento ti sarà richiesto 23 giorni prima della scadenza del contratto.',
       icona: <ShoppingCart className="w-6 h-6" />,
       colore: 'border-[#2563eb]',
       bgColore: 'bg-blue-50',
