@@ -347,16 +347,20 @@ export default function FlussoRiacquisto() {
         </div>
       </header>
 
-      {/* Progress bar */}
-      <div className="max-w-2xl mx-auto px-4 pt-6">
-        <div className="flex items-center gap-1 mb-6">
-          {[1, 2, 3, 4, 5].map(s => (
-            <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= currentStep ? 'bg-[#2563eb]' : 'bg-gray-200'}`} />
-          ))}
+      {/* Progress bar — nascosta nella schermata "Scelta confermata" (pagamento
+          differito): il cliente ha finito la sua parte, gli step residui
+          riprenderanno quando si aprirà la finestra di pagamento */}
+      {state.step !== 'STEP_DIFFERITO' && (
+        <div className="max-w-2xl mx-auto px-4 pt-6">
+          <div className="flex items-center gap-1 mb-6">
+            {[1, 2, 3, 4, 5].map(s => (
+              <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= currentStep ? 'bg-[#2563eb]' : 'bg-gray-200'}`} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <main className="max-w-2xl mx-auto px-4 pb-12">
+      <main className={`max-w-2xl mx-auto px-4 pb-12 ${state.step === 'STEP_DIFFERITO' ? 'pt-6' : ''}`}>
         {errore && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm mb-4">{errore}</div>
         )}
