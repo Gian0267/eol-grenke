@@ -32,12 +32,16 @@ export interface InvioResult {
   errori: string[];
 }
 
-export async function inviaComunicazioneIniziale(contratto_eol_id: string): Promise<InvioResult> {
+export async function inviaComunicazioneIniziale(
+  contratto_eol_id: string,
+  opts?: { reinvio?: boolean },
+): Promise<InvioResult> {
+  const reinvio = opts?.reinvio === true;
   const result: InvioResult = { success: false, contrattoId: contratto_eol_id, emailInviate: 0, errori: [] };
 
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contratto_eol_id },
-    include: { cliente: true },
+    include: { cliente: true, decisioni: true },
   });
 
   if (!contratto) {
@@ -45,8 +49,22 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
     return result;
   }
 
-  if (contratto.stato !== 'LISTA_RICEVUTA') {
-    result.errori.push(`Stato non valido: ${contratto.stato} (atteso LISTA_RICEVUTA)`);
+  // Primo invio: solo da LISTA_RICEVUTA. Reinvio (backoffice): anche a
+  // comunicazione già inviata, purché il cliente non abbia già deciso.
+  const statiAmmessi = reinvio
+    ? ['LISTA_RICEVUTA', 'COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE']
+    : ['LISTA_RICEVUTA'];
+  if (!statiAmmessi.includes(contratto.stato)) {
+    result.errori.push(
+      reinvio
+        ? `Stato non valido per il reinvio: ${contratto.stato}`
+        : `Stato non valido: ${contratto.stato} (atteso LISTA_RICEVUTA)`,
+    );
+    return result;
+  }
+
+  if (reinvio && contratto.decisioni.length > 0) {
+    result.errori.push('Il cliente ha già comunicato una decisione: reinvio non consentito');
     return result;
   }
 
@@ -165,14 +183,18 @@ export async function inviaComunicazioneIniziale(contratto_eol_id: string): Prom
   }
 
   if (almenoUnInvioOk) {
-    await prisma.contratto_EOL.update({
-      where: { id: contratto.id },
-      data: { stato: 'COMUNICAZIONE_INVIATA' },
-    });
+    // Sul reinvio lo stato non viene toccato (evita regressioni da IN_ATTESA_DECISIONE)
+    if (contratto.stato === 'LISTA_RICEVUTA') {
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: { stato: 'COMUNICAZIONE_INVIATA' },
+      });
+    }
     result.success = true;
 
     await registraEvento(contratto.id, 'SISTEMA', 'EMAIL_SERVICE', 'COMUNICAZIONE_INVIATA', {
       tipo: 'COMUNICAZIONE_INIZIALE',
+      reinvio,
       destinatari: destinatari.map(d => d.email),
       email_inviate: result.emailInviate,
     });

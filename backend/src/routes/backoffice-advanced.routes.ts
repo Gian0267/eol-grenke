@@ -368,7 +368,7 @@ router.post('/pratiche-dettaglio/:id/decisione-manuale', async (req: Authenticat
 // POST /api/backoffice/pratiche-dettaglio/:id/reinvia-comunicazione
 router.post('/pratiche-dettaglio/:id/reinvia-comunicazione', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await inviaComunicazioneIniziale(req.params.id as string);
+    const result = await inviaComunicazioneIniziale(req.params.id as string, { reinvio: true });
     if (result.success) {
       res.json(result);
     } else {

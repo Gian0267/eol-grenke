@@ -390,7 +390,18 @@ export default function PraticaDettaglio() {
         headers: getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const raw = await res.text();
+        // Estrae un messaggio leggibile dalle risposte JSON ({errori:[]}, {error}, {errore})
+        let msg = raw;
+        try {
+          const body = JSON.parse(raw);
+          msg = Array.isArray(body.errori) && body.errori.length > 0
+            ? body.errori.join('; ')
+            : body.error || body.errore || raw;
+        } catch { /* testo non JSON: lo mostra così com'è */ }
+        throw new Error(msg);
+      }
       toast.success('Azione completata con successo');
       setModalOpen(null);
       await loadPratica();
