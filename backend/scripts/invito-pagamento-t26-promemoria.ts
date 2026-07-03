@@ -60,6 +60,22 @@ async function main() {
   });
   console.log('✅ timeline.invito_pagamento_promemoria = 23');
 
+  // 2b. Termine accredito bonifico (T-21) citato nelle mail
+  await prisma.impostazione.upsert({
+    where: { chiave: 'timeline.termine_accredito_bonifico' },
+    update: { valore: '21', valore_default: '21' },
+    create: {
+      chiave: 'timeline.termine_accredito_bonifico',
+      valore: '21',
+      valore_default: '21',
+      tipo: 'NUMERO',
+      categoria: 'TIMELINE',
+      label: 'Termine accredito bonifico',
+      descrizione: 'Giorni prima della scadenza entro cui l\'accredito del bonifico deve pervenire (data indicata nelle mail di invito/promemoria); oltre, proroga Grenke di 6 mesi',
+    },
+  });
+  console.log('✅ timeline.termine_accredito_bonifico = 21');
+
   // 3. Template con box promemoria condizionale
   const valore = readFileSync(resolve(templatesDir, 'email/invito_pagamento.html'), 'utf-8');
   await prisma.impostazione.update({

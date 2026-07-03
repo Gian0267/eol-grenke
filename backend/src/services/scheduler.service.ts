@@ -567,7 +567,12 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
   // Pagamento online disattivato → la mail include le coordinate per il bonifico
   const pagamentoOnlineAttivo = await configService.getBooleano('flags.abilita_pagamento_online', false);
 
+  // Termine per l'accredito (T-21): oltre questa data scatta la proroga Grenke di 6 mesi
+  const giorniTermine = await configService.getNumero('timeline.termine_accredito_bonifico', 21);
+  const dataTermine = new Date(new Date(pratica.data_scadenza).getTime() - giorniTermine * 24 * 60 * 60 * 1000);
+
   const templateVars = {
+    data_termine_bonifico: formatDate(dataTermine),
     ragione_sociale: pratica.cliente.ragione_sociale,
     numero_contratto_nsm: pratica.contratto_nsm_id,
     numero_contratto_grenke: pratica.contratto_grenke_id,

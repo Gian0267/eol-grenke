@@ -13,7 +13,8 @@
     "deadline_decisione": 30,
     "consolidamento_lista_riacquisti": 20,
     "pagamento_riacquisto": 26,
-    "invito_pagamento_promemoria": 23
+    "invito_pagamento_promemoria": 23,
+    "termine_accredito_bonifico": 21
   },
   "giorni_post_scadenza": {
     "termine_consegna_bene": 10,
