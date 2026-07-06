@@ -45,6 +45,7 @@ export default function PraticaScaduta() {
           scaduti{info?.data_fine_noleggio ? <> (fine noleggio: <strong>{info.data_fine_noleggio}</strong>)</> : null}.
           Per la gestione del Suo fine noleggio La invitiamo a contattare
           direttamente <strong>Grenke Italia S.p.A.</strong>
+          {info ? <>, indicando il Suo numero di contratto Grenke <strong>{info.numero_contratto_grenke}</strong>.</> : null}
         </p>
 
         <a
