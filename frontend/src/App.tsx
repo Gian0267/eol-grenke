@@ -14,6 +14,7 @@ import EsportaListaGrenke from './pages/backoffice/EsportaListaGrenke'
 import Impostazioni from './pages/backoffice/Impostazioni'
 import GestioneUtenti from './pages/backoffice/GestioneUtenti'
 import CodiciSconto from './pages/backoffice/CodiciSconto'
+import ComunicazioniInviate from './pages/backoffice/ComunicazioniInviate'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
@@ -47,6 +48,8 @@ export default function App() {
           <Route path="task-escalation" element={<TaskEscalation />} />
           <Route path="riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
           <Route path="codici-sconto" element={<CodiciSconto />} />
+          <Route path="posta-inviata" element={<ComunicazioniInviate canale="EMAIL" />} />
+          <Route path="pec-inviata" element={<ComunicazioniInviate canale="PEC" />} />
           <Route path="import" element={<ImportLista />} />
           <Route path="outlier" element={<GestioneOutlier />} />
           <Route path="reportistica" element={<Reportistica />} />

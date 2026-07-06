@@ -438,6 +438,20 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
           [{ filename: `ricevuta_${result.fattura_numero}.pdf`, content: pdfBuffer }],
         );
         email_inviata = sendResult.success;
+        await prisma.comunicazione.create({
+          data: {
+            contratto_eol_id: contrattoId,
+            tipo: 'RICEVUTA_PAGAMENTO',
+            canale: 'EMAIL',
+            destinatario: contratto.cliente.email,
+            oggetto: `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_nsm_id}`,
+            corpo_html: html,
+            allegati_json: JSON.stringify([`ricevuta_${result.fattura_numero}.pdf`]),
+            data_invio: new Date(),
+            esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
+            operatore_id: (req.user as any)?.id || null,
+          },
+        });
       }
     } catch (emailErr) {
       console.error('[registra-pagamento] Invio ricevuta fallito:', emailErr);
@@ -454,6 +468,108 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
     console.error('[registra-pagamento] Errore:', err);
     const msg = err instanceof Error ? err.message : 'Errore interno';
     res.status(msg === 'Pratica già pagata' ? 409 : 500).json({ error: msg });
+  }
+});
+
+// ─── REGISTRO COMUNICAZIONI INVIATE (Posta/PEC) ────────────────────────────
+
+// GET /api/backoffice/comunicazioni — registro di tutto ciò che è stato spedito
+router.get('/comunicazioni', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { canale, tipo, esito, search, data_from, data_to, page = '1', pageSize = '25' } = req.query as Record<string, string>;
+    const where: any = {
+      contratto_eol: { ambiente: ambienteVista(req) },
+      canale: canale === 'PEC' ? 'PEC' : canale === 'EMAIL' ? 'EMAIL' : { in: ['EMAIL', 'PEC'] },
+    };
+    if (tipo) where.tipo = tipo;
+    if (esito) where.esito_invio = esito;
+    if (data_from || data_to) {
+      where.data_invio = {};
+      if (data_from) where.data_invio.gte = new Date(data_from);
+      if (data_to) { const t = new Date(data_to); t.setHours(23, 59, 59, 999); where.data_invio.lte = t; }
+    }
+    if (search) {
+      where.OR = [
+        { destinatario: { contains: search, mode: 'insensitive' } },
+        { oggetto: { contains: search, mode: 'insensitive' } },
+        { contratto_eol: { contratto_nsm_id: { contains: search, mode: 'insensitive' } } },
+        { contratto_eol: { cliente: { ragione_sociale: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(pageSize);
+    const [total, righe, tipiRaw] = await Promise.all([
+      prisma.comunicazione.count({ where }),
+      prisma.comunicazione.findMany({
+        where,
+        include: {
+          contratto_eol: { select: { id: true, contratto_nsm_id: true, cliente: { select: { ragione_sociale: true } } } },
+        },
+        orderBy: { data_invio: 'desc' },
+        skip,
+        take: Number(pageSize),
+      }),
+      prisma.comunicazione.groupBy({
+        by: ['tipo'],
+        where: { contratto_eol: { ambiente: ambienteVista(req) }, canale: { in: ['EMAIL', 'PEC'] } },
+      }),
+    ]);
+
+    res.json({
+      items: righe.map(c => ({
+        id: c.id,
+        data_invio: c.data_invio,
+        tipo: c.tipo,
+        canale: c.canale,
+        destinatario: c.destinatario,
+        oggetto: c.oggetto,
+        esito: c.esito_invio,
+        allegati: c.allegati_json ? JSON.parse(c.allegati_json) : [],
+        contratto_id: c.contratto_eol.id,
+        contratto_nsm: c.contratto_eol.contratto_nsm_id,
+        cliente: c.contratto_eol.cliente.ragione_sociale,
+      })),
+      total,
+      page: Number(page),
+      pageSize: Number(pageSize),
+      tipi: tipiRaw.map(t => t.tipo).sort(),
+    });
+  } catch (err) {
+    console.error('[comunicazioni] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// GET /api/backoffice/comunicazioni/:id — dettaglio con il corpo HTML esatto inviato
+router.get('/comunicazioni/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const c = await prisma.comunicazione.findFirst({
+      where: { id: req.params.id as string, contratto_eol: { ambiente: ambienteVista(req) } },
+      include: {
+        contratto_eol: { select: { id: true, contratto_nsm_id: true, cliente: { select: { ragione_sociale: true } } } },
+      },
+    });
+    if (!c) {
+      res.status(404).json({ error: 'Comunicazione non trovata' });
+      return;
+    }
+    res.json({
+      id: c.id,
+      data_invio: c.data_invio,
+      tipo: c.tipo,
+      canale: c.canale,
+      destinatario: c.destinatario,
+      oggetto: c.oggetto,
+      corpo_html: c.corpo_html,
+      esito: c.esito_invio,
+      allegati: c.allegati_json ? JSON.parse(c.allegati_json) : [],
+      contratto_id: c.contratto_eol.id,
+      contratto_nsm: c.contratto_eol.contratto_nsm_id,
+      cliente: c.contratto_eol.cliente.ragione_sociale,
+    });
+  } catch (err) {
+    console.error('[comunicazioni/:id] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
   }
 });
 
