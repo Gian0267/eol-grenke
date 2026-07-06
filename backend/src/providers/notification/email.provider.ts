@@ -182,9 +182,13 @@ export class PecEmailProvider implements EmailProvider {
 export class TestRedirectEmailProvider implements EmailProvider {
   constructor(
     private inner: EmailProvider,
-    private redirectTo: string,
+    private redirectTo: string | (() => Promise<string>),
     private prefix: string,
   ) {}
+
+  private resolveTo(): Promise<string> {
+    return typeof this.redirectTo === 'function' ? this.redirectTo() : Promise.resolve(this.redirectTo);
+  }
 
   private banner(originalTo: string): string {
     return (
@@ -194,22 +198,62 @@ export class TestRedirectEmailProvider implements EmailProvider {
     );
   }
 
-  send(to: string, subject: string, html: string): Promise<SendResult> {
-    return this.inner.send(this.redirectTo, `${this.prefix} ${subject}`, this.banner(to) + html);
+  async send(to: string, subject: string, html: string): Promise<SendResult> {
+    return this.inner.send(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html);
   }
 
-  sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
-    return this.inner.sendWithAttachment(this.redirectTo, `${this.prefix} ${subject}`, this.banner(to) + html, attachments);
+  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+    return this.inner.sendWithAttachment(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html, attachments);
   }
 }
 
+let _base: EmailProvider | null = null;
 function baseEmailProvider(): EmailProvider {
+  if (_base) return _base;
   if (process.env.RESEND_API_KEY) {
     console.log('[Email] Provider attivo: Resend');
-    return new ResendEmailProvider();
+    _base = new ResendEmailProvider();
+  } else {
+    console.log('[Email] Provider attivo: SMTP (Mailpit/dev)');
+    _base = new SmtpEmailProvider();
   }
-  console.log('[Email] Provider attivo: SMTP (Mailpit/dev)');
-  return new SmtpEmailProvider();
+  return _base;
+}
+
+/** Casella di raccolta delle mail dell'ambiente TEST (Impostazioni → test.email_redirect). */
+async function testRedirectAddress(): Promise<string> {
+  const configService = await import('../../services/config.service.js');
+  const fromDb = await configService.getTesto('test.email_redirect', '');
+  return fromDb || process.env.TEST_MAIL_REDIRECT || 'g.ciardo@gmail.com';
+}
+
+let _testEmail: EmailProvider | null = null;
+let _testPec: EmailProvider | null = null;
+
+/**
+ * Provider email in base all'ambiente della PRATICA: le pratiche TEST hanno
+ * le mail sempre reindirizzate alla casella di test (a prescindere dalla
+ * variabile globale TEST_MAIL_REDIRECT); le pratiche LIVE inviano davvero.
+ */
+export function emailProviderPerAmbiente(ambiente?: string | null): EmailProvider {
+  if (ambiente === 'TEST') {
+    if (!_testEmail) _testEmail = new TestRedirectEmailProvider(baseEmailProvider(), testRedirectAddress, '(mail cliente)');
+    return _testEmail;
+  }
+  return createEmailProvider();
+}
+
+/**
+ * Provider PEC in base all'ambiente della PRATICA: per le pratiche TEST la
+ * PEC è simulata via email ordinaria verso la casella di test (zero PEC Aruba
+ * consumate); per le pratiche LIVE si usa la PEC reale se configurata.
+ */
+export function pecProviderPerAmbiente(ambiente?: string | null): EmailProvider | null {
+  if (ambiente === 'TEST') {
+    if (!_testPec) _testPec = new TestRedirectEmailProvider(baseEmailProvider(), testRedirectAddress, '(pec cliente)');
+    return _testPec;
+  }
+  return createPecProvider();
 }
 
 /**

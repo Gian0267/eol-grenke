@@ -80,6 +80,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'pagamenti.intestatario', valore: 'Smartcom Solutions S.r.l.', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Intestatario conto incassi', descrizione: 'Intestatario del conto corrente mostrato al cliente per il bonifico di riacquisto' },
     { chiave: 'pagamenti.iban', valore: 'IT96S0853001002000000267119', tipo: 'TESTO', categoria: 'RECAPITI', label: 'IBAN incassi', descrizione: 'IBAN mostrato al cliente nella mascherina di pagamento e nella mail di invito al pagamento' },
     { chiave: 'pagamenti.banca', valore: 'Banca d\'Alba', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Banca incassi', descrizione: 'Nome della banca del conto incassi' },
+    { chiave: 'test.email_redirect', valore: 'g.ciardo@gmail.com', tipo: 'TESTO', categoria: 'RECAPITI', label: 'Casella raccolta mail ambiente Test', descrizione: 'Tutte le email/PEC generate dalle pratiche in ambiente TEST vengono reindirizzate a questa casella (le pratiche LIVE inviano davvero)' },
 
     // ─── EMAIL (HTML) ─────────────────────────────────────────────────
     { chiave: 'email.comunicazione_iniziale', valore: readTemplate('email', 'comunicazione_iniziale.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Comunicazione iniziale', descrizione: 'Template email della prima comunicazione al cliente con le 4 opzioni di fine contratto' },

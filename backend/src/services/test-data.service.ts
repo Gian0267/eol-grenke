@@ -71,20 +71,23 @@ export interface ResetTestDataResult {
 }
 
 export async function resetTestData(): Promise<ResetTestDataResult> {
-  // 1) Svuota i dati operativi in ordine FK-safe (utenti e impostazioni esclusi)
-  const [otp, task, richieste, pagamenti, decisioni, comunicazioni, audit, codiciSconto, contratti, clienti, counter] =
+  // 1) Svuota SOLO i dati dell'ambiente TEST, in ordine FK-safe (utenti e
+  // impostazioni esclusi). Le pratiche/clienti LIVE sono strutturalmente
+  // fuori dalla portata del reset.
+  const soloTest = { contratto_eol: { ambiente: 'TEST' } };
+  const idContrattiTest = (await prisma.contratto_EOL.findMany({ where: { ambiente: 'TEST' }, select: { id: true } })).map(c => c.id);
+  const [otp, task, richieste, pagamenti, decisioni, comunicazioni, audit, codiciSconto, contratti, clienti] =
     await prisma.$transaction([
       prisma.otpCode.deleteMany(),
-      prisma.task_Escalation.deleteMany(),
-      prisma.richiesta_Contatto.deleteMany(),
-      prisma.pagamento.deleteMany(),
-      prisma.decisione_Cliente.deleteMany(),
-      prisma.comunicazione.deleteMany(),
-      prisma.audit_Event.deleteMany(),
-      prisma.codice_Sconto.deleteMany(),
-      prisma.contratto_EOL.deleteMany(),
-      prisma.cliente.deleteMany(),
-      prisma.counter.deleteMany(),
+      prisma.task_Escalation.deleteMany({ where: soloTest }),
+      prisma.richiesta_Contatto.deleteMany({ where: soloTest }),
+      prisma.pagamento.deleteMany({ where: soloTest }),
+      prisma.decisione_Cliente.deleteMany({ where: soloTest }),
+      prisma.comunicazione.deleteMany({ where: soloTest }),
+      prisma.audit_Event.deleteMany({ where: { contratto_eol_id: { in: idContrattiTest } } }),
+      prisma.codice_Sconto.deleteMany({ where: soloTest }),
+      prisma.contratto_EOL.deleteMany({ where: { ambiente: 'TEST' } }),
+      prisma.cliente.deleteMany({ where: { ambiente: 'TEST', contratti: { none: {} } } }),
     ]);
 
   // 2) Prepara i dati dei 17 contratti (15 in entrambi i file, 2 solo NSM)
@@ -222,7 +225,6 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       codici_sconto: codiciSconto.count,
       contratti: contratti.count,
       clienti: clienti.count,
-      counter: counter.count,
     },
   };
 }

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { AuthenticatedRequest, verifyBackofficeToken } from '../middleware/auth.middleware.js';
+import { AuthenticatedRequest, ambienteVista, verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { prisma } from '../lib/db.js';
 
 const router = Router();
@@ -11,11 +11,11 @@ function diffDays(a: Date, b: Date): number {
 }
 
 // GET /api/backoffice/dashboard/risk-silence-counts
-router.get('/risk-silence-counts', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/risk-silence-counts', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const now = new Date();
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: 'IN_ATTESA_DECISIONE' },
+      where: { stato: 'IN_ATTESA_DECISIONE', ambiente: ambienteVista(req) },
       select: { id: true, data_scadenza: true },
     });
 
@@ -45,7 +45,7 @@ router.get('/risk-silence-counts', async (_req: AuthenticatedRequest, res: Respo
 });
 
 // GET /api/backoffice/dashboard/kpi
-router.get('/kpi', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/kpi', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const year = new Date().getFullYear();
     const startOfYear = new Date(year, 0, 1);
@@ -55,6 +55,7 @@ router.get('/kpi', async (_req: AuthenticatedRequest, res: Response) => {
       where: {
         data_scadenza: { gte: startOfYear, lt: endOfYear },
         stato: { not: 'FLEX_ATTIVO' },
+        ambiente: ambienteVista(req),
       },
       select: {
         id: true,
@@ -137,10 +138,10 @@ router.get('/kpi', async (_req: AuthenticatedRequest, res: Response) => {
 });
 
 // GET /api/backoffice/dashboard/pratiche-recenti
-router.get('/pratiche-recenti', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/pratiche-recenti', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: { not: 'FLEX_ATTIVO' } },
+      where: { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) },
       include: {
         cliente: { select: { ragione_sociale: true } },
       },

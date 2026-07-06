@@ -4,10 +4,10 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
-import { verifyBackofficeToken, AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { verifyBackofficeToken, ambienteVista, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { previewCombinedImport, confirmCombinedImport } from '../services/combined-import.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
-import { createEmailProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from '../services/audit.service.js';
 import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
@@ -16,7 +16,6 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templateDir = resolve(__dirname, '../../../templates/email');
-const boEmailProvider = createEmailProvider();
 
 const router = Router();
 import { prisma } from '../lib/db.js';
@@ -66,7 +65,7 @@ router.post('/import/confirm', importFiles, async (req: AuthenticatedRequest, re
       res.status(400).json({ error: 'Servono entrambi i file: lista Grenke e export NSM (.xlsx)' });
       return;
     }
-    const result = await confirmCombinedImport(files.grenke, files.nsm, prisma);
+    const result = await confirmCombinedImport(files.grenke, files.nsm, prisma, ambienteVista(req));
 
     for (const cId of result.contrattiCreati) {
       await registraEvento(cId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'PRATICA_CREATA', {
@@ -99,6 +98,7 @@ router.post('/import/confirm', importFiles, async (req: AuthenticatedRequest, re
 router.get('/pratiche', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const pratiche = await prisma.contratto_EOL.findMany({
+      where: { ambiente: ambienteVista(req) },
       include: { cliente: { select: { ragione_sociale: true, piva: true, email: true } } },
       orderBy: { data_importazione: 'desc' },
     });
@@ -128,7 +128,7 @@ router.post('/pratiche/:id/invia-comunicazione', async (req: AuthenticatedReques
 router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: 'LISTA_RICEVUTA' },
+      where: { stato: 'LISTA_RICEVUTA', ambiente: ambienteVista(req) },
       select: { id: true },
     });
 
@@ -169,7 +169,7 @@ router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequ
 router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA' },
+      where: { stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA', ambiente: ambienteVista(req) },
       include: {
         cliente: { select: { ragione_sociale: true, piva: true, email: true, telefono: true } },
         richieste_contatto: {
@@ -184,7 +184,7 @@ router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Respo
     // Richieste di contatto aperte (contatto personalizzato, widget chiamami):
     // quelle legate al riacquisto (STEP_PRE_PAGAMENTO) sono già nel blocco sopra
     const richieste = await prisma.richiesta_Contatto.findMany({
-      where: { stato: 'DA_GESTIRE', origine: { not: 'STEP_PRE_PAGAMENTO' } },
+      where: { stato: 'DA_GESTIRE', origine: { not: 'STEP_PRE_PAGAMENTO' }, contratto_eol: { ambiente: ambienteVista(req) } },
       include: {
         contratto_eol: {
           select: {
@@ -280,7 +280,7 @@ router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest,
         link: `${frontendUrl}/pratica/${pratica.token_accesso_cliente}/riacquisto`,
       });
 
-      await boEmailProvider.send(
+      await emailProviderPerAmbiente(pratica.ambiente).send(
         cliente.email,
         `Pagamento sbloccato — Contratto ${pratica.contratto_nsm_id}`,
         html,
@@ -313,7 +313,7 @@ router.get('/miei-task', async (req: AuthenticatedRequest, res: Response) => {
     const { tipo, stato } = req.query as { tipo?: string; stato?: string };
 
     // Decisioni RINNOVO/CONTATTO assegnate a me
-    const whereContratto: any = { agente_assegnato_id: userId };
+    const whereContratto: any = { agente_assegnato_id: userId, ambiente: ambienteVista(req) };
     if (tipo === 'RINNOVO') {
       whereContratto.stato = 'DECISIONE_RINNOVO';
     } else if (tipo === 'CONTATTO') {
@@ -383,7 +383,10 @@ router.get('/task-escalation', async (req: AuthenticatedRequest, res: Response) 
     const userRecord = await prisma.utente_NSM.findUnique({ where: { id: userId } });
     const isAdmin = userRecord && (userRecord.ruolo === 'ADMIN' || userRecord.ruolo === 'BACKOFFICE_INTERNO');
 
-    const where: any = { stato: { in: ['DA_CHIAMARE', 'RICHIAMARE'] } };
+    const where: any = {
+      stato: { in: ['DA_CHIAMARE', 'RICHIAMARE'] },
+      contratto_eol: { ambiente: ambienteVista(req) },
+    };
     if (!isAdmin) {
       where.assegnato_a_id = userId;
     }

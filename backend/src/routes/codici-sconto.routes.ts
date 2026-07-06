@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
-import { AuthenticatedRequest, verifyBackofficeToken } from '../middleware/auth.middleware.js';
+import { AuthenticatedRequest, verifyBackofficeToken, ambienteVista } from '../middleware/auth.middleware.js';
 import { marcaUtilizzato, annullaCodice } from '../services/codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 
@@ -19,9 +19,9 @@ function soloInternoOAdmin(req: AuthenticatedRequest, res: Response, next: NextF
 
 router.use(soloInternoOAdmin as any);
 
-function buildWhere(query: Record<string, string>): any {
+function buildWhere(query: Record<string, string>, ambiente: 'TEST' | 'LIVE'): any {
   const { stato, data_from, data_to, search } = query;
-  const where: any = {};
+  const where: any = { contratto_eol: { ambiente } };
   if (stato) where.stato = stato;
   if (data_from || data_to) {
     where.data_generazione = {};
@@ -45,7 +45,7 @@ function buildWhere(query: Record<string, string>): any {
 router.get('/codici-sconto', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { page = '1', pageSize = '20' } = req.query as Record<string, string>;
-    const where = buildWhere(req.query as Record<string, string>);
+    const where = buildWhere(req.query as Record<string, string>, ambienteVista(req));
     const skip = (Number(page) - 1) * Number(pageSize);
     const take = Number(pageSize);
 
@@ -96,7 +96,7 @@ router.get('/codici-sconto', async (req: AuthenticatedRequest, res: Response) =>
 // GET /api/backoffice/codici-sconto/export-csv
 router.get('/codici-sconto/export-csv', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const where = buildWhere(req.query as Record<string, string>);
+    const where = buildWhere(req.query as Record<string, string>, ambienteVista(req));
     const codici = await prisma.codice_Sconto.findMany({
       where,
       include: {

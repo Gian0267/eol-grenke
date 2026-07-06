@@ -10,7 +10,7 @@ import {
   verifyClienteToken,
   ClienteAuthenticatedRequest,
 } from '../middleware/cliente.middleware.js';
-import { createEmailProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { generateOtp, verifyOtp } from '../services/otp.service.js';
 import { generaVerbaleRestituzione } from '../services/pdf.service.js';
 import { MockFeaProvider } from '../providers/signature/fea.provider.js';
@@ -30,7 +30,6 @@ import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-const emailProvider = createEmailProvider();
 
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -283,7 +282,7 @@ router.post(
           });
 
           const oggetto = `Richiesta contatto: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
-          const sendResult = await emailProvider.send(agente.email, oggetto, html);
+          const sendResult = await emailProviderPerAmbiente(contratto.ambiente).send(agente.email, oggetto, html);
 
           await prisma.comunicazione.create({
             data: {
@@ -365,7 +364,7 @@ router.post(
       const { metodo } = parsed.data;
       const destinatario = metodo === 'EMAIL' ? contratto.cliente.email : (contratto.cliente.telefono || contratto.cliente.email);
 
-      await generateOtp(metodo, destinatario);
+      await generateOtp(metodo, destinatario, contratto.ambiente);
 
       if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
         await prisma.contratto_EOL.update({
@@ -484,7 +483,7 @@ router.post(
 
       const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_nsm_id}`;
 
-      await emailProvider.sendWithAttachment(
+      await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,
         oggetto,
         html,
@@ -625,7 +624,7 @@ router.post(
               monte_canoni: formatEur(Number(contratto.monte_canoni)),
               motivo_assegnazione: 'step_pre_pagamento',
             });
-            await emailProvider.send(
+            await emailProviderPerAmbiente(contratto.ambiente).send(
               agente.email,
               `Richiesta contatto pre-pagamento: ${contratto.cliente.ragione_sociale}`,
               html,
@@ -861,7 +860,7 @@ router.post(
         ? contratto.cliente.email
         : (contratto.cliente.telefono || contratto.cliente.email);
 
-      await generateOtp(metodo, destinatario);
+      await generateOtp(metodo, destinatario, contratto.ambiente);
 
       res.json({
         success: true,
@@ -1043,7 +1042,7 @@ router.post(
         ? contratto.cliente.email
         : (contratto.cliente.telefono || contratto.cliente.email);
 
-      await generateOtp(metodo_otp, destinatario);
+      await generateOtp(metodo_otp, destinatario, contratto.ambiente);
 
       if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
         await prisma.contratto_EOL.update({
@@ -1186,7 +1185,7 @@ router.post(
 
       const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
 
-      const sendCliente = await emailProvider.sendWithAttachment(
+      const sendCliente = await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,
         oggettoCliente,
         htmlCliente,
@@ -1229,7 +1228,7 @@ router.post(
           });
 
           const oggettoAgente = `Nuova richiesta rinnovo: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
-          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+          const sendAgente = await emailProviderPerAmbiente(contratto.ambiente).send(agente.email, oggettoAgente, htmlAgente);
 
           await prisma.comunicazione.create({
             data: {
@@ -1321,7 +1320,7 @@ router.post(
         ? contratto.cliente.email
         : (contratto.cliente.telefono || contratto.cliente.email);
 
-      await generateOtp(metodo_otp, destinatario);
+      await generateOtp(metodo_otp, destinatario, contratto.ambiente);
 
       if (contratto.stato !== 'IN_ATTESA_DECISIONE') {
         await prisma.contratto_EOL.update({
@@ -1485,7 +1484,7 @@ router.post(
 
       const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
 
-      const sendCliente = await emailProvider.sendWithAttachment(
+      const sendCliente = await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,
         oggettoCliente,
         htmlCliente,
@@ -1530,7 +1529,7 @@ router.post(
           });
 
           const oggettoAgente = `Nuova richiesta rinnovo: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
-          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+          const sendAgente = await emailProviderPerAmbiente(contratto.ambiente).send(agente.email, oggettoAgente, htmlAgente);
 
           await prisma.comunicazione.create({
             data: {
@@ -1696,7 +1695,7 @@ router.post(
           });
 
           const oggettoAgente = `Richiesta contatto personalizzato: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
-          const sendAgente = await emailProvider.send(agente.email, oggettoAgente, htmlAgente);
+          const sendAgente = await emailProviderPerAmbiente(contratto.ambiente).send(agente.email, oggettoAgente, htmlAgente);
 
           await prisma.comunicazione.create({
             data: {

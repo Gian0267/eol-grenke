@@ -6,6 +6,7 @@ import {
   FlaskConical, Loader2, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAmbiente, setAmbiente, puoVedereTest } from '../lib/ambiente';
 
 interface Utente {
   id: string;
@@ -28,9 +29,10 @@ export default function BackofficeSidebar() {
   const resetDatiTest = async () => {
     const ok = window.confirm(
       'ATTENZIONE — Reset dati di test\n\n' +
-      'Verranno CANCELLATE tutte le pratiche, decisioni, pagamenti, ' +
-      'comunicazioni e clienti. Verranno scaricati 2 file Excel di test ' +
-      '(lista Grenke + export NSM) da caricare in "Importa contratti".\n\n' +
+      'Verranno CANCELLATE le pratiche, decisioni, pagamenti, comunicazioni ' +
+      'e clienti dell\'AMBIENTE TEST (i dati LIVE non vengono toccati). ' +
+      'Verranno scaricati 2 file Excel di test (lista Grenke + export NSM) ' +
+      'da caricare in "Importa contratti" nella vista Test.\n\n' +
       'Utenti e impostazioni NON vengono toccati.\n\nProcedere?',
     );
     if (!ok) return;
@@ -100,6 +102,15 @@ export default function BackofficeSidebar() {
   const isAgenteOrCapo = ['AGENTE', 'JUNIOR_AGENT', 'CAPO_AREA', 'GROUP_MANAGER', 'AGENZIA'].includes(ruolo);
   const isInternoOrAdmin = ['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo);
   const isAdmin = ruolo === 'ADMIN';
+  const ambiente = getAmbiente();
+  const vistaTest = puoVedereTest(ruolo) && ambiente === 'TEST';
+
+  const cambiaAmbiente = (nuovo: 'TEST' | 'LIVE') => {
+    if (nuovo === getAmbiente()) return;
+    setAmbiente(nuovo);
+    // Ricarica per rileggere tutte le liste/KPI nel nuovo ambiente
+    window.location.reload();
+  };
 
   const menuItems = [
     { to: '/backoffice/dashboard', label: 'Dashboard', icon: LayoutDashboard, visible: true },
@@ -157,8 +168,28 @@ export default function BackofficeSidebar() {
         ))}
       </nav>
 
-      {/* SOLO FASE DI TEST — pulsante reset dati (rimuovere in produzione) */}
-      {isInternoOrAdmin && (
+      {/* Selettore vista Test/Live (solo ADMIN e Backoffice interno) */}
+      {isInternoOrAdmin && !collapsed && (
+        <div className="px-2 pb-2">
+          <div className="flex rounded-lg border border-white/15 overflow-hidden text-xs font-semibold">
+            <button
+              onClick={() => cambiaAmbiente('LIVE')}
+              className={`flex-1 py-1.5 transition-colors ${ambiente === 'LIVE' ? 'bg-emerald-500 text-white' : 'text-white/60 hover:bg-white/10'}`}
+            >
+              LIVE
+            </button>
+            <button
+              onClick={() => cambiaAmbiente('TEST')}
+              className={`flex-1 py-1.5 transition-colors ${ambiente === 'TEST' ? 'bg-amber-400 text-amber-950' : 'text-white/60 hover:bg-white/10'}`}
+            >
+              TEST
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reset dati di prova — esiste solo nella vista Test */}
+      {vistaTest && (
         <div className="px-2 pb-2">
           <button
             onClick={resetDatiTest}

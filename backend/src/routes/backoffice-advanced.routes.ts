@@ -1,12 +1,12 @@
 import { Router, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { AuthenticatedRequest, ambienteVista } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
 import { confermaBonificoRicevuto } from '../services/payment.service.js';
 import { loadDocument } from '../services/storage.service.js';
-import { createEmailProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 
@@ -33,7 +33,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     const skip = (Number(page) - 1) * Number(pageSize);
     const take = Number(pageSize);
 
-    const where: any = { stato: { not: 'FLEX_ATTIVO' } };
+    const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
 
     if (stato) where.stato = stato;
     if (agente_id) where.agente_assegnato_id = agente_id;
@@ -103,7 +103,7 @@ router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, re
   try {
     const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine } = req.query as Record<string, string>;
 
-    const where: any = { stato: { not: 'FLEX_ATTIVO' } };
+    const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
     if (stato) where.stato = stato;
     if (agente_id) where.agente_assegnato_id = agente_id;
     if (origine) where.origine = origine;
@@ -421,7 +421,7 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
       });
       if (contratto && !contratto.cliente.opt_out_comunicazioni) {
         const pdfBuffer = await loadDocument(result.fattura_path);
-        const emailProvider = createEmailProvider();
+        const emailProvider = emailProviderPerAmbiente(contratto.ambiente);
         const html = `
           <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
             <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
@@ -477,10 +477,10 @@ router.get('/agenti', async (_req: AuthenticatedRequest, res: Response) => {
 // ─── OUTLIER ───────────────────────────────────────────────────────────────
 
 // GET /api/backoffice/outliers
-router.get('/outliers', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/outliers', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const outliers = await prisma.contratto_EOL.findMany({
-      where: { stato_riconciliazione: 'OUTLIER_DA_GESTIRE' },
+      where: { stato_riconciliazione: 'OUTLIER_DA_GESTIRE', ambiente: ambienteVista(req) },
       include: {
         cliente: { select: { ragione_sociale: true, piva: true, email: true } },
       },
@@ -506,6 +506,7 @@ router.get('/outliers/:id/suggestions', async (req: AuthenticatedRequest, res: R
     }
 
     const clienti = await prisma.cliente.findMany({
+      where: { ambiente: outlier.ambiente },
       select: { id: true, ragione_sociale: true, piva: true, email: true },
     });
 
@@ -610,6 +611,7 @@ router.get('/reports/sintesi', async (req: AuthenticatedRequest, res: Response) 
       where: {
         data_scadenza: { gte: start, lt: end },
         stato: { not: 'FLEX_ATTIVO' },
+        ambiente: ambienteVista(req),
       },
       select: { id: true, stato: true, margine_lordo: true, data_scadenza: true },
     });
@@ -669,6 +671,7 @@ router.get('/reports/perdite-silenzio', async (req: AuthenticatedRequest, res: R
       where: {
         data_scadenza: { gte: start, lt: end },
         stato: 'SILENZIO_PERDITA_DEFINITIVA',
+        ambiente: ambienteVista(req),
       },
       include: { cliente: { select: { ragione_sociale: true } } },
       orderBy: { margine_lordo: 'desc' },
@@ -709,6 +712,7 @@ router.get('/reports/performance-agenti', async (req: AuthenticatedRequest, res:
         data_scadenza: { gte: start, lt: end },
         stato: { not: 'FLEX_ATTIVO' },
         agente_assegnato_id: { not: null },
+        ambiente: ambienteVista(req),
       },
       select: { agente_assegnato_id: true, stato: true, margine_lordo: true },
     });
@@ -756,7 +760,7 @@ router.get('/grenke-export/preview', async (req: AuthenticatedRequest, res: Resp
       res.status(400).json({ error: 'Parametri da e a obbligatori (formato YYYY-MM-DD)' });
       return;
     }
-    const rows = await previewExport(da, a);
+    const rows = await previewExport(da, a, ambienteVista(req));
     res.json(rows);
   } catch (err) {
     console.error('[grenke-export/preview] Errore:', err);
@@ -772,7 +776,7 @@ router.post('/grenke-export/genera', async (req: AuthenticatedRequest, res: Resp
       return;
     }
     const operatoreId = (req.user as any)?.id || 'system';
-    const result = await generaExcel(da, a, esclusi || [], operatoreId);
+    const result = await generaExcel(da, a, esclusi || [], operatoreId, ambienteVista(req));
     res.json({ success: true, ...result });
   } catch (err) {
     console.error('[grenke-export/genera] Errore:', err);

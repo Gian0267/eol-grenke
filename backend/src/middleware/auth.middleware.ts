@@ -13,6 +13,20 @@ export interface AuthenticatedRequest extends Request {
 
 const RUOLI_BACKOFFICE = ['AGENTE', 'JUNIOR_AGENT', 'CAPO_AREA', 'GROUP_MANAGER', 'AGENZIA', 'BACKOFFICE_INTERNO', 'ADMIN'];
 
+// Ruoli che possono passare alla vista TEST (gli altri vedono sempre e solo LIVE)
+const RUOLI_VISTA_TEST = ['ADMIN', 'BACKOFFICE_INTERNO'];
+
+/**
+ * Ambiente della vista corrente, dall'header `x-ambiente` inviato dal
+ * frontend. Default LIVE; la vista TEST e' concessa solo ad ADMIN e
+ * BACKOFFICE_INTERNO — per gli altri ruoli l'header viene ignorato.
+ */
+export function ambienteVista(req: AuthenticatedRequest): 'TEST' | 'LIVE' {
+  const richiesto = String(req.headers['x-ambiente'] || '').toUpperCase();
+  if (richiesto === 'TEST' && RUOLI_VISTA_TEST.includes(req.user?.ruolo || '')) return 'TEST';
+  return 'LIVE';
+}
+
 export async function verifyBackofficeToken(
   req: AuthenticatedRequest,
   res: Response,

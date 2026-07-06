@@ -4,14 +4,13 @@ import jwt from 'jsonwebtoken';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createEmailProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { scadiCodici } from './codice-sconto.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const emailProvider = createEmailProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -358,7 +357,7 @@ async function inviaSollecito(
   const html = template(templateVars);
   const oggetto = `Promemoria: contratto n. ${pratica.contratto_nsm_id} in scadenza il ${formatDate(dataScadenza)}`;
 
-  const sendResult = await emailProvider.send(pratica.cliente.email, oggetto, html);
+  const sendResult = await emailProviderPerAmbiente(pratica.ambiente).send(pratica.cliente.email, oggetto, html);
 
   await prisma.comunicazione.create({
     data: {
@@ -502,7 +501,7 @@ async function creaEscalation(
   const html = notificaTemplate(templateVars);
   const oggetto = `[${color.label}] Escalation telefonica ${cfg.tipo.replace('T_', 'T-')} — ${pratica.cliente.ragione_sociale} (${pratica.contratto_nsm_id})`;
 
-  const sendResult = await emailProvider.send(emailAgente, oggetto, html);
+  const sendResult = await emailProviderPerAmbiente(pratica.ambiente).send(emailAgente, oggetto, html);
 
   if (sendResult.success) {
     console.log(`[Scheduler] Notifica escalation inviata a ${emailAgente}`);
@@ -536,7 +535,7 @@ async function marcaSilenzio(pratica: any): Promise<void> {
       <p><strong>Monte canoni:</strong> €${formatEur(Number(pratica.monte_canoni))}</p>
       <p>Il cliente non ha comunicato alcuna decisione entro la deadline. Il contratto proseguirà in proroga automatica Grenke.</p>
     `;
-    await emailProvider.send(
+    await emailProviderPerAmbiente(pratica.ambiente).send(
       user.email,
       `[SILENZIO] Pratica ${pratica.contratto_nsm_id} — Perdita definitiva`,
       html,
@@ -594,7 +593,7 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
     ? `Promemoria: pagamento riacquisto beni (contratto ${pratica.contratto_nsm_id})`
     : `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_nsm_id})`;
 
-  const sendResult = await emailProvider.send(pratica.cliente.email, oggetto, html);
+  const sendResult = await emailProviderPerAmbiente(pratica.ambiente).send(pratica.cliente.email, oggetto, html);
 
   await prisma.comunicazione.create({
     data: {

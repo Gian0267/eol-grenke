@@ -6,6 +6,8 @@
 // Non tocca l'area cliente (/pratica/:token, autenticata via JWT nel link) né
 // la pagina di login stessa (dove il 401 significa "credenziali sbagliate").
 
+import { getAmbiente } from './ambiente'
+
 const LOGIN_PATH = '/backoffice/login'
 
 let redirecting = false
@@ -23,6 +25,16 @@ export function installSessionGuard(): void {
   const originalFetch = window.fetch.bind(window)
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    // Vista Test/Live: ogni chiamata API del backoffice dichiara l'ambiente
+    // corrente nell'header x-ambiente (il backend lo onora solo per i ruoli
+    // autorizzati). Le pagine cliente (/pratica/...) non sono toccate.
+    const requestPath = pathnameOf(input)
+    if (requestPath.startsWith('/api/') && window.location.pathname.startsWith('/backoffice')) {
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined))
+      if (!headers.has('x-ambiente')) headers.set('x-ambiente', getAmbiente())
+      init = { ...(init || {}), headers }
+    }
+
     const res = await originalFetch(input, init)
 
     if (res.status === 401 && !redirecting) {

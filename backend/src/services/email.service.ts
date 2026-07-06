@@ -3,14 +3,12 @@ import Handlebars from 'handlebars';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createEmailProvider, createPecProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente, pecProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const emailProvider = createEmailProvider();
-const pecProvider = createPecProvider();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
@@ -156,7 +154,9 @@ export async function inviaComunicazioneIniziale(
     // Il canale PEC usa il provider PEC certificato (se configurato) e il
     // template istituzionale; altrimenti provider e template ordinari.
     const isPec = dest.canale === 'PEC';
-    const provider = isPec && pecProvider ? pecProvider : emailProvider;
+    // Routing per ambiente della pratica: TEST → casella di raccolta test (PEC simulata)
+    const pecPerPratica = pecProviderPerAmbiente(contratto.ambiente);
+    const provider = isPec && pecPerPratica ? pecPerPratica : emailProviderPerAmbiente(contratto.ambiente);
     const corpo = isPec ? htmlPec : html;
     const sendResult = await provider.send(dest.email, oggetto, corpo);
 

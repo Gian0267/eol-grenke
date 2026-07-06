@@ -21,10 +21,11 @@ export interface GrenkeExportRow {
   note: string;
 }
 
-export async function previewExport(da: string, a: string): Promise<GrenkeExportRow[]> {
+export async function previewExport(da: string, a: string, ambiente: 'TEST' | 'LIVE' = 'LIVE'): Promise<GrenkeExportRow[]> {
   const pratiche = await prisma.contratto_EOL.findMany({
     where: {
       stato: 'RIACQUISTO_PAGATO',
+      ambiente,
       data_scadenza: { gte: new Date(da), lte: new Date(a) },
     },
     include: {
@@ -56,8 +57,9 @@ export async function generaExcel(
   a: string,
   esclusi: string[],
   operatoreId: string,
+  ambiente: 'TEST' | 'LIVE' = 'LIVE',
 ): Promise<{ filename: string; filepath: string; righe: number }> {
-  const all = await previewExport(da, a);
+  const all = await previewExport(da, a, ambiente);
   const rows = all.filter(r => !esclusi.includes(r.contratto_id));
 
   const wsData = [
@@ -88,7 +90,7 @@ export async function generaExcel(
   const now = new Date();
   const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
   const ts = now.toISOString().replace(/[:.]/g, '-').substring(0, 19);
-  const filename = `lista_riacquisti_${ym}_${ts}.xlsx`;
+  const filename = ambiente === 'TEST' ? `TEST_lista_riacquisti_${ym}_${ts}.xlsx` : `lista_riacquisti_${ym}_${ts}.xlsx`;
   const filepath = resolve(exportDir, filename);
 
   const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });

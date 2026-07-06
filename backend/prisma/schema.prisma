@@ -14,6 +14,7 @@ datasource db {
 
 model Contratto_EOL {
   id                    String               @id @default(uuid())
+  ambiente              String               @default("LIVE") // TEST | LIVE — le pratiche di prova sono cancellabili dal reset
   contratto_nsm_id      String               @unique // corrispondenza 1:1 con il contratto Grenke
   contratto_grenke_id   String
   cliente_id            String
@@ -51,11 +52,13 @@ model Contratto_EOL {
 
   @@index([contratto_grenke_id])
   @@index([stato])
+  @@index([ambiente])
   @@index([data_scadenza])
 }
 
 model Cliente {
   id                    String          @id @default(uuid())
+  ambiente              String          @default("LIVE") // TEST | LIVE
   ragione_sociale       String
   piva                  String          @unique
   codice_fiscale        String?

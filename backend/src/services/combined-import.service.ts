@@ -177,6 +177,7 @@ export async function confirmCombinedImport(
   grenkeBuffer: Buffer,
   nsmBuffer: Buffer,
   prisma: PrismaClient,
+  ambiente: 'TEST' | 'LIVE' = 'LIVE',
 ): Promise<CombinedImportResult> {
   const preview = await previewCombinedImport(grenkeBuffer, nsmBuffer, prisma);
   const grenke = parseGrenkeFile(grenkeBuffer);
@@ -221,8 +222,9 @@ export async function confirmCombinedImport(
     const piva = grenkeRow['cliente.piva'];
     const cliente = await prisma.cliente.upsert({
       where: { piva },
-      update: datiCliente,
-      create: { piva, ...datiCliente },
+      // Un import LIVE promuove a LIVE un cliente nato in TEST (mai il contrario)
+      update: ambiente === 'LIVE' ? { ...datiCliente, ambiente: 'LIVE' } : datiCliente,
+      create: { piva, ambiente, ...datiCliente },
     });
 
     const canone = row.canone_mensile!;
@@ -232,6 +234,7 @@ export async function confirmCombinedImport(
 
     const contratto = await prisma.contratto_EOL.create({
       data: {
+        ambiente,
         contratto_nsm_id: row.contratto_nsm_id!,
         contratto_grenke_id: row.contratto_grenke_id,
         cliente_id: cliente.id,

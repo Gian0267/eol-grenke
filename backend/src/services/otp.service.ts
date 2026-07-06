@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
-import { createEmailProvider } from '../providers/notification/email.provider.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const featureFlags = JSON.parse(
@@ -11,7 +11,6 @@ const featureFlags = JSON.parse(
 const OTP_VALIDITY_MINUTES = 10;
 const TEST_CODE = '123456';
 
-const emailProvider = createEmailProvider();
 
 function randomSixDigits(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -32,6 +31,7 @@ function otpEmailHtml(codice: string): string {
 export async function generateOtp(
   metodo: 'SMS' | 'EMAIL',
   destinatario: string,
+  ambiente?: string | null,
 ): Promise<{ codice: string }> {
   const codice = randomSixDigits();
   const scadenza = new Date(Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000);
@@ -44,7 +44,7 @@ export async function generateOtp(
   // SMS non ha ancora un provider — quando il destinatario è un numero di
   // telefono il codice resta solo a DB e va integrato un provider SMS).
   if (destinatario.includes('@')) {
-    const result = await emailProvider.send(
+    const result = await emailProviderPerAmbiente(ambiente).send(
       destinatario,
       'Il tuo codice di verifica — Noleggio Su Misura',
       otpEmailHtml(codice),
