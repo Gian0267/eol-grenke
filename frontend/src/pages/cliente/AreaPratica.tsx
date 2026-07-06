@@ -68,7 +68,7 @@ export default function AreaPratica() {
         if (res.ok) return res.json();
         const body = await res.json().catch(() => ({}));
         if (body.codice === 'TOKEN_SCADUTO') {
-          navigate('/pratica/scaduta', { replace: true });
+          navigate(`/pratica/scaduta?token=${encodeURIComponent(token || '')}`, { replace: true });
           return null;
         }
         throw new Error(body.messaggio || 'Errore nel caricamento');

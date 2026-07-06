@@ -1,4 +1,5 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import Handlebars from 'handlebars';
 import rateLimit from 'express-rate-limit';
@@ -1731,6 +1732,45 @@ router.post(
     }
   },
 );
+
+// GET /api/cliente/pratica-scaduta-info — dati minimi per la pagina "termini
+// scaduti": il token del link è SCADUTO ma la firma viene comunque verificata
+// (ignoreExpiration), così mostriamo al cliente il numero di contratto Grenke
+// da riferire all'operatore telefonico Grenke.
+router.get('/pratica-scaduta-info', async (req: Request, res: Response) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token) {
+      res.status(400).json({ errore: 'Token mancante' });
+      return;
+    }
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const payload = jwt.verify(token, secret, { ignoreExpiration: true }) as { contratto_eol_id?: string };
+    if (!payload.contratto_eol_id) {
+      res.status(401).json({ errore: 'Token non valido' });
+      return;
+    }
+    const contratto = await prisma.contratto_EOL.findUnique({
+      where: { id: payload.contratto_eol_id },
+      select: { contratto_grenke_id: true, data_scadenza: true, cliente: { select: { ragione_sociale: true } } },
+    });
+    if (!contratto) {
+      res.status(404).json({ errore: 'Pratica non trovata' });
+      return;
+    }
+    const configService = await import('../services/config.service.js');
+    res.json({
+      numero_contratto_grenke: contratto.contratto_grenke_id,
+      ragione_sociale: contratto.cliente.ragione_sociale,
+      data_fine_noleggio: contratto.data_scadenza
+        ? new Date(contratto.data_scadenza).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : null,
+      telefono_grenke: await configService.getTesto('recapiti.telefono_grenke', '02-30082525'),
+    });
+  } catch {
+    res.status(401).json({ errore: 'Token non valido' });
+  }
+});
 
 // GET /api/cliente/config-testi — testi dinamici per area cliente
 router.get('/config-testi', verifyClienteToken, async (_req: ClienteAuthenticatedRequest, res: Response) => {
