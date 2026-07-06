@@ -44,7 +44,7 @@ export default function PraticaScaduta() {
           gestione del fine noleggio tramite <strong>Smartcom Solutions Srl</strong> sono
           scaduti{info?.data_fine_noleggio ? <> (fine noleggio: <strong>{info.data_fine_noleggio}</strong>)</> : null}.
           Per la gestione del Suo fine noleggio La invitiamo a contattare
-          direttamente <strong>Grenke</strong>.
+          direttamente <strong>Grenke Italia S.p.A.</strong>
         </p>
 
         <a
@@ -52,7 +52,7 @@ export default function PraticaScaduta() {
           className="inline-flex items-center gap-2 bg-[#1a3a52] text-white font-medium py-3 px-6 rounded-lg hover:bg-[#1a3a52]/90 transition-colors"
         >
           <Phone className="w-5 h-5" />
-          Chiama Grenke — {telefono}
+          Chiama Grenke Italia S.p.A. — {telefono}
         </a>
 
         {info && (
@@ -65,7 +65,7 @@ export default function PraticaScaduta() {
               <span className="font-mono font-bold text-[#1a3a52] text-base">{info.numero_contratto_grenke}</span>
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Le verrà richiesto dall'operatore telefonico Grenke.
+              Le verrà richiesto dall'operatore telefonico di Grenke Italia S.p.A.
             </p>
           </div>
         )}
