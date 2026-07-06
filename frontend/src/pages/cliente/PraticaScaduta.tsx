@@ -49,9 +49,9 @@ export default function PraticaScaduta() {
 
         <a
           href={telHref}
-          className="inline-flex items-center gap-2 bg-[#1a3a52] text-white font-medium py-3 px-6 rounded-lg hover:bg-[#1a3a52]/90 transition-colors"
+          className="inline-flex items-center gap-2 bg-[#1a3a52] text-white text-sm font-medium py-3 px-4 rounded-lg hover:bg-[#1a3a52]/90 transition-colors whitespace-nowrap"
         >
-          <Phone className="w-5 h-5" />
+          <Phone className="w-4 h-4 shrink-0" />
           Chiama Grenke Italia S.p.A. — {telefono}
         </a>
 
@@ -65,7 +65,7 @@ export default function PraticaScaduta() {
               <span className="font-mono font-bold text-[#1a3a52] text-base">{info.numero_contratto_grenke}</span>
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Le verrà richiesto dall'operatore telefonico di Grenke Italia S.p.A.
+              Le verrà richiesto dall'operatore telefonico Grenke Italia S.p.A.
             </p>
           </div>
         )}
