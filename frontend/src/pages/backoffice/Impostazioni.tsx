@@ -630,13 +630,58 @@ function TabAreaCliente({ items, localValues, updateLocal, onSave, onReset }: Ta
 
 // ─── Tab: RECAPITI ──────────────────────────────────────────────
 function TabRecapiti({ items, localValues, updateLocal, onSave, onReset }: TabProps) {
+  const [testEsito, setTestEsito] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const testImap = async () => {
+    setTesting(true);
+    setTestEsito(null);
+    try {
+      const user = JSON.parse(localStorage.getItem('nsm_user') || 'null');
+      const h: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user?.id) h['x-user-id'] = user.id;
+      const res = await fetch('/api/backoffice/segnalazioni-casella/test-connessione', { method: 'POST', credentials: 'include', headers: h });
+      const body = await res.json();
+      setTestEsito(body.ok
+        ? `✅ Connessione riuscita — ${body.messaggi} messaggi in INBOX (nessuno è stato toccato)`
+        : `❌ ${body.errore || body.error || 'Connessione fallita'}`);
+    } catch (e) {
+      setTestEsito('❌ Errore di rete durante il test');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-800 mb-2">Recapiti aziendali</h2>
-      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti.</p>
+      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti. Le voci "Monitor casella" governano la lettura di info@smartcomsolutions.it.</p>
       {items.map(imp => (
-        <FieldRow key={imp.chiave} imp={imp} value={localValues[imp.chiave] || ''} onChange={v => updateLocal(imp.chiave, v)} onSave={() => onSave(imp.chiave)} onReset={() => onReset(imp.chiave)} />
+        <FieldRow key={imp.chiave} imp={imp} value={localValues[imp.chiave] || ''} onChange={v => updateLocal(imp.chiave, v)} onSave={() => onSave(imp.chiave)} onReset={() => onReset(imp.chiave)}>
+          {(imp.chiave === 'monitor.keywords' || imp.chiave === 'monitor.digest_destinatari') ? (
+            <textarea
+              value={localValues[imp.chiave] || ''}
+              onChange={e => updateLocal(imp.chiave, e.target.value)}
+              rows={imp.chiave === 'monitor.keywords' ? 8 : 3}
+              placeholder={imp.chiave === 'monitor.keywords' ? 'una keyword per riga' : 'un indirizzo per riga'}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 font-mono"
+            />
+          ) : undefined}
+        </FieldRow>
       ))}
+
+      <div className="mt-6 p-4 rounded-lg border border-slate-200 bg-slate-50">
+        <p className="text-sm font-medium text-slate-700 mb-1">Test connessione IMAP</p>
+        <p className="text-xs text-slate-500 mb-3">Verifica le credenziali della casella info@ e conta i messaggi in INBOX senza processarli né modificarli.</p>
+        <button
+          onClick={testImap}
+          disabled={testing}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          {testing ? 'Verifica in corso…' : 'Test connessione IMAP'}
+        </button>
+        {testEsito && <p className="text-sm mt-3">{testEsito}</p>}
+      </div>
     </div>
   );
 }

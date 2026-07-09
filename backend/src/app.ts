@@ -117,6 +117,28 @@ app.get('/api/admin/run-scheduler', async (req, res) => {
   }
 });
 
+// Trigger del monitor casella info@ da cron esterno (stesso meccanismo dello scheduler).
+// GET /api/admin/run-monitor?secret=...  — protetto da SCHEDULER_TRIGGER_SECRET
+app.get('/api/admin/run-monitor', async (req, res) => {
+  const expected = process.env.SCHEDULER_TRIGGER_SECRET;
+  if (!expected) {
+    res.status(503).json({ errore: 'SCHEDULER_TRIGGER_SECRET non configurato' });
+    return;
+  }
+  if (req.query.secret !== expected) {
+    res.status(401).json({ errore: 'Secret non valido' });
+    return;
+  }
+  try {
+    const { monitorTick } = await import('./services/mail-monitor.service.js');
+    const report = await monitorTick();
+    res.json({ ok: true, report });
+  } catch (err) {
+    console.error('[run-monitor] Errore:', err);
+    res.status(500).json({ errore: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
 // In produzione il backend serve anche il frontend buildato (single deploy, stesso
 // origine → niente CORS, le chiamate relative /api restano sullo stesso host).
 if (process.env.NODE_ENV === 'production') {

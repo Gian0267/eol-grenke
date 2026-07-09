@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
-  BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings, Users, Mail, MailCheck,
+  BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings, Users, Mail, MailCheck, Inbox,
   FlaskConical, Loader2, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -121,6 +121,7 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/riacquisti-in-attesa', label: 'Clienti in attesa', icon: CreditCard, visible: true },
     { to: '/backoffice/posta-inviata', label: 'Posta inviata', icon: Mail, visible: true },
     { to: '/backoffice/pec-inviata', label: 'PEC inviate', icon: MailCheck, visible: true },
+    { to: '/backoffice/segnalazioni-casella', label: 'Segnalazioni info@', icon: Inbox, visible: isInternoOrAdmin },
     { to: '/backoffice/codici-sconto', label: 'Codici Sconto', icon: Tag, visible: isInternoOrAdmin },
     { to: '/backoffice/import', label: 'Importa contratti', icon: Upload, visible: isInternoOrAdmin },
     { to: '/backoffice/outlier', label: 'Outlier', icon: AlertTriangle, visible: isInternoOrAdmin },

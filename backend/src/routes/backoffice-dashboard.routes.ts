@@ -122,7 +122,10 @@ router.get('/kpi', async (req: AuthenticatedRequest, res: Response) => {
     });
     const tassoIntervento = total > 0 ? (escalation / total) * 100 : 0;
 
+    const segnalazioni_da_gestire = await prisma.monitoredEmail.count({ where: { status: { in: ['NEW', 'NOTIFIED'] } } });
+
     res.json({
+      segnalazioni_da_gestire,
       tasso_non_silenzio: Math.round(nonSilenzio * 10) / 10,
       tasso_rinnovo: Math.round(tassoRinnovo * 10) / 10,
       tasso_riacquisto: Math.round(tassoRiacquisto * 10) / 10,

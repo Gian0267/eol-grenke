@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox } from 'lucide-react'
 
 interface Utente {
   id: string
@@ -17,6 +18,7 @@ interface RiskSilenceCounts {
 }
 
 interface Kpi {
+  segnalazioni_da_gestire?: number
   tasso_non_silenzio: number
   tasso_rinnovo: number
   tasso_riacquisto: number
@@ -196,6 +198,20 @@ export default function Dashboard() {
       <section>
         <h2 className="text-xl font-medium text-graphite mb-4">KPI Anno Corrente</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Segnalazioni casella info@ da gestire */}
+          <div className="bg-card rounded-xl border border-border p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Inbox className="h-5 w-5 text-stone" />
+              <h3 className="text-sm font-medium text-stone">Segnalazioni da gestire</h3>
+            </div>
+            <p className={`text-3xl font-medium font-mono ${(kpi?.segnalazioni_da_gestire ?? 0) > 0 ? 'text-danger-text' : 'text-ok-text'}`}>
+              {kpi?.segnalazioni_da_gestire ?? 0}
+            </p>
+            <p className="text-xs text-stone mt-1">
+              <Link to="/backoffice/segnalazioni-casella" className="text-flex hover:underline">Casella info@ — vai alle segnalazioni</Link>
+            </p>
+          </div>
+
           {/* Tasso non silenzio */}
           <div className="bg-card rounded-xl border border-border p-5">
             <div className="flex items-center gap-2 mb-3">

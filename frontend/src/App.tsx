@@ -15,6 +15,7 @@ import Impostazioni from './pages/backoffice/Impostazioni'
 import GestioneUtenti from './pages/backoffice/GestioneUtenti'
 import CodiciSconto from './pages/backoffice/CodiciSconto'
 import ComunicazioniInviate from './pages/backoffice/ComunicazioniInviate'
+import SegnalazioniCasella from './pages/backoffice/SegnalazioniCasella'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="codici-sconto" element={<CodiciSconto />} />
           <Route path="posta-inviata" element={<ComunicazioniInviate canale="EMAIL" />} />
           <Route path="pec-inviata" element={<ComunicazioniInviate canale="PEC" />} />
+          <Route path="segnalazioni-casella" element={<SegnalazioniCasella />} />
           <Route path="import" element={<ImportLista />} />
           <Route path="outlier" element={<GestioneOutlier />} />
           <Route path="reportistica" element={<Reportistica />} />

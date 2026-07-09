@@ -471,6 +471,96 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
   }
 });
 
+// ─── SEGNALAZIONI CASELLA INFO@ (monitor IMAP) ─────────────────────────────
+
+// GET /api/backoffice/segnalazioni-casella — lista con filtri e paginazione
+router.get('/segnalazioni-casella', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status, keyword, data_from, data_to, page = '1', pageSize = '25' } = req.query as Record<string, string>;
+    const where: any = {};
+    if (status) where.status = status;
+    if (keyword) where.matched_keywords = { contains: keyword, mode: 'insensitive' };
+    if (data_from || data_to) {
+      where.received_at = {};
+      if (data_from) where.received_at.gte = new Date(data_from);
+      if (data_to) { const t = new Date(data_to); t.setHours(23, 59, 59, 999); where.received_at.lte = t; }
+    }
+    const skip = (Number(page) - 1) * Number(pageSize);
+    const [total, righe, daGestire] = await Promise.all([
+      prisma.monitoredEmail.count({ where }),
+      prisma.monitoredEmail.findMany({
+        where,
+        include: { contratto_eol: { select: { id: true, contratto_nsm_id: true, data_scadenza: true } } },
+        orderBy: { received_at: 'desc' },
+        skip,
+        take: Number(pageSize),
+      }),
+      prisma.monitoredEmail.count({ where: { status: { in: ['NEW', 'NOTIFIED'] } } }),
+    ]);
+    res.json({
+      items: righe.map(m => ({
+        id: m.id,
+        received_at: m.received_at,
+        from_address: m.from_address,
+        from_name: m.from_name,
+        subject: m.subject,
+        snippet: m.snippet,
+        keywords: JSON.parse(m.matched_keywords),
+        status: m.status,
+        contratto: m.contratto_eol
+          ? { id: m.contratto_eol.id, contratto_nsm: m.contratto_eol.contratto_nsm_id, data_scadenza: m.contratto_eol.data_scadenza }
+          : null,
+      })),
+      total,
+      da_gestire: daGestire,
+      page: Number(page),
+      pageSize: Number(pageSize),
+    });
+  } catch (err) {
+    console.error('[segnalazioni-casella] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/segnalazioni-casella/:id/gestita — status → HANDLED (audit)
+router.post('/segnalazioni-casella/:id/gestita', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const m = await prisma.monitoredEmail.findUnique({ where: { id: req.params.id as string } });
+    if (!m) {
+      res.status(404).json({ error: 'Segnalazione non trovata' });
+      return;
+    }
+    await prisma.monitoredEmail.update({ where: { id: m.id }, data: { status: 'HANDLED' } });
+    await registraEvento(m.contratto_eol_id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MONITOR_SEGNALAZIONE_GESTITA', {
+      segnalazione_id: m.id,
+      mittente: m.from_address,
+      oggetto: m.subject,
+      status_precedente: m.status,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[segnalazioni-casella/gestita] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/segnalazioni-casella/test-connessione — verifica credenziali IMAP
+router.post('/segnalazioni-casella/test-connessione', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+    const { testConnessione } = await import('../services/mail-monitor.service.js');
+    const esito = await testConnessione();
+    res.json(esito);
+  } catch (err) {
+    console.error('[test-connessione] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // ─── REGISTRO COMUNICAZIONI INVIATE (Posta/PEC) ────────────────────────────
 
 // GET /api/backoffice/comunicazioni — registro di tutto ciò che è stato spedito

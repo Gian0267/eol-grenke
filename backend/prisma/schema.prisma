@@ -50,6 +50,8 @@ model Contratto_EOL {
   task_escalation       Task_Escalation[]
   codici_sconto         Codice_Sconto[]
 
+  monitored_emails      MonitoredEmail[]
+
   @@index([contratto_grenke_id])
   @@index([stato])
   @@index([ambiente])
@@ -262,4 +264,26 @@ model Task_Escalation {
   note                String?
 
   @@index([assegnato_a_id, stato])
+}
+
+// Mail rilevanti intercettate sulla casella info@smartcomsolutions.it
+// (monitor IMAP in sola lettura — la casella non viene MAI modificata)
+model MonitoredEmail {
+  id               String         @id @default(uuid())
+  imap_uid         Int
+  message_id       String         @unique // deduplicazione
+  from_address     String
+  from_name        String?
+  subject          String
+  received_at      DateTime
+  snippet          String // primi 300 caratteri del corpo testuale
+  matched_keywords String // JSON array delle keyword trovate
+  status           String         @default("NEW") // NEW | NOTIFIED | HANDLED
+  contratto_eol_id String?
+  contratto_eol    Contratto_EOL? @relation(fields: [contratto_eol_id], references: [id])
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([received_at])
 }

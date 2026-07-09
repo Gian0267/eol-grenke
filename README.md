@@ -210,3 +210,40 @@ Tel: 011 4557949 — info@noleggiosumisura.it
 ## Licenza
 
 Codice proprietario — Smartcom Solutions Srl. Tutti i diritti riservati.
+
+## Monitor casella info@smartcomsolutions.it (v1.2.0)
+
+Modulo di monitoraggio IMAP **in sola lettura** della casella `info@smartcomsolutions.it`:
+le mail che contengono le keyword configurate (es. "Fine contratto Grenke") vengono
+salvate come segnalazioni, mostrate nel backoffice ("Segnalazioni info@") e riepilogate
+in un digest email mattutino. **La casella non viene mai modificata**: nessun move,
+delete, flag o mark-as-read; la deduplicazione avviene a database (Message-ID univoco).
+
+### Configurazione
+
+Variabili d'ambiente (hPanel + `backend/.env`, vedi `backend/.env.example`):
+
+```
+MONITOR_IMAP_HOST=pop.securemail.pro
+MONITOR_IMAP_PORT=993
+MONITOR_IMAP_SECURE=true
+MONITOR_IMAP_USER=info@smartcomsolutions.it
+MONITOR_IMAP_PASSWORD=***
+```
+
+Dal backoffice (Impostazioni, ruolo ADMIN):
+- **Recapiti → Monitor casella: keyword** — una keyword per riga (match case/accent-insensitive su oggetto+corpo)
+- **Recapiti → Monitor casella: destinatari digest** — chi riceve il riepilogo mattutino
+- **Recapiti → Monitor casella: orario digest** — default 08:00 Europe/Rome (nessun invio se non ci sono segnalazioni)
+- **Feature Flags → Monitor casella info@ attivo** — accensione/spegnimento
+- **Recapiti → Test connessione IMAP** — verifica credenziali e conta i messaggi senza processarli
+
+### Funzionamento
+
+- Polling ogni 15 minuti (scheduler interno). Su hosting che sospende l'app in idle,
+  agganciare un cron esterno a `GET /api/admin/run-monitor?secret=$SCHEDULER_TRIGGER_SECRET`.
+- I mittenti interni (@smartcomsolutions.it, @noleggiosumisura.it, mittenti dell'app)
+  sono esclusi per evitare auto-segnalazioni.
+- Collegamento automatico al contratto EOL per email/PEC del cliente (o dominio aziendale non generico).
+- Dopo 3 connessioni IMAP fallite consecutive parte un alert tecnico ai destinatari del digest.
+- Audit log: digest inviati, cambi di status manuali, alert tecnici.

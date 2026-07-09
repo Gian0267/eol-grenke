@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { scadiCodici } from './codice-sconto.service.js';
+import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
 import * as configService from './config.service.js';
 
@@ -622,6 +623,16 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
 }
 
 export function startSchedulerCron(): void {
+  // Monitor casella info@: polling IMAP (sola lettura) + digest mattutino
+  cron.schedule('*/15 * * * *', async () => {
+    try {
+      await monitorTick();
+    } catch (err) {
+      console.error('[Monitor] Errore tick:', err);
+    }
+  });
+  console.log('[Scheduler] Monitor casella info@ registrato: ogni 15 minuti');
+
   cron.schedule('0 2 * * *', async () => {
     console.log(`[Scheduler] Esecuzione programmata alle ${new Date().toISOString()}`);
     try {

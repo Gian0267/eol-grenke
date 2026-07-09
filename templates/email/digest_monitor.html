@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#F1EFE8;font-family:Inter,Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1EFE8;padding:20px 0;">
+    <tr>
+      <td align="center">
+        <table width="640" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:640px;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:22px 32px;">
+              <span style="display:inline-block;background-color:#ffffff;border-radius:8px;padding:8px 14px;"><img src="https://eol.smartcomgroup.it/nsm-logo.png" alt="Noleggio Su Misura" height="28" style="display:block;height:28px;border:0;"></span>
+            </td>
+          </tr>
+          <tr><td style="height:4px;background-color:#00B4D8;"></td></tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding:28px 32px;">
+              <h1 style="color:#1a3a52;font-size:20px;margin:0 0 6px;">Segnalazioni casella info@ — {{data}}</h1>
+              <p style="color:#6b7280;font-size:13px;margin:0 0 20px;">
+                {{totale}} mail rilevanti intercettate sulla casella info@smartcomsolutions.it e non ancora gestite.
+              </p>
+
+              {{#each segnalazioni}}
+              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:14px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0 0 2px;color:#1a3a52;font-size:14px;font-weight:bold;">{{oggetto}}</p>
+                    <p style="margin:0 0 8px;color:#6b7280;font-size:12px;">da <strong>{{mittente}}</strong> · {{data_ora}}</p>
+                    <p style="margin:0 0 8px;color:#374151;font-size:13px;line-height:1.5;">{{snippet}}…</p>
+                    <p style="margin:0;font-size:12px;">
+                      <span style="color:#0369a1;background:#e0f2fe;border-radius:4px;padding:2px 8px;">{{keywords}}</span>
+                      {{#if contratto}}
+                      <span style="color:#166534;background:#dcfce7;border-radius:4px;padding:2px 8px;margin-left:6px;">Contratto {{contratto}}</span>
+                      {{else}}
+                      <span style="color:#92400e;background:#fef3c7;border-radius:4px;padding:2px 8px;margin-left:6px;">Nessun contratto collegato</span>
+                      {{/if}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              {{/each}}
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 6px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{link_backoffice}}" style="display:inline-block;background-color:#00B4D8;color:#ffffff;font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px;text-decoration:none;">
+                      Gestisci nel backoffice
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#9ca3af;font-size:11px;text-align:center;margin:10px 0 0;">
+                Il monitor legge la casella in sola lettura: le mail restano intatte su Register.it.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb;padding:14px 32px;border-top:1px solid #e5e7eb;">
+              <p style="color:#9ca3af;font-size:11px;margin:0;text-align:center;">
+                NSM EOL Grenke — digest automatico giornaliero · Noleggio Su Misura, divisione rental di Smartcom Solutions Srl
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
