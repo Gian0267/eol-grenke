@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { resolve as pathResolve, dirname as pathDirname } from 'path';
 import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
+import { formatBene } from '../lib/beni.js';
 import { saveDocument } from './storage.service.js';
 
 const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
@@ -150,7 +151,7 @@ export async function generaRicevutaPagamento(
     doc.text('Beni come da contratto');
   } else {
     beni.forEach((bene, i) => {
-      doc.text(`${i + 1}. ${bene.descrizione || 'N/D'}`);
+      doc.text(`${i + 1}. ${formatBene(bene)}`);
     });
   }
   doc.moveDown(1);

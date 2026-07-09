@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { emailProviderPerAmbiente, pecProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
+import { formatBeniLista } from '../lib/beni.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -96,15 +97,16 @@ export async function inviaComunicazioneIniziale(
     data: { token_accesso_cliente: token },
   });
 
-  const beni = contratto.beni_json ? JSON.parse(contratto.beni_json) : [];
-  const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
+  const beniFormatted = formatBeniLista(contratto.beni_json);
 
   // Flag "Opzione Rinnovo attiva": quando è OFF i template nascondono l'opzione
   // rinnovo e le altre opzioni vengono rinumerate 1-2-3.
   const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
+  const pagamentoOnlineAttivo = await configService.getBooleano('flags.abilita_pagamento_online', false);
 
   const templateVars = {
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
+    pagamento_online_attivo: pagamentoOnlineAttivo,
     num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
     num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
     num_opzione_restituzione: opzioneRinnovoAttiva ? 4 : 3,
@@ -112,7 +114,7 @@ export async function inviaComunicazioneIniziale(
     numero_contratto_grenke: contratto.contratto_grenke_id,
     numero_contratto_nsm: contratto.contratto_nsm_id,
     data_scadenza: formatDate(dataScadenza),
-    beni: beniFormatted || 'Beni come da contratto',
+    beni: beniFormatted,
     monte_canoni: formatEur(Number(contratto.monte_canoni)),
     pricing_riacquisto: formatEur(Number(contratto.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(contratto.valore_gift_card)),

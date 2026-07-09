@@ -4,6 +4,7 @@ import { resolve as pathResolve, dirname as pathDirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verificaCatena } from './audit.service.js';
 import { prisma } from '../lib/db.js';
+import { formatBene, formatBeniLista, parseBeni } from '../lib/beni.js';
 import { saveDocument } from './storage.service.js';
 
 const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
@@ -120,7 +121,7 @@ export async function generaVerbaleRestituzione(
     doc.text('Beni come da contratto');
   } else {
     beni.forEach((bene, i) => {
-      const parts = [bene.descrizione || 'N/D'];
+      const parts = [formatBene(bene)];
       if (bene.marca) parts.push(bene.marca);
       if (bene.modello) parts.push(bene.modello);
       if (bene.seriale) parts.push(`S/N: ${bene.seriale}`);
@@ -267,7 +268,7 @@ export async function generaConfermaRinnovo(
   doc.text(`Numero contratto Grenke: ${contratto.contratto_grenke_id}`);
   doc.text(`Data scadenza: ${formatDate(new Date(contratto.data_scadenza!))}`);
   doc.text(`Monte canoni: EUR ${formatEur(Number(contratto.monte_canoni))}`);
-  doc.text(`Beni attuali: ${beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto'}`);
+  doc.text(`Beni attuali: ${formatBeniLista(contratto.beni_json, 'Come da contratto')}`);
   doc.moveDown(1);
 
   // Pre-qualificazione

@@ -9,6 +9,7 @@ import { registraEvento } from './audit.service.js';
 import { scadiCodici } from './codice-sconto.service.js';
 import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
+import { formatBeniLista } from '../lib/beni.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -326,8 +327,7 @@ async function inviaSollecito(
     { expiresIn: '365d' },
   );
 
-  const beni = pratica.beni_json ? JSON.parse(pratica.beni_json) : [];
-  const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
+  const beniFormatted = formatBeniLista(pratica.beni_json);
 
   const linkAreaCliente = pratica.token_accesso_cliente
     ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}`
@@ -345,7 +345,7 @@ async function inviaSollecito(
     numero_contratto_nsm: pratica.contratto_nsm_id,
     numero_contratto_grenke: pratica.contratto_grenke_id,
     data_scadenza: formatDate(dataScadenza),
-    beni: beniFormatted || 'Beni come da contratto',
+    beni: beniFormatted,
     monte_canoni: formatEur(Number(pratica.monte_canoni)),
     pricing_riacquisto: formatEur(Number(pratica.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(pratica.valore_gift_card)),
@@ -452,8 +452,7 @@ async function creaEscalation(
   };
   const color = colorMap[cfg.tipo] ?? colorMap['T_50']!;
 
-  const beni = pratica.beni_json ? JSON.parse(pratica.beni_json) : [];
-  const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
+  const beniFormatted = formatBeniLista(pratica.beni_json);
 
   const storico = pratica.comunicazioni.map((c: any) => ({
     data: formatDate(new Date(c.data_invio)),
@@ -489,7 +488,7 @@ async function creaEscalation(
     numero_contratto_grenke: pratica.contratto_grenke_id,
     data_scadenza: formatDate(new Date(pratica.data_scadenza)),
     monte_canoni: formatEur(monteCanoni),
-    beni: beniFormatted || 'Beni come da contratto',
+    beni: beniFormatted,
     storico_comunicazioni: storico,
     tipo_escalation: `Tentativo ${cfg.tipo.replace('T_', 'T-')}`,
     colore_priorita: color.fg,
@@ -550,8 +549,7 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
   const promemoria = opts?.promemoria === true;
   const invitoPagamentoTemplate = await loadTemplateFromDb('email.invito_pagamento');
 
-  const beni = pratica.beni_json ? JSON.parse(pratica.beni_json) : [];
-  const beniFormatted = beni.map((b: { descrizione?: string }) => b.descrizione || 'N/D').join(', ');
+  const beniFormatted = formatBeniLista(pratica.beni_json);
 
   const pricingRules = JSON.parse(readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'));
   const netto = Number(pratica.pricing_riacquisto);
@@ -577,7 +575,7 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
     numero_contratto_nsm: pratica.contratto_nsm_id,
     numero_contratto_grenke: pratica.contratto_grenke_id,
     data_scadenza: formatDate(new Date(pratica.data_scadenza)),
-    beni: beniFormatted || 'Beni come da contratto',
+    beni: beniFormatted,
     pricing_netto: formatEur(netto),
     pricing_iva: formatEur(iva),
     pricing_totale: formatEur(totale),

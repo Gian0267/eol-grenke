@@ -28,6 +28,7 @@ import { registraEvento } from '../services/audit.service.js';
 import { generaCodice } from '../services/codice-sconto.service.js';
 import type { Codice_Sconto } from '@prisma/client';
 import { prisma } from '../lib/db.js';
+import { parseBeni, formatBene, formatBeniLista } from '../lib/beni.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -160,10 +161,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
     const dataScadenza = new Date(contratto.data_scadenza!);
     const deadlineDecisione = calcolaDeadline(dataScadenza);
 
-    let beni: Array<{ descrizione?: string }> = [];
-    try {
-      beni = JSON.parse(contratto.beni_json);
-    } catch {}
+    const beni = parseBeni(contratto.beni_json);
 
     // Leggi feature flag Premio Fedeltà (chiave interna: flags.abilita_gift_card)
     const configService = await import('../services/config.service.js');
@@ -179,7 +177,7 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         numero_nsm: contratto.contratto_nsm_id,
         numero_grenke: contratto.contratto_grenke_id,
         data_scadenza: contratto.data_scadenza,
-        beni: beni.map((b) => b.descrizione || 'N/D'),
+        beni: beni.map(formatBene),
         monte_canoni: Number(contratto.monte_canoni),
         numero_mesi: contratto.numero_mesi,
         stato: contratto.stato,
@@ -471,15 +469,12 @@ router.post(
         otpVerificato: true,
       });
 
-      let beni: Array<{ descrizione?: string }> = [];
-      try { beni = JSON.parse(contratto.beni_json); } catch {}
-
       const html = confermaRestituzioneTemplate({
         ragione_sociale: contratto.cliente.ragione_sociale,
         numero_contratto_nsm: contratto.contratto_nsm_id,
         numero_contratto_grenke: contratto.contratto_grenke_id,
         data_scadenza: new Date(contratto.data_scadenza!).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        beni: beni.map(b => b.descrizione || 'N/D').join(', ') || 'Come da contratto',
+        beni: formatBeniLista(contratto.beni_json, 'Come da contratto'),
       });
 
       const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_nsm_id}`;

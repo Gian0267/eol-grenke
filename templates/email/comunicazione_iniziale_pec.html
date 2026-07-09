@@ -61,7 +61,7 @@
                     <p style="margin:0 0 6px;font-size:15px;color:#1a3a52;"><strong>{{num_opzione_riacquisto}}. Acquisto dei beni attuali</strong></p>
                     <p style="margin:0;font-size:14px;line-height:1.6;color:#374151;">
                       Acquisto dei beni in locazione al prezzo di <strong>&euro; {{pricing_riacquisto}} oltre IVA</strong>,
-                      con pagamento online tramite bonifico istantaneo o carta.
+                      {{#if pagamento_online_attivo}}con pagamento online tramite bonifico istantaneo o carta.{{else}}con pagamento tramite bonifico bancario (le coordinate verranno fornite al momento del pagamento).{{/if}}
                     </p>
                   </td>
                 </tr>
