@@ -426,14 +426,14 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
           <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
             <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
             <p>confermiamo di aver ricevuto il pagamento per il riacquisto dei beni del contratto
-            n. <strong>${contratto.contratto_nsm_id}</strong>.</p>
+            n. <strong>${contratto.contratto_grenke_id}</strong>.</p>
             <p>In allegato trova la ricevuta n. ${result.fattura_numero}.</p>
             <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
             <span style="font-size:13px;color:#6b7280;">Divisione Rental di Smartcom Solutions Srl</span></p>
           </div>`;
         const sendResult = await emailProvider.sendWithAttachment(
           contratto.cliente.email,
-          `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_nsm_id}`,
+          `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`,
           html,
           [{ filename: `ricevuta_${result.fattura_numero}.pdf`, content: pdfBuffer }],
         );
@@ -444,7 +444,7 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
             tipo: 'RICEVUTA_PAGAMENTO',
             canale: 'EMAIL',
             destinatario: contratto.cliente.email,
-            oggetto: `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_nsm_id}`,
+            oggetto: `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`,
             corpo_html: html,
             allegati_json: JSON.stringify([`ricevuta_${result.fattura_numero}.pdf`]),
             data_invio: new Date(),

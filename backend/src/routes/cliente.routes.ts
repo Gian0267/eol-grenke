@@ -477,7 +477,7 @@ router.post(
         beni: formatBeniLista(contratto.beni_json, 'Come da contratto'),
       });
 
-      const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_nsm_id}`;
+      const oggetto = `Conferma restituzione beni — Contratto ${contratto.contratto_grenke_id}`;
 
       await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,
@@ -1179,7 +1179,7 @@ router.post(
         scadenza_codice: codiceSconto ? formatDataIt(codiceSconto.data_scadenza) : null,
       });
 
-      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
+      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_grenke_id}`;
 
       const sendCliente = await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,
@@ -1478,7 +1478,7 @@ router.post(
         prezzo_riacquisto: scelta_beni === 'TENGO' ? formatEur(Number(contratto.pricing_riacquisto)) : null,
       });
 
-      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_nsm_id}`;
+      const oggettoCliente = `Conferma richiesta rinnovo — Contratto ${contratto.contratto_grenke_id}`;
 
       const sendCliente = await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
         contratto.cliente.email,

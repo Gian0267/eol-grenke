@@ -140,7 +140,7 @@ export async function inviaComunicazioneIniziale(
   }
   const htmlPec = Handlebars.compile(templatePecHtml)(templateVars);
 
-  const oggetto = `Comunicazione relativa al Suo contratto di locazione operativa n. ${contratto.contratto_nsm_id} in scadenza`;
+  const oggetto = `Comunicazione relativa al Suo contratto di locazione operativa n. ${contratto.contratto_grenke_id} in scadenza`;
 
   const destinatari: Array<{ email: string; canale: string }> = [
     { email: contratto.cliente.email, canale: 'EMAIL' },

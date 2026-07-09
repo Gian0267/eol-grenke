@@ -346,7 +346,7 @@ router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest,
 
       await emailProviderPerAmbiente(pratica.ambiente).send(
         cliente.email,
-        `Pagamento sbloccato — Contratto ${pratica.contratto_nsm_id}`,
+        `Pagamento sbloccato — Contratto ${pratica.contratto_grenke_id}`,
         html,
       );
     }

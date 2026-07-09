@@ -691,7 +691,7 @@ export default function FlussoRiacquisto() {
                 </div>
                 <div>
                   <dt className="text-gray-400">Causale</dt>
-                  <dd className="font-medium text-[#1a3a52]">Riacquisto contratto {pratica.contratto.numero_nsm}</dd>
+                  <dd className="font-medium text-[#1a3a52]">Riacquisto contratto {pratica.contratto.numero_grenke}</dd>
                 </div>
               </dl>
             </div>

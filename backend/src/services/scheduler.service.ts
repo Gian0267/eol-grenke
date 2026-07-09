@@ -356,7 +356,7 @@ async function inviaSollecito(
   };
 
   const html = template(templateVars);
-  const oggetto = `Promemoria: contratto n. ${pratica.contratto_nsm_id} in scadenza il ${formatDate(dataScadenza)}`;
+  const oggetto = `Promemoria: contratto n. ${pratica.contratto_grenke_id} in scadenza il ${formatDate(dataScadenza)}`;
 
   const sendResult = await emailProviderPerAmbiente(pratica.ambiente).send(pratica.cliente.email, oggetto, html);
 
@@ -589,8 +589,8 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
 
   const html = invitoPagamentoTemplate(templateVars);
   const oggetto = promemoria
-    ? `Promemoria: pagamento riacquisto beni (contratto ${pratica.contratto_nsm_id})`
-    : `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_nsm_id})`;
+    ? `Promemoria: pagamento riacquisto beni (contratto ${pratica.contratto_grenke_id})`
+    : `Riacquisto beni — Procedi con il pagamento (contratto ${pratica.contratto_grenke_id})`;
 
   const sendResult = await emailProviderPerAmbiente(pratica.ambiente).send(pratica.cliente.email, oggetto, html);
 
