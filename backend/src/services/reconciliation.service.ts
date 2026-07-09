@@ -28,21 +28,46 @@ function parseDate(v: unknown): Date {
 
 const flexDate = z.union([z.date(), z.string(), z.number()]).transform(parseDate);
 
-// Tracciato Grenke concordato: 9 colonne. Canone, durata e dispositivi NON
-// sono nel file: arrivano dall'export della piattaforma NSM.
+/**
+ * Importo in formato italiano o numerico: gestisce "2.803,51 €", "2803.51",
+ * numeri Excel e spazi. Il NAV del template Grenke arriva formattato valuta.
+ */
+function parseImporto(v: unknown): number {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    let t = v.replace(/[€\s]/g, '');
+    if (t.includes(',')) {
+      // Formato italiano: i punti sono migliaia, la virgola è il decimale
+      t = t.replace(/\./g, '').replace(',', '.');
+    }
+    const n = Number(t);
+    if (!isNaN(n)) return n;
+  }
+  throw new Error(`Importo non valido: ${v}`);
+}
+
+const flexImporto = z.union([z.number(), z.string()]).transform(parseImporto);
+
+/** P.IVA: rimuove spazi e reintegra gli zeri iniziali persi dalle celle numeriche. */
+function normalizzaPiva(v: unknown): string {
+  const t = String(v ?? '').replace(/\s/g, '');
+  return /^\d{9,10}$/.test(t) ? t.padStart(11, '0') : t;
+}
+
+// Template ufficiale Grenke (9 colonne, intestazioni inglesi). Canone, durata
+// e dispositivi NON sono nel file: arrivano dall'export della piattaforma NSM.
 const rowSchema = z.object({
-  contratto_grenke_id: z.string().min(1, 'Numero Contratto Grenke obbligatorio'),
-  'cliente.ragione_sociale': z.string().min(1, 'Denominazione Sociale obbligatoria'),
-  'cliente.piva': z.string().regex(/^\d{11}$/, 'P.IVA deve essere di 11 cifre'),
-  'cliente.email': z.string().email('Email non valida'),
+  contratto_grenke_id: z.coerce.string().min(1, 'Numero di contratto (colonna "contract") obbligatorio'),
+  'cliente.ragione_sociale': z.string().min(1, 'Nome cliente (colonna "lessee name") obbligatorio'),
+  'cliente.piva': z.preprocess(normalizzaPiva, z.string().regex(/^\d{11}$/, 'P.IVA (colonna "lessee vat ID") deve essere di 11 cifre')),
+  'cliente.email': z.string().email('Email (colonna "lessee email") non valida'),
   'cliente.pec': z.string().email('PEC non valida').optional().or(z.literal('')),
   data_stipula: flexDate.optional(),
   data_scadenza: flexDate,
-  // Importo che Grenke addebita a Smartcom: obbligatorio.
-  pricing_grenke: z.coerce
-    .number({ error: 'Importo Riacquisto Grenke mancante o non numerico (colonna obbligatoria del file Grenke)' })
-    .positive('Importo Riacquisto Grenke deve essere positivo'),
-  // Origine commerciale del contratto (IOL / Smartcom) — ultima colonna
+  // NAV = importo TOTALE del contratto: il prezzo riacquisto Grenke si ricava
+  // moltiplicandolo per pricing.grenke_percentuale (default 5%) in fase di import.
+  nav: flexImporto.pipe(z.number().positive('NAV deve essere positivo')),
+  // Origine commerciale del contratto — colonna "broker name"
   origine: z.string().optional(),
 });
 
@@ -56,11 +81,15 @@ export interface GrenkeParsedRow {
   errors?: string[];
 }
 
+const normalizzaHeader = (h: string) => h.trim().replace(/\s+/g, ' ').toLowerCase();
+const mappingNormalizzato = new Map(Object.entries(mapping).map(([k, v]) => [normalizzaHeader(k), v]));
+
 function mapRow(rawRow: Record<string, unknown>): Record<string, unknown> {
   const mapped: Record<string, unknown> = {};
-  for (const [excelCol, dbField] of Object.entries(mapping)) {
-    if (rawRow[excelCol] !== undefined && rawRow[excelCol] !== null && rawRow[excelCol] !== '') {
-      mapped[dbField as string] = rawRow[excelCol];
+  for (const [col, valore] of Object.entries(rawRow)) {
+    const dbField = mappingNormalizzato.get(normalizzaHeader(col));
+    if (dbField && valore !== undefined && valore !== null && valore !== '') {
+      mapped[dbField] = valore;
     }
   }
   return mapped;

@@ -160,16 +160,18 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
     // Solo i primi 15 entrano nel file Grenke (gli altri 2 → "scartati")
     if (i < 15) {
       const prezzoGrenkeTest = round2(canone * (mesi / 12) * 0.6);
+      // Template ufficiale Grenke: il NAV è l'importo totale (prezzo riacquisto = NAV × 5%);
+      // la colonna pec è quasi sempre vuota come nei file reali (la PEC arriva dall'export NSM)
       grenkeRows.push({
-        'Numero Contratto Grenke': grenkeId,
-        'Denominazione Sociale': az.nome,
-        'P.IVA': az.piva,
-        'Email': email,
-        'PEC': pec,
-        'Data Inizio Contratto': formatDateIt(stipula),
-        'Data Fine Contratto': formatDateIt(scadenza),
-        'Importo Riacquisto Grenke': prezzoGrenkeTest,
-        'Origine': origine,
+        'contract': grenkeId,
+        'lessee name': az.nome,
+        'lessee vat ID': az.piva,
+        'lessee email': email,
+        'pec': i < 2 ? pec : '',
+        'start date': formatDateIt(stipula),
+        'end of lease term': formatDateIt(scadenza),
+        'NAV': round2(prezzoGrenkeTest * 20),
+        'broker name': origine,
       });
     }
   }
@@ -178,15 +180,15 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
   const scadenzaX = new Date(oggi);
   scadenzaX.setDate(scadenzaX.getDate() + 75);
   grenkeRows.push({
-    'Numero Contratto Grenke': 'G-FLEX-TEST-99',
-    'Denominazione Sociale': 'Zenith Mancante SRL',
-    'P.IVA': '11111111199',
-    'Email': 'g.ciardo+eol99@gmail.com',
-    'PEC': '',
-    'Data Inizio Contratto': formatDateIt(new Date(scadenzaX.getFullYear() - 3, scadenzaX.getMonth(), scadenzaX.getDate())),
-    'Data Fine Contratto': formatDateIt(scadenzaX),
-    'Importo Riacquisto Grenke': 120,
-    'Origine': 'Smartcom',
+    'contract': 'G-FLEX-TEST-99',
+    'lessee name': 'Zenith Mancante SRL',
+    'lessee vat ID': '11111111199',
+    'lessee email': 'g.ciardo+eol99@gmail.com',
+    'pec': '',
+    'start date': formatDateIt(new Date(scadenzaX.getFullYear() - 3, scadenzaX.getMonth(), scadenzaX.getDate())),
+    'end of lease term': formatDateIt(scadenzaX),
+    'NAV': 2400,
+    'broker name': 'Smartcom Solutions S.r.l.',
   });
 
   // 3) Genera i due file in memoria

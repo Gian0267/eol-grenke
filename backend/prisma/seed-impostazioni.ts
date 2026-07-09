@@ -51,7 +51,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'timeline.termine_accredito_bonifico', valore: String(pre.termine_accredito_bonifico ?? 21), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Termine accredito bonifico', descrizione: 'Giorni prima della scadenza entro cui l\'accredito del bonifico deve pervenire (data indicata nelle mail di invito/promemoria); oltre, proroga Grenke di 6 mesi' },
 
     // ─── PRICING ──────────────────────────────────────────────────────
-    { chiave: 'pricing.grenke_percentuale', valore: '5', tipo: 'NUMERO', categoria: 'PRICING', label: 'Percentuale acquisto Grenke', descrizione: 'Percentuale del monte canoni per il prezzo di acquisto da Grenke' },
+    { chiave: 'pricing.grenke_percentuale', valore: '5', tipo: 'NUMERO', categoria: 'PRICING', label: 'Percentuale acquisto Grenke (su NAV)', descrizione: 'Percentuale applicata al NAV del file Grenke per ottenere il prezzo di riacquisto addebitato da Grenke' },
     { chiave: 'pricing.riacquisto_percentuale', valore: '8', tipo: 'NUMERO', categoria: 'PRICING', label: 'Percentuale riacquisto cliente', descrizione: 'Percentuale del monte canoni per il prezzo di rivendita al cliente' },
     { chiave: 'pricing.iva_percentuale', valore: '22', tipo: 'NUMERO', categoria: 'PRICING', label: 'IVA', descrizione: 'Aliquota IVA applicata al riacquisto' },
     { chiave: 'pricing.soglia_alto_valore', valore: '5000', tipo: 'NUMERO', categoria: 'PRICING', label: 'Soglia alto valore', descrizione: 'Soglia in euro oltre la quale la pratica viene assegnata al Capo Area' },

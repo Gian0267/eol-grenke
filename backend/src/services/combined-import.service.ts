@@ -71,6 +71,11 @@ export async function previewCombinedImport(
   const grenke = parseGrenkeFile(grenkeBuffer);
   const nsm = await previewNsmImport(nsmBuffer, prisma);
 
+  // Il NAV del file Grenke è l'importo TOTALE del contratto: il prezzo di
+  // riacquisto addebitato da Grenke è NAV × percentuale (default 5%).
+  const configService = await import('./config.service.js');
+  const percGrenke = await configService.getNumero('pricing.grenke_percentuale', 5);
+
   const nsmByGrenke = new Map<string, NsmContractPreview>();
   for (const c of nsm.contratti) {
     nsmByGrenke.set(c.contratto_grenke_id, c);
@@ -95,13 +100,14 @@ export async function previewCombinedImport(
     }
 
     const r = g.row;
+    const pricingGrenke = round2(r.nav * percGrenke / 100);
     const base = {
       index: g.index,
       contratto_grenke_id: r.contratto_grenke_id,
       denominazione: r['cliente.ragione_sociale'],
       origine: r.origine,
       data_scadenza: r.data_scadenza.toISOString(),
-      pricing_grenke: r.pricing_grenke,
+      pricing_grenke: pricingGrenke,
     };
 
     if (grenkeEsistenti.has(r.contratto_grenke_id)) {
@@ -132,7 +138,7 @@ export async function previewCombinedImport(
       continue;
     }
 
-    const pricing = await calcolaPricing(match.canone_mensile, match.numero_mesi, r.pricing_grenke);
+    const pricing = await calcolaPricing(match.canone_mensile, match.numero_mesi, pricingGrenke);
     const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     rows.push({
@@ -209,7 +215,7 @@ export async function confirmCombinedImport(
       ragione_sociale: row.denominazione,
       codice_fiscale: primaNsm ? str(primaNsm.codice_fiscale) || null : null,
       email: (primaNsm && str(primaNsm.email)) || grenkeRow['cliente.email'],
-      pec: (primaNsm && str(primaNsm.pec)) || grenkeRow['cliente.pec'] || null,
+      pec: grenkeRow['cliente.pec'] || (primaNsm && str(primaNsm.pec)) || null,
       telefono: primaNsm ? str(primaNsm.telefono) || null : null,
       referente_nome: firmatario || null,
       referente_telefono: primaNsm ? str(primaNsm.firmatario_telefono) || null : null,

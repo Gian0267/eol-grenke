@@ -1,16 +1,16 @@
 {
-  "version": "1.0",
-  "_description": "Mapping delle colonne del file Excel Grenke ai campi del DB NSM. Vedi SPECS.md sezione 6.1 e 9.5.",
+  "version": "2.0",
+  "_description": "Mapping delle colonne del file Excel Grenke (template ufficiale ricevuto da Grenke, lug 2026) ai campi del DB NSM.",
   "formato_grenke_standard": {
-    "Numero Contratto Grenke": "contratto_grenke_id",
-    "Denominazione Sociale": "cliente.ragione_sociale",
-    "P.IVA": "cliente.piva",
-    "Email": "cliente.email",
-    "PEC": "cliente.pec",
-    "Data Inizio Contratto": "data_stipula",
-    "Data Fine Contratto": "data_scadenza",
-    "Importo Riacquisto Grenke": "pricing_grenke",
-    "Origine": "origine"
+    "contract": "contratto_grenke_id",
+    "lessee name": "cliente.ragione_sociale",
+    "lessee vat ID": "cliente.piva",
+    "lessee email": "cliente.email",
+    "pec": "cliente.pec",
+    "start date": "data_stipula",
+    "end of lease term": "data_scadenza",
+    "NAV": "nav",
+    "broker name": "origine"
   },
   "campi_obbligatori": [
     "contratto_grenke_id",
@@ -18,8 +18,8 @@
     "cliente.piva",
     "cliente.email",
     "data_scadenza",
-    "pricing_grenke"
+    "nav"
   ],
-  "_note": "Tracciato concordato con Grenke: numero contratto, denominazione, P.IVA, email, PEC (se disponibile), data inizio, data fine, importo addebitato a Smartcom. Canone, durata e dispositivi arrivano dall'export della piattaforma NSM (import contratti NSM).",
+  "_note": "Template ufficiale Grenke: contract, lessee name, lessee vat ID, lessee email, pec (quasi sempre vuota: si usa la PEC dell'export NSM), start date, end of lease term, NAV (importo TOTALE: il prezzo riacquisto Grenke si ottiene moltiplicando per pricing.grenke_percentuale, default 5%), broker name (origine commerciale). Il matching delle intestazioni e' case-insensitive. Canone, durata e dispositivi arrivano dall'export della piattaforma NSM.",
   "_frequenza_invio": "Trimestrale, entro il 15 del primo mese del trimestre precedente la scadenza (es. file per scadenze 01/07 arriva entro 15/04). Le scadenze Grenke cadono sempre il 01/01, 01/04, 01/07, 01/10."
 }
