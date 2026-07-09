@@ -36,9 +36,18 @@ function parseImporto(v: unknown): number {
   if (typeof v === 'number') return v;
   if (typeof v === 'string') {
     let t = v.replace(/[€\s]/g, '');
-    if (t.includes(',')) {
-      // Formato italiano: i punti sono migliaia, la virgola è il decimale
-      t = t.replace(/\./g, '').replace(',', '.');
+    const lastDot = t.lastIndexOf('.');
+    const lastComma = t.lastIndexOf(',');
+    if (lastDot !== -1 && lastComma !== -1) {
+      // Entrambi i separatori: quello più a destra è il decimale
+      // ("2.803,51" italiano / "2,803.51" inglese)
+      t = lastComma > lastDot ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+    } else if (lastComma !== -1) {
+      // Solo virgole: decimale se seguita da 1-2 cifre finali, altrimenti migliaia
+      t = /,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');
+    } else if (lastDot !== -1 && /^\d{1,3}(\.\d{3})+$/.test(t)) {
+      // Solo punti in gruppi di tre: migliaia all'italiana ("2.803")
+      t = t.replace(/\./g, '');
     }
     const n = Number(t);
     if (!isNaN(n)) return n;
@@ -107,7 +116,7 @@ export function parseGrenkeFile(buffer: Buffer): { totalRows: number; rows: Gren
     throw new Error('Il file Excel non contiene fogli');
   }
   const sheet = workbook.Sheets[sheetName]!;
-  const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { raw: false, dateNF: 'yyyy-mm-dd' });
+  const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { raw: true });
 
   if (rawRows.length === 0) {
     throw new Error('Il file Excel non contiene righe di dati');
