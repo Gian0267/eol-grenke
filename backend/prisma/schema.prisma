@@ -1,9 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
-  // Motore "binary" (processo separato) invece della libreria nativa in-process:
-  // necessario su Hostinger/LiteSpeed, dove il fork dei worker rompe i timer
-  // del motore library ("PANIC: timer has gone away" a ogni query).
-  engineType = "binary"
+  provider        = "prisma-client-js"
+  // Niente motore Rust (né binary né library): driver adapter pg + query
+  // compiler in-process. Su Hostinger il motore esterno moriva quando
+  // l'account saturava il limite di processi ("PANIC: timer has gone away",
+  // episodi del 03/07 e 09/07/2026) — così la classe di guasti sparisce.
+  previewFeatures = ["driverAdapters", "queryCompiler"]
 }
 
 datasource db {
