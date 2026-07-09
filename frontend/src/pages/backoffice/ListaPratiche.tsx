@@ -13,6 +13,7 @@ import {
   Search,
   FileText,
   Send,
+  Trash2,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -169,6 +170,8 @@ export default function ListaPratiche() {
   const [agenti, setAgenti] = useState<Agente[]>([]);
   const [exporting, setExporting] = useState(false);
   const [sendingBatch, setSendingBatch] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchResult, setBatchResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   /* --- Build query string (shared between list + export) --- */
@@ -312,11 +315,17 @@ export default function ListaPratiche() {
 
   async function handleInviaComunicazioneBatch() {
     if (!utente) return;
-    const listaRicevutaCount = items.filter(p => p.stato === 'LISTA_RICEVUTA').length;
-    const msg = listaRicevutaCount > 0
-      ? `Inviare la comunicazione iniziale a tutte le pratiche in stato "Lista ricevuta"?`
-      : 'Inviare la comunicazione iniziale a tutte le pratiche in stato "Lista ricevuta"?';
-    if (!confirm(msg)) return;
+    const idsSelezionati = items.filter(p => selected.has(p.id)).map(p => p.id);
+    const inviabili = items.filter(p => selected.has(p.id) && p.stato === 'LISTA_RICEVUTA').length;
+    if (idsSelezionati.length === 0) {
+      setBatchResult({ message: 'Nessuna pratica selezionata', type: 'error' });
+      return;
+    }
+    if (inviabili === 0) {
+      setBatchResult({ message: 'Nessuna delle pratiche selezionate è in stato "Lista ricevuta"', type: 'error' });
+      return;
+    }
+    if (!confirm(`Inviare la comunicazione iniziale alle ${inviabili} pratiche selezionate in stato "Lista ricevuta"?`)) return;
 
     setSendingBatch(true);
     setBatchResult(null);
@@ -325,6 +334,7 @@ export default function ListaPratiche() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-user-id': utente.id },
+        body: JSON.stringify({ ids: idsSelezionati }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Errore invio');
@@ -336,6 +346,48 @@ export default function ListaPratiche() {
       setSendingBatch(false);
     }
   }
+
+  async function handleEliminaSelezionate() {
+    if (!utente) return;
+    const idsSelezionati = items.filter(p => selected.has(p.id)).map(p => p.id);
+    if (idsSelezionati.length === 0) {
+      setBatchResult({ message: 'Nessuna pratica selezionata', type: 'error' });
+      return;
+    }
+    if (!confirm(
+      `ATTENZIONE — Eliminazione definitiva\n\n` +
+      `Verranno eliminate ${idsSelezionati.length} pratiche selezionate con tutto il loro storico ` +
+      `(comunicazioni, decisioni, audit). Le pratiche con pagamento completato NON verranno toccate.\n\n` +
+      `L'operazione non è reversibile. Procedere?`,
+    )) return;
+
+    setDeleting(true);
+    setBatchResult(null);
+    try {
+      const res = await fetch('/api/backoffice/pratiche/elimina', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': utente.id },
+        body: JSON.stringify({ ids: idsSelezionati }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore eliminazione');
+      const msgBloccate = body.bloccate?.length
+        ? ` — ${body.bloccate.length} non eliminate (pagamento completato): ${body.bloccate.map((b: any) => b.contratto_nsm).join(', ')}`
+        : '';
+      setBatchResult({ message: `${body.eliminate} pratiche eliminate${msgBloccate}`, type: body.bloccate?.length ? 'error' : 'success' });
+      fetchPratiche();
+    } catch (err: any) {
+      setBatchResult({ message: err.message, type: 'error' });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // Selezione di default: tutte le pratiche della pagina corrente
+  useEffect(() => {
+    setSelected(new Set((data?.items ?? []).map(p => p.id)));
+  }, [data]);
 
   /* --- Derived --- */
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
@@ -494,8 +546,18 @@ export default function ListaPratiche() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-flex rounded-lg hover:bg-flex-dark disabled:opacity-50 transition-colors"
           >
             {sendingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Invia comunicazione
+            Invia comunicazione ({items.filter(p => selected.has(p.id)).length} sel.)
           </button>
+          {utente && ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente.ruolo) && (
+            <button
+              onClick={handleEliminaSelezionate}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Elimina
+            </button>
+          )}
           <button
             onClick={handleExportCsv}
             disabled={exporting}
@@ -532,6 +594,15 @@ export default function ListaPratiche() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-paper border-b border-border text-left">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && items.every(p => selected.has(p.id))}
+                      onChange={e => setSelected(e.target.checked ? new Set(items.map(p => p.id)) : new Set())}
+                      className="w-4 h-4 accent-[#1a3a52] cursor-pointer"
+                      title="Seleziona/deseleziona tutte"
+                    />
+                  </th>
                   <ThSortable columnKey="contratto_nsm" label="Contr. NSM" onSort={handleSort}>
                     <SortIcon columnKey="contratto_nsm" />
                   </ThSortable>
@@ -561,6 +632,18 @@ export default function ListaPratiche() {
                     key={p.id}
                     className={`border-b last:border-b-0 hover:bg-paper/60 transition-colors ${idx % 2 === 1 ? 'bg-paper/30' : ''}`}
                   >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(p.id)}
+                        onChange={e => {
+                          const next = new Set(selected);
+                          if (e.target.checked) next.add(p.id); else next.delete(p.id);
+                          setSelected(next);
+                        }}
+                        className="w-4 h-4 accent-[#1a3a52] cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_nsm}</td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_grenke}</td>
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate" title={p.cliente}>

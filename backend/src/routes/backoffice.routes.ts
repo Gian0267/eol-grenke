@@ -127,8 +127,12 @@ router.post('/pratiche/:id/invia-comunicazione', async (req: AuthenticatedReques
 // POST /api/backoffice/pratiche/invia-comunicazione-batch — invio a tutte le LISTA_RICEVUTA
 router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // Se il body contiene una selezione di id, si inviano solo quelle
+    const { ids } = (req.body || {}) as { ids?: string[] };
+    const wherePratiche: any = { stato: 'LISTA_RICEVUTA', ambiente: ambienteVista(req) };
+    if (Array.isArray(ids) && ids.length > 0) wherePratiche.id = { in: ids };
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: 'LISTA_RICEVUTA', ambiente: ambienteVista(req) },
+      where: wherePratiche,
       select: { id: true },
     });
 
@@ -162,6 +166,66 @@ router.post('/pratiche/invia-comunicazione-batch', async (req: AuthenticatedRequ
   } catch (err) {
     console.error('[invia-comunicazione-batch] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche/elimina — eliminazione definitiva (bulk).
+// Riservata a BACKOFFICE_INTERNO/ADMIN; agisce solo nell'ambiente della vista
+// corrente e NON elimina pratiche pagate o con pagamenti completati.
+router.post('/pratiche/elimina', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+    const { ids } = (req.body || {}) as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: 'Nessuna pratica selezionata' });
+      return;
+    }
+    if (ids.length > 500) {
+      res.status(400).json({ error: 'Troppe pratiche in una sola richiesta (max 500)' });
+      return;
+    }
+
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where: { id: { in: ids }, ambiente: ambienteVista(req) },
+      select: {
+        id: true,
+        contratto_nsm_id: true,
+        stato: true,
+        pagamenti: { where: { stato: 'COMPLETATO' }, select: { id: true } },
+      },
+    });
+
+    const bloccate = pratiche.filter(p => p.stato === 'RIACQUISTO_PAGATO' || p.pagamenti.length > 0);
+    const bloccateIds = new Set(bloccate.map(p => p.id));
+    const daEliminare = pratiche.filter(p => !bloccateIds.has(p.id)).map(p => p.id);
+
+    if (daEliminare.length > 0) {
+      const inIds = { contratto_eol_id: { in: daEliminare } };
+      await prisma.$transaction([
+        prisma.task_Escalation.deleteMany({ where: inIds }),
+        prisma.richiesta_Contatto.deleteMany({ where: inIds }),
+        prisma.pagamento.deleteMany({ where: inIds }),
+        prisma.decisione_Cliente.deleteMany({ where: inIds }),
+        prisma.comunicazione.deleteMany({ where: inIds }),
+        prisma.audit_Event.deleteMany({ where: inIds }),
+        prisma.codice_Sconto.deleteMany({ where: inIds }),
+        prisma.contratto_EOL.deleteMany({ where: { id: { in: daEliminare } } }),
+      ]);
+      console.log(`[elimina-pratiche] ${daEliminare.length} pratiche eliminate da ${(req.user as any)?.email || 'n/d'} (ambiente ${ambienteVista(req)})`);
+    }
+
+    res.json({
+      success: true,
+      eliminate: daEliminare.length,
+      bloccate: bloccate.map(p => ({ id: p.id, contratto_nsm: p.contratto_nsm_id, motivo: 'Pratica con pagamento completato: non eliminabile' })),
+    });
+  } catch (err) {
+    console.error('[elimina-pratiche] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
   }
 });
 
