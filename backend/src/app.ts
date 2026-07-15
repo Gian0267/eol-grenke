@@ -139,6 +139,57 @@ app.get('/api/admin/run-monitor', async (req, res) => {
   }
 });
 
+// Auto-pulizia dei processi stantii dell'account (Hostinger ha un limite di
+// ~120 processi condiviso fra TUTTI i siti dell'account: le istanze node
+// orfane lasciate dai deploy si accumulano fino a bloccare tutto, episodi del
+// 03/07, 09/07 e 10/07/2026). Uccide gli eventuali query-engine legacy e le
+// istanze node più vecchie della soglia (default 6 ore), escluso il processo
+// corrente. Da agganciare a un cron esterno giornaliero.
+// GET /api/admin/pulizia-processi?secret=...&ore=6
+app.get('/api/admin/pulizia-processi', async (req, res) => {
+  const expected = process.env.SCHEDULER_TRIGGER_SECRET;
+  if (!expected) {
+    res.status(503).json({ errore: 'SCHEDULER_TRIGGER_SECRET non configurato' });
+    return;
+  }
+  if (req.query.secret !== expected) {
+    res.status(401).json({ errore: 'Secret non valido' });
+    return;
+  }
+  try {
+    const { execSync } = await import('child_process');
+    const sogliaSecondi = Math.max(1, Number(req.query.ore) || 6) * 3600;
+    const out = execSync('ps -eo pid,etimes,comm,args', { encoding: 'utf-8', timeout: 10000 });
+    const righe = out.split('\n').slice(1);
+    let engineKilled = 0;
+    let nodeKilled = 0;
+    const dettagli: string[] = [];
+    for (const riga of righe) {
+      const m = riga.trim().match(/^(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
+      if (!m) continue;
+      const pid = Number(m[1]);
+      const etimes = Number(m[2]);
+      const comm = m[3] || '';
+      const args = m[4] || '';
+      if (pid === process.pid) continue;
+      const isEngine = args.includes('query-engine');
+      const isNodeStantio = comm.includes('node') && etimes > sogliaSecondi;
+      if (isEngine || isNodeStantio) {
+        try {
+          process.kill(pid, 'SIGKILL');
+          if (isEngine) engineKilled++; else nodeKilled++;
+          dettagli.push(`${pid} (${comm}, ${Math.round(etimes / 3600)}h)`);
+        } catch { /* processo già morto o non nostro */ }
+      }
+    }
+    console.log(`[pulizia-processi] engine: ${engineKilled}, node stantii: ${nodeKilled}${dettagli.length ? ' — ' + dettagli.join(', ') : ''}`);
+    res.json({ ok: true, engine_killed: engineKilled, node_stantii_killed: nodeKilled, soglia_ore: sogliaSecondi / 3600 });
+  } catch (err) {
+    console.error('[pulizia-processi] Errore:', err);
+    res.status(500).json({ errore: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
 // In produzione il backend serve anche il frontend buildato (single deploy, stesso
 // origine → niente CORS, le chiamate relative /api restano sullo stesso host).
 if (process.env.NODE_ENV === 'production') {
