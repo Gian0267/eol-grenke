@@ -477,8 +477,10 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
 router.get('/segnalazioni-casella', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { status, keyword, data_from, data_to, page = '1', pageSize = '25' } = req.query as Record<string, string>;
-    const where: any = {};
-    if (status) where.status = status;
+    // Le segnalazioni eliminate restano a DB solo per la deduplicazione
+    // (altrimenti il monitor le ricreerebbe al giro successivo) ma non
+    // compaiono mai in elenco né nei conteggi.
+    const where: any = { status: status || { in: ['NEW', 'NOTIFIED', 'HANDLED'] } };
     if (keyword) where.matched_keywords = { contains: keyword, mode: 'insensitive' };
     if (data_from || data_to) {
       where.received_at = {};
@@ -540,6 +542,29 @@ router.post('/segnalazioni-casella/:id/gestita', async (req: AuthenticatedReques
     res.json({ success: true });
   } catch (err) {
     console.error('[segnalazioni-casella/gestita] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/segnalazioni-casella/:id/elimina — la segnalazione
+// sparisce da elenco/conteggi/digest; la riga resta a DB per la deduplicazione.
+router.post('/segnalazioni-casella/:id/elimina', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const m = await prisma.monitoredEmail.findUnique({ where: { id: req.params.id as string } });
+    if (!m) {
+      res.status(404).json({ error: 'Segnalazione non trovata' });
+      return;
+    }
+    await prisma.monitoredEmail.update({ where: { id: m.id }, data: { status: 'ELIMINATA' } });
+    await registraEvento(m.contratto_eol_id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MONITOR_SEGNALAZIONE_ELIMINATA', {
+      segnalazione_id: m.id,
+      mittente: m.from_address,
+      oggetto: m.subject,
+      status_precedente: m.status,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[segnalazioni-casella/elimina] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
   }
 });

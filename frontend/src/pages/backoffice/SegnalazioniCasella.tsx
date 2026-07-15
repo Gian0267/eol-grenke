@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, Loader2, CheckCircle2, Search } from 'lucide-react';
+import { Inbox, Loader2, CheckCircle2, Search, Trash2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 interface Segnalazione {
@@ -69,6 +69,25 @@ export default function SegnalazioniCasella() {
   };
 
   useEffect(carica, [page, status, keyword, dataFrom, dataTo]);
+
+  const elimina = async (id: string, oggetto: string) => {
+    if (!confirm(`Eliminare la segnalazione "${oggetto}"?\n\nSparirà da elenco, conteggi e digest (la mail nella casella non viene toccata).`)) return;
+    setMarking(id);
+    try {
+      const res = await fetch(`/api/backoffice/segnalazioni-casella/${id}/elimina`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: headers(),
+      });
+      if (!res.ok) throw new Error('Errore');
+      toast.success('Segnalazione eliminata');
+      carica();
+    } catch {
+      toast.error('Impossibile eliminare la segnalazione');
+    } finally {
+      setMarking(null);
+    }
+  };
 
   const segnaGestita = async (id: string) => {
     setMarking(id);
@@ -200,7 +219,7 @@ export default function SegnalazioniCasella() {
                         {STATUS_BADGE[m.status]?.label || m.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
                       {m.status !== 'HANDLED' && (
                         <button
                           onClick={() => segnaGestita(m.id)}
@@ -211,6 +230,14 @@ export default function SegnalazioniCasella() {
                           Segna gestita
                         </button>
                       )}
+                      <button
+                        onClick={() => elimina(m.id, m.subject)}
+                        disabled={marking === m.id}
+                        title="Elimina segnalazione"
+                        className="inline-flex items-center justify-center w-8 h-8 ml-2 rounded-lg text-stone hover:text-red-600 hover:bg-red-50 disabled:opacity-50 align-middle"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
