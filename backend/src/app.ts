@@ -157,21 +157,31 @@ app.get('/api/admin/pulizia-processi', async (req, res) => {
     return;
   }
   try {
-    const { execSync } = await import('child_process');
+    // Lettura diretta da /proc: `ps` richiederebbe una fork, e proprio quando
+    // l'account è saturo ogni spawn fallisce con EAGAIN (visto il 10/07/2026),
+    // rendendo inutile la pulizia nell'unico momento in cui serve davvero.
+    const { readFileSync, readdirSync } = await import('fs');
     const sogliaSecondi = Math.max(1, Number(req.query.ore) || 6) * 3600;
-    const out = execSync('ps -eo pid,etimes,comm,args', { encoding: 'utf-8', timeout: 10000 });
-    const righe = out.split('\n').slice(1);
+    const HZ = 100; // USER_HZ standard su Linux
+    const uptime = Number(readFileSync('/proc/uptime', 'utf-8').split(' ')[0]);
     let engineKilled = 0;
     let nodeKilled = 0;
     const dettagli: string[] = [];
-    for (const riga of righe) {
-      const m = riga.trim().match(/^(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
-      if (!m) continue;
-      const pid = Number(m[1]);
-      const etimes = Number(m[2]);
-      const comm = m[3] || '';
-      const args = m[4] || '';
-      if (pid === process.pid) continue;
+    for (const voce of readdirSync('/proc')) {
+      const pid = Number(voce);
+      if (!pid || pid === process.pid) continue;
+      let comm = '';
+      let args = '';
+      let etimes = 0;
+      try {
+        const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8');
+        comm = stat.slice(stat.indexOf('(') + 1, stat.lastIndexOf(')'));
+        const campi = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+        etimes = Math.max(0, uptime - Number(campi[19]) / HZ); // campo 22: starttime
+        args = readFileSync(`/proc/${pid}/cmdline`, 'utf-8').replace(/\0/g, ' ').trim();
+      } catch {
+        continue; // processo terminato o di un altro utente
+      }
       const isEngine = args.includes('query-engine');
       const isNodeStantio = comm.includes('node') && etimes > sogliaSecondi;
       if (isEngine || isNodeStantio) {
