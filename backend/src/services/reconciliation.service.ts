@@ -90,6 +90,22 @@ export interface GrenkeParsedRow {
   errors?: string[];
 }
 
+/**
+ * Il numero di contratto Grenke è spezzato su due colonne: la prima colonna
+ * del file (senza intestazione, letta da SheetJS come "__EMPTY") contiene il
+ * codice filiale e "contract" il progressivo. Il numero completo — quello che
+ * la piattaforma NSM registra come "Internet Number" — è `259-17810`, quindi
+ * senza il prefisso il match con l'export NSM fallisce sempre.
+ */
+function prefissoFiliale(rawRow: Record<string, unknown>): string | null {
+  for (const [col, valore] of Object.entries(rawRow)) {
+    if (!/^__EMPTY/.test(col)) continue;
+    const t = String(valore ?? '').trim();
+    if (/^\d{1,5}$/.test(t)) return t;
+  }
+  return null;
+}
+
 const normalizzaHeader = (h: string) => h.trim().replace(/\s+/g, ' ').toLowerCase();
 const mappingNormalizzato = new Map(Object.entries(mapping).map(([k, v]) => [normalizzaHeader(k), v]));
 
@@ -125,6 +141,10 @@ export function parseGrenkeFile(buffer: Buffer): { totalRows: number; rows: Gren
   const rows: GrenkeParsedRow[] = [];
   for (let i = 0; i < rawRows.length; i++) {
     const mapped = mapRow(rawRows[i]!);
+    const prefisso = prefissoFiliale(rawRows[i]!);
+    if (prefisso && mapped.contratto_grenke_id !== undefined) {
+      mapped.contratto_grenke_id = `${prefisso}-${String(mapped.contratto_grenke_id).trim()}`;
+    }
     const parseResult = rowSchema.safeParse(mapped);
     if (!parseResult.success) {
       rows.push({

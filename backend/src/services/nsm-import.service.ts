@@ -125,14 +125,16 @@ export function parseNsmExport(buffer: Buffer): {
     }
 
     const nsmId = str(row[COL.contratto_nsm]);
-    const grenkeIdRiga = str(row[COL.contratto_grenke]);
+    // "Internet Number" = numero di contratto Grenke completo (es. 259-17810);
+    // gli spazi si tolgono perché il match col file Grenke è per stringa esatta
+    const grenkeIdRiga = str(row[COL.contratto_grenke]).replace(/\s/g, '');
     const key = grenkeIdRiga || `__RIGA_${i}`;
     if (!gruppi.has(key)) gruppi.set(key, []);
     gruppi.get(key)!.push({
       _rowIndex: i + 1,
       finanziaria,
       contratto_nsm: nsmId,
-      contratto_grenke: str(row[COL.contratto_grenke]),
+      contratto_grenke: grenkeIdRiga,
       numero_rate: num(row[COL.numero_rate]),
       ragione_sociale: str(row[COL.ragione_sociale]),
       piva: str(row[COL.piva]),
