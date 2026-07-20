@@ -210,10 +210,16 @@ export async function confirmCombinedImport(
       ? [str(primaNsm.firmatario_nome), str(primaNsm.firmatario_cognome)].filter(Boolean).join(' ')
       : '';
 
-    // Cliente: anagrafica dal file NSM (master); email/PEC con fallback Grenke
+    // Identità del cliente (ragione sociale + P.IVA) dal file Grenke: è
+    // l'estrazione più recente e le società si trasformano, quindi l'export
+    // NSM può portare la denominazione precedente. Dal file NSM arrivano i
+    // dati che Grenke non ha (indirizzo, telefono, firmatario) più email/PEC.
+    // Il codice fiscale NSM si tiene solo se coerente con la P.IVA Grenke:
+    // se diverge è quello della società prima della trasformazione.
+    const cfNsm = primaNsm ? str(primaNsm.codice_fiscale) : '';
     const datiCliente = {
       ragione_sociale: row.denominazione,
-      codice_fiscale: primaNsm ? str(primaNsm.codice_fiscale) || null : null,
+      codice_fiscale: cfNsm && cfNsm === grenkeRow['cliente.piva'] ? cfNsm : null,
       email: (primaNsm && str(primaNsm.email)) || grenkeRow['cliente.email'],
       pec: grenkeRow['cliente.pec'] || (primaNsm && str(primaNsm.pec)) || null,
       telefono: primaNsm ? str(primaNsm.telefono) || null : null,
