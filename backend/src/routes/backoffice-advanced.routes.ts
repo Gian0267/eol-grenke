@@ -279,6 +279,63 @@ router.post('/pratiche-dettaglio/:id/cambia-agente', async (req: AuthenticatedRe
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/modifica-contatti — corregge
+// email e/o PEC del cliente. I contatti sono del Cliente, quindi la modifica
+// vale per tutte le sue pratiche. La PEC può essere svuotata, l'email no.
+router.post('/pratiche-dettaglio/:id/modifica-contatti', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { email, pec } = req.body as { email?: string; pec?: string };
+    if (email === undefined && pec === undefined) {
+      res.status(400).json({ error: 'Indicare almeno un contatto da modificare' });
+      return;
+    }
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const nuovaEmail = email !== undefined ? String(email).trim().toLowerCase() : undefined;
+    const nuovaPec = pec !== undefined ? String(pec).trim().toLowerCase() : undefined;
+    if (nuovaEmail !== undefined && !EMAIL_RE.test(nuovaEmail)) {
+      res.status(400).json({ error: 'Indirizzo email non valido' });
+      return;
+    }
+    if (nuovaPec !== undefined && nuovaPec !== '' && !EMAIL_RE.test(nuovaPec)) {
+      res.status(400).json({ error: 'Indirizzo PEC non valido' });
+      return;
+    }
+
+    const pratica = await prisma.contratto_EOL.findUnique({
+      where: { id: req.params.id as string },
+      select: { cliente_id: true, cliente: { select: { email: true, pec: true } } },
+    });
+    if (!pratica) {
+      res.status(404).json({ error: 'Pratica non trovata' });
+      return;
+    }
+
+    const data: { email?: string; pec?: string | null } = {};
+    if (nuovaEmail !== undefined) data.email = nuovaEmail;
+    if (nuovaPec !== undefined) data.pec = nuovaPec === '' ? null : nuovaPec;
+    await prisma.cliente.update({ where: { id: pratica.cliente_id }, data });
+
+    await registraEvento(
+      req.params.id as string,
+      'BACKOFFICE',
+      (req.user as any)?.id || 'system',
+      'MODIFICA_BACKOFFICE',
+      {
+        sotto_azione: 'MODIFICA_CONTATTI',
+        email_precedente: pratica.cliente.email,
+        email_nuova: data.email ?? pratica.cliente.email,
+        pec_precedente: pratica.cliente.pec,
+        pec_nuova: data.pec === undefined ? pratica.cliente.pec : data.pec,
+      },
+    );
+
+    res.json({ success: true, messaggio: 'Contatti del cliente aggiornati' });
+  } catch (err) {
+    console.error('[modifica-contatti] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/modifica-deadline
 router.post('/pratiche-dettaglio/:id/modifica-deadline', async (req: AuthenticatedRequest, res: Response) => {
   try {

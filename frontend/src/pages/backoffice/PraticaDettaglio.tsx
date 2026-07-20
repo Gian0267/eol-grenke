@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { toast, Toaster } from 'sonner';
 import { format } from 'date-fns';
@@ -19,6 +19,8 @@ import {
   FileDown,
   X,
   AlertCircle,
+  AtSign,
+  Trash2,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -303,6 +305,7 @@ type TabKey = 'panoramica' | 'timeline' | 'richieste' | 'audit';
 
 export default function PraticaDettaglio() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [utente] = useState<Utente | null>(() => getUtente());
 
   const [pratica, setPratica] = useState<Pratica | null>(null);
@@ -328,6 +331,10 @@ export default function PraticaDettaglio() {
 
   // Registra pagamento (bonifico verificato)
   const [riferimentoBonifico, setRiferimentoBonifico] = useState('');
+
+  // Modifica contatti cliente (email / PEC)
+  const [contattiEmail, setContattiEmail] = useState('');
+  const [contattiPec, setContattiPec] = useState('');
 
   // Segna richiamato loading
   const [richiamatoLoading, setRichiamatoLoading] = useState<string | null>(null);
@@ -441,6 +448,34 @@ export default function PraticaDettaglio() {
     setDecisioneNote('');
     setRiferimentoBonifico('');
     if (key === 'cambia-agente') loadAgenti();
+    if (key === 'modifica-contatti') {
+      setContattiEmail(pratica?.cliente.email || '');
+      setContattiPec(pratica?.cliente.pec || '');
+    }
+  }
+
+  // Eliminazione definitiva: riusa l'endpoint bulk della lista pratiche
+  async function handleEliminaPratica() {
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/backoffice/pratiche/elimina', {
+        method: 'POST',
+        credentials: 'include',
+        headers: getHeaders(),
+        body: JSON.stringify({ ids: [id] }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Errore eliminazione');
+      if (body.bloccate?.length) {
+        throw new Error(body.bloccate[0]?.motivo || 'Pratica non eliminabile');
+      }
+      toast.success('Pratica eliminata definitivamente');
+      navigate('/backoffice/pratiche');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Errore');
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function handleSegnaRichiamato(richiestaId: string) {
@@ -615,6 +650,20 @@ export default function PraticaDettaglio() {
                   label="Decisione manuale"
                   onClick={() => openModal('decisione-manuale')}
                 />
+                <ActionBtn
+                  icon={<AtSign className="w-4 h-4" />}
+                  label="Modifica email / PEC"
+                  onClick={() => openModal('modifica-contatti')}
+                />
+                {['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <button
+                    onClick={() => openModal('elimina-pratica')}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-red-200 bg-card hover:bg-red-50 text-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Elimina pratica
+                  </button>
+                )}
                 <div className="relative group">
                   <button
                     disabled
@@ -862,6 +911,85 @@ export default function PraticaDettaglio() {
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
+          </button>
+        </div>
+      </Modal>
+
+      {/* Modifica email / PEC */}
+      <Modal open={modalOpen === 'modifica-contatti'} title="Modifica email / PEC" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-4">
+          I contatti appartengono al cliente <strong>{pratica.cliente.ragione_sociale}</strong>:
+          la modifica vale per tutte le sue pratiche e per le prossime comunicazioni.
+        </p>
+        <div className="space-y-3 mb-5">
+          <div>
+            <label className="block text-sm font-medium text-graphite mb-1">Email</label>
+            <input
+              type="email"
+              value={contattiEmail}
+              onChange={(e) => setContattiEmail(e.target.value)}
+              placeholder="nome@azienda.it"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-graphite mb-1">PEC</label>
+            <input
+              type="email"
+              value={contattiPec}
+              onChange={(e) => setContattiPec(e.target.value)}
+              placeholder="nome@pec.azienda.it (vuoto = nessuna PEC)"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            Annulla
+          </button>
+          <button
+            disabled={actionLoading || !contattiEmail.trim()}
+            onClick={() =>
+              doAction(`/api/backoffice/pratiche-dettaglio/${id}/modifica-contatti`, {
+                email: contattiEmail.trim(),
+                pec: contattiPec.trim(),
+              })
+            }
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Salva contatti
+          </button>
+        </div>
+      </Modal>
+
+      {/* Elimina pratica */}
+      <Modal open={modalOpen === 'elimina-pratica'} title="Elimina pratica" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-3">
+          Eliminare definitivamente la pratica <strong className="font-mono">{pratica.contratto_nsm_id}</strong> di{' '}
+          <strong>{pratica.cliente.ragione_sociale}</strong>?
+        </p>
+        <p className="text-sm text-red-600 mb-5">
+          Verranno cancellati anche comunicazioni, decisioni, richieste di contatto e storico.
+          L'operazione non è reversibile. Le pratiche con pagamento completato non sono eliminabili.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            Annulla
+          </button>
+          <button
+            disabled={actionLoading}
+            onClick={handleEliminaPratica}
+            className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Elimina definitivamente
           </button>
         </div>
       </Modal>
