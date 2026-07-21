@@ -336,6 +336,9 @@ export default function PraticaDettaglio() {
   const [contattiEmail, setContattiEmail] = useState('');
   const [contattiPec, setContattiPec] = useState('');
 
+  // Reinvio comunicazione: canale scelto
+  const [reinviaCanale, setReinviaCanale] = useState<'TUTTI' | 'EMAIL' | 'PEC'>('TUTTI');
+
   // Segna richiamato loading
   const [richiamatoLoading, setRichiamatoLoading] = useState<string | null>(null);
 
@@ -447,6 +450,7 @@ export default function PraticaDettaglio() {
     setDecisioneScelta('');
     setDecisioneNote('');
     setRiferimentoBonifico('');
+    setReinviaCanale('TUTTI');
     if (key === 'cambia-agente') loadAgenti();
     if (key === 'modifica-contatti') {
       setContattiEmail(pratica?.cliente.email || '');
@@ -688,10 +692,38 @@ export default function PraticaDettaglio() {
 
       {/* Reinvia comunicazione */}
       <Modal open={modalOpen === 'reinvia'} title="Reinvia comunicazione" onClose={() => setModalOpen(null)}>
-        <p className="text-sm text-stone mb-5">
+        <p className="text-sm text-stone mb-4">
           Vuoi reinviare la comunicazione EOL al cliente{' '}
           <strong>{pratica.cliente.ragione_sociale}</strong>?
         </p>
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-graphite mb-2">Canale</label>
+          <div className="space-y-2">
+            {([
+              { val: 'TUTTI', label: 'Email + PEC', hint: 'entrambi i canali disponibili' },
+              { val: 'EMAIL', label: 'Solo email', hint: pratica.cliente.email },
+              { val: 'PEC', label: 'Solo PEC', hint: pratica.cliente.pec || 'nessuna PEC registrata' },
+            ] as const).map((o) => (
+              <label
+                key={o.val}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                  reinviaCanale === o.val ? 'border-flex bg-flex/5' : 'border-border hover:bg-paper'
+                } ${o.val === 'PEC' && !pratica.cliente.pec ? 'opacity-50' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="reinvia-canale"
+                  checked={reinviaCanale === o.val}
+                  disabled={o.val === 'PEC' && !pratica.cliente.pec}
+                  onChange={() => setReinviaCanale(o.val)}
+                  className="accent-flex"
+                />
+                <span className="text-sm">{o.label}</span>
+                <span className="text-xs text-stone truncate">{o.hint}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
@@ -701,7 +733,7 @@ export default function PraticaDettaglio() {
           </button>
           <button
             disabled={actionLoading}
-            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/reinvia-comunicazione`)}
+            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/reinvia-comunicazione`, { canale: reinviaCanale })}
             className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}

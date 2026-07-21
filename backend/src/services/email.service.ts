@@ -33,9 +33,12 @@ export interface InvioResult {
 
 export async function inviaComunicazioneIniziale(
   contratto_eol_id: string,
-  opts?: { reinvio?: boolean },
+  // canale: sul reinvio si può limitare a un solo canale (es. solo PEC quando
+  // l'email era già partita — caso reale del 21/07/2026, PEC fallite per 535)
+  opts?: { reinvio?: boolean; canale?: 'EMAIL' | 'PEC' | 'TUTTI' },
 ): Promise<InvioResult> {
   const reinvio = opts?.reinvio === true;
+  const canaleRichiesto = opts?.canale && opts.canale !== 'TUTTI' ? opts.canale : null;
   const result: InvioResult = { success: false, contrattoId: contratto_eol_id, emailInviate: 0, errori: [] };
 
   const contratto = await prisma.contratto_EOL.findUnique({
@@ -142,12 +145,20 @@ export async function inviaComunicazioneIniziale(
 
   const oggetto = `Comunicazione relativa al Suo contratto di locazione operativa n. ${contratto.contratto_grenke_id} in scadenza`;
 
-  const destinatari: Array<{ email: string; canale: string }> = [
+  let destinatari: Array<{ email: string; canale: string }> = [
     { email: contratto.cliente.email, canale: 'EMAIL' },
   ];
 
   if (contratto.cliente.pec && contratto.cliente.pec !== contratto.cliente.email) {
     destinatari.push({ email: contratto.cliente.pec, canale: 'PEC' });
+  }
+
+  if (canaleRichiesto) {
+    destinatari = destinatari.filter((d) => d.canale === canaleRichiesto);
+    if (destinatari.length === 0) {
+      result.errori.push(canaleRichiesto === 'PEC' ? 'Il cliente non ha una PEC distinta dall\'email' : 'Nessun destinatario per il canale richiesto');
+      return result;
+    }
   }
 
   let almenoUnInvioOk = false;
