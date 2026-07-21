@@ -154,20 +154,40 @@ export class ResendEmailProvider implements EmailProvider {
  * Valore legale solo PEC→PEC. Il mittente DEVE coincidere con la casella autenticata.
  * Default: parametri Aruba PEC (smtps.pec.aruba.it:465).
  */
+/**
+ * Password PEC: prima Impostazioni (pec.password), poi variabile d'ambiente.
+ * La via DB esiste perché il 21/07/2026 il valore incollato su hPanel arrivava
+ * sistematicamente corrotto (17 caratteri anziché 16 → 535 da Aruba) e non
+ * c'era modo di correggerlo dal pannello.
+ */
+export async function pecPassword(): Promise<{ password: string; sorgente: 'impostazioni' | 'env' }> {
+  try {
+    const configService = await import('../../services/config.service.js');
+    const fromDb = (await configService.getTesto('pec.password', '')).trim();
+    if (fromDb) return { password: fromDb, sorgente: 'impostazioni' };
+  } catch { /* config non disponibile: si ricade sull'env */ }
+  return { password: process.env.PEC_PASSWORD || '', sorgente: 'env' };
+}
+
 export class PecEmailProvider implements EmailProvider {
-  private transporter: nodemailer.Transporter;
   private from: string;
 
   constructor() {
-    const port = Number(process.env.PEC_SMTP_PORT || 465);
     this.from = process.env.PEC_FROM || process.env.PEC_USER || '';
-    this.transporter = nodemailer.createTransport({
+  }
+
+  // Transporter creato a ogni invio: la password può arrivare dalle
+  // Impostazioni (asincrone) e può cambiare senza riavvio dell'app
+  private async transporter(): Promise<nodemailer.Transporter> {
+    const port = Number(process.env.PEC_SMTP_PORT || 465);
+    const { password } = await pecPassword();
+    return nodemailer.createTransport({
       host: process.env.PEC_SMTP_HOST || 'smtps.pec.aruba.it',
       port,
       secure: port === 465, // 465 = SMTPS; 587 = STARTTLS
       auth: {
         user: process.env.PEC_USER,
-        pass: process.env.PEC_PASSWORD,
+        pass: password,
       },
     });
   }
@@ -175,7 +195,8 @@ export class PecEmailProvider implements EmailProvider {
   async send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult> {
     try {
       // Il CC su una casella ordinaria riceve una copia senza valore legale
-      const info = await this.transporter.sendMail({ from: this.from, to, cc: await risolviCc(opts), subject, html });
+      const t = await this.transporter();
+      const info = await t.sendMail({ from: this.from, to, cc: await risolviCc(opts), subject, html });
       return { success: true, messageId: info.messageId };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -186,7 +207,8 @@ export class PecEmailProvider implements EmailProvider {
 
   async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[], opts?: SendOpts): Promise<SendResult> {
     try {
-      const info = await this.transporter.sendMail({
+      const t = await this.transporter();
+      const info = await t.sendMail({
         from: this.from,
         to,
         cc: await risolviCc(opts),

@@ -158,7 +158,8 @@ app.get('/api/admin/test-pec', async (req, res) => {
   const port = Number(process.env.PEC_SMTP_PORT || 465);
   // Introspezione della password SENZA esporla: serve a scovare virgolette o
   // spazi finiti nel valore incollato su hPanel (dotenv li toglie, hPanel no)
-  const pw = process.env.PEC_PASSWORD || '';
+  const { pecPassword } = await import('./providers/notification/email.provider.js');
+  const { password: pw, sorgente } = await pecPassword();
   // Confronto cieco: ?hash=<sha256 esadecimale della password attesa> — dice
   // se il valore sul server coincide, e se no dove sta il carattere in più
   let confronto: Record<string, boolean> | undefined;
@@ -178,6 +179,7 @@ app.get('/api/admin/test-pec', async (req, res) => {
     pec_user: process.env.PEC_USER || null,
     pec_from: process.env.PEC_FROM || null,
     pec_password: {
+      sorgente,
       presente: Boolean(pw),
       lunghezza: pw.length,
       con_virgolette: /^["']|["']$/.test(pw),
@@ -191,7 +193,7 @@ app.get('/api/admin/test-pec', async (req, res) => {
       host,
       port,
       secure: port === 465,
-      auth: { user: process.env.PEC_USER, pass: process.env.PEC_PASSWORD },
+      auth: { user: process.env.PEC_USER, pass: pw },
       connectionTimeout: 15000,
     });
     const t0 = Date.now();

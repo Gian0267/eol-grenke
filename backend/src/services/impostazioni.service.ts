@@ -15,7 +15,8 @@ export async function getCategoria(categoria: string) {
 }
 
 export async function getAll() {
-  const all = await prisma.impostazione.findMany({ orderBy: { chiave: 'asc' } });
+  // Le righe NASCOSTA (segreti, es. pec.password) non vanno mai esposte alla UI
+  const all = await prisma.impostazione.findMany({ where: { tipo: { not: 'NASCOSTA' } }, orderBy: { chiave: 'asc' } });
   const grouped: Record<string, typeof all> = {};
   for (const imp of all) {
     if (!grouped[imp.categoria]) grouped[imp.categoria] = [];
