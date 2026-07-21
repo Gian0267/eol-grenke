@@ -159,6 +159,19 @@ app.get('/api/admin/test-pec', async (req, res) => {
   // Introspezione della password SENZA esporla: serve a scovare virgolette o
   // spazi finiti nel valore incollato su hPanel (dotenv li toglie, hPanel no)
   const pw = process.env.PEC_PASSWORD || '';
+  // Confronto cieco: ?hash=<sha256 esadecimale della password attesa> — dice
+  // se il valore sul server coincide, e se no dove sta il carattere in più
+  let confronto: Record<string, boolean> | undefined;
+  if (typeof req.query.hash === 'string' && /^[0-9a-f]{64}$/.test(req.query.hash)) {
+    const { createHash } = await import('crypto');
+    const h = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex');
+    confronto = {
+      valore_intero_corrisponde: h(pw) === req.query.hash,
+      senza_primo_carattere: h(pw.slice(1)) === req.query.hash,
+      senza_ultimo_carattere: h(pw.slice(0, -1)) === req.query.hash,
+      dopo_trim: h(pw.trim()) === req.query.hash,
+    };
+  }
   const config = {
     host,
     port,
@@ -170,6 +183,7 @@ app.get('/api/admin/test-pec', async (req, res) => {
       con_virgolette: /^["']|["']$/.test(pw),
       con_spazi_o_a_capo: /\s/.test(pw),
     },
+    ...(confronto ? { confronto } : {}),
   };
   try {
     const nodemailer = (await import('nodemailer')).default;
