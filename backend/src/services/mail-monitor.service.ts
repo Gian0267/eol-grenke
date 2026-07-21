@@ -231,7 +231,7 @@ async function inviaAlertTecnico(ultimoErrore: string): Promise<void> {
       <p>Verificare credenziali e raggiungibilità del server ${process.env.MONITOR_IMAP_HOST}. Il monitor riproverà automaticamente a ogni ciclo.</p>
     </div>`;
   for (const dest of destinatari) {
-    await emailProvider.send(dest, '[ALERT] Monitor casella info@ — connessione IMAP fallita', html);
+    await emailProvider.send(dest, '[ALERT] Monitor casella info@ — connessione IMAP fallita', html, { cc: null });
   }
   await registraEvento(null, 'SISTEMA', 'MAIL_MONITOR', 'MONITOR_ALERT_TECNICO', {
     fallimenti: fallimentiConsecutivi,
@@ -300,7 +300,7 @@ export async function inviaDigestSeDovuto(adesso = new Date()): Promise<{ inviat
   const oggetto = `Segnalazioni casella info@ — ${nuove.length} mail da gestire (${dataRome(adesso)})`;
   let inviiOk = 0;
   for (const dest of destinatari) {
-    const r = await emailProvider.send(dest, oggetto, html);
+    const r = await emailProvider.send(dest, oggetto, html, { cc: null });
     if (r.success) inviiOk++;
   }
 

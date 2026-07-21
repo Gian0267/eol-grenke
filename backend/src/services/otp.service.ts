@@ -44,10 +44,13 @@ export async function generateOtp(
   // SMS non ha ancora un provider — quando il destinatario è un numero di
   // telefono il codice resta solo a DB e va integrato un provider SMS).
   if (destinatario.includes('@')) {
+    // cc: null — il codice OTP verifica l'identità del cliente: mai in copia
+    // alla casella aziendale (email.cc_fisso), perderebbe valore di prova
     const result = await emailProviderPerAmbiente(ambiente).send(
       destinatario,
       'Il tuo codice di verifica — Noleggio Su Misura',
       otpEmailHtml(codice),
+      { cc: null },
     );
     if (!result.success) {
       console.error('[OTP] Invio email fallito:', result.error);

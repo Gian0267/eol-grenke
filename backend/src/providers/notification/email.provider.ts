@@ -12,9 +12,34 @@ export interface EmailAttachment {
   content: Buffer;
 }
 
+export interface SendOpts {
+  /**
+   * Indirizzo in copia conoscenza. Non passato (undefined) → si applica il CC
+   * predefinito da Impostazioni (email.cc_fisso); null o '' → nessun CC
+   * (usato per OTP, mail interne del monitor e ambiente TEST).
+   */
+  cc?: string | null;
+}
+
 export interface EmailProvider {
-  send(to: string, subject: string, html: string): Promise<SendResult>;
-  sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult>;
+  send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult>;
+  sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[], opts?: SendOpts): Promise<SendResult>;
+}
+
+/** CC predefinito per le comunicazioni verso i clienti (Impostazioni → email.cc_fisso). */
+async function ccPredefinito(): Promise<string> {
+  try {
+    const configService = await import('../../services/config.service.js');
+    return (await configService.getTesto('email.cc_fisso', '')).trim();
+  } catch {
+    return '';
+  }
+}
+
+/** Risolve il CC effettivo per un invio: default da Impostazioni, esclusioni esplicite via opts. */
+async function risolviCc(opts?: SendOpts): Promise<string | undefined> {
+  const cc = opts?.cc === undefined ? await ccPredefinito() : opts.cc;
+  return cc ? cc : undefined;
 }
 
 export class SmtpEmailProvider implements EmailProvider {
@@ -31,11 +56,12 @@ export class SmtpEmailProvider implements EmailProvider {
     });
   }
 
-  async send(to: string, subject: string, html: string): Promise<SendResult> {
+  async send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult> {
     try {
       const info = await this.transporter.sendMail({
         from: this.from,
         to,
+        cc: await risolviCc(opts),
         subject,
         html,
       });
@@ -47,11 +73,12 @@ export class SmtpEmailProvider implements EmailProvider {
     }
   }
 
-  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[], opts?: SendOpts): Promise<SendResult> {
     try {
       const info = await this.transporter.sendMail({
         from: this.from,
         to,
+        cc: await risolviCc(opts),
         subject,
         html,
         attachments: attachments.map(a => ({ filename: a.filename, content: a.content })),
@@ -82,9 +109,10 @@ export class ResendEmailProvider implements EmailProvider {
       'Noleggio Su Misura <noreply@noleggiosumisura.it>';
   }
 
-  async send(to: string, subject: string, html: string): Promise<SendResult> {
+  async send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult> {
     try {
-      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
+      const cc = await risolviCc(opts);
+      const { data, error } = await this.resend.emails.send({ from: this.from, to, ...(cc ? { cc } : {}), subject, html });
       if (error) {
         console.error(`[Resend] Errore invio a ${to}: ${error.message}`);
         return { success: false, error: error.message };
@@ -97,11 +125,13 @@ export class ResendEmailProvider implements EmailProvider {
     }
   }
 
-  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[], opts?: SendOpts): Promise<SendResult> {
     try {
+      const cc = await risolviCc(opts);
       const { data, error } = await this.resend.emails.send({
         from: this.from,
         to,
+        ...(cc ? { cc } : {}),
         subject,
         html,
         attachments: attachments.map(a => ({ filename: a.filename, content: a.content })),
@@ -142,9 +172,10 @@ export class PecEmailProvider implements EmailProvider {
     });
   }
 
-  async send(to: string, subject: string, html: string): Promise<SendResult> {
+  async send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult> {
     try {
-      const info = await this.transporter.sendMail({ from: this.from, to, subject, html });
+      // Il CC su una casella ordinaria riceve una copia senza valore legale
+      const info = await this.transporter.sendMail({ from: this.from, to, cc: await risolviCc(opts), subject, html });
       return { success: true, messageId: info.messageId };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -153,11 +184,12 @@ export class PecEmailProvider implements EmailProvider {
     }
   }
 
-  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
+  async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[], opts?: SendOpts): Promise<SendResult> {
     try {
       const info = await this.transporter.sendMail({
         from: this.from,
         to,
+        cc: await risolviCc(opts),
         subject,
         html,
         attachments: attachments.map(a => ({ filename: a.filename, content: a.content })),
@@ -198,12 +230,13 @@ export class TestRedirectEmailProvider implements EmailProvider {
     );
   }
 
+  // cc: null — le mail di test non vanno mai in copia alla casella aziendale
   async send(to: string, subject: string, html: string): Promise<SendResult> {
-    return this.inner.send(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html);
+    return this.inner.send(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html, { cc: null });
   }
 
   async sendWithAttachment(to: string, subject: string, html: string, attachments: EmailAttachment[]): Promise<SendResult> {
-    return this.inner.sendWithAttachment(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html, attachments);
+    return this.inner.sendWithAttachment(await this.resolveTo(), `${this.prefix} ${subject}`, this.banner(to) + html, attachments, { cc: null });
   }
 }
 
