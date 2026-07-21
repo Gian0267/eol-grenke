@@ -139,6 +139,47 @@ app.get('/api/admin/run-monitor', async (req, res) => {
   }
 });
 
+// Diagnostica del canale PEC DAL server: verifica login SMTP Aruba senza
+// inviare nulla e riporta l'errore esatto (il dettaglio degli invii falliti
+// finisce su stderr, che i log di runtime Hostinger non mostrano). Serve a
+// distinguere credenziali errate (535) da porte SMTP in uscita bloccate
+// dall'hosting (timeout/refused). GET /api/admin/test-pec?secret=...
+app.get('/api/admin/test-pec', async (req, res) => {
+  const expected = process.env.SCHEDULER_TRIGGER_SECRET;
+  if (!expected) {
+    res.status(503).json({ errore: 'SCHEDULER_TRIGGER_SECRET non configurato' });
+    return;
+  }
+  if (req.query.secret !== expected) {
+    res.status(401).json({ errore: 'Secret non valido' });
+    return;
+  }
+  const host = process.env.PEC_SMTP_HOST || 'smtps.pec.aruba.it';
+  const port = Number(process.env.PEC_SMTP_PORT || 465);
+  const config = {
+    host,
+    port,
+    pec_user: process.env.PEC_USER || null,
+    pec_password_presente: Boolean(process.env.PEC_PASSWORD),
+    pec_from: process.env.PEC_FROM || null,
+  };
+  try {
+    const nodemailer = (await import('nodemailer')).default;
+    const t = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user: process.env.PEC_USER, pass: process.env.PEC_PASSWORD },
+      connectionTimeout: 15000,
+    });
+    const t0 = Date.now();
+    await t.verify();
+    res.json({ ok: true, ms: Date.now() - t0, config });
+  } catch (err) {
+    res.json({ ok: false, errore: err instanceof Error ? err.message : String(err), config });
+  }
+});
+
 // Auto-pulizia dei processi stantii dell'account (Hostinger ha un limite di
 // ~120 processi condiviso fra TUTTI i siti dell'account: le istanze node
 // orfane lasciate dai deploy si accumulano fino a bloccare tutto, episodi del
