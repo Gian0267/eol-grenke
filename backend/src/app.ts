@@ -156,12 +156,20 @@ app.get('/api/admin/test-pec', async (req, res) => {
   }
   const host = process.env.PEC_SMTP_HOST || 'smtps.pec.aruba.it';
   const port = Number(process.env.PEC_SMTP_PORT || 465);
+  // Introspezione della password SENZA esporla: serve a scovare virgolette o
+  // spazi finiti nel valore incollato su hPanel (dotenv li toglie, hPanel no)
+  const pw = process.env.PEC_PASSWORD || '';
   const config = {
     host,
     port,
     pec_user: process.env.PEC_USER || null,
-    pec_password_presente: Boolean(process.env.PEC_PASSWORD),
     pec_from: process.env.PEC_FROM || null,
+    pec_password: {
+      presente: Boolean(pw),
+      lunghezza: pw.length,
+      con_virgolette: /^["']|["']$/.test(pw),
+      con_spazi_o_a_capo: /\s/.test(pw),
+    },
   };
   try {
     const nodemailer = (await import('nodemailer')).default;
