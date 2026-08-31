@@ -44,7 +44,7 @@ function optOutPage(message: string, success: boolean): string {
 <p style="font-size:48px;margin:0 0 16px;">${icon}</p>
 <h1 style="color:#1a3a52;font-size:20px;margin:0 0 12px;">Comunicazioni Noleggio Su Misura</h1>
 <p style="color:${color};font-size:16px;line-height:1.5;">${message}</p>
-<p style="color:#94a3b8;font-size:13px;margin-top:24px;">Smartcom Solutions Srl — 011 4557949</p>
+<p style="color:#94a3b8;font-size:13px;margin-top:24px;">Integra Solutions Srl — 011 4557949</p>
 </div></body></html>`;
 }
 

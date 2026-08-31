@@ -581,7 +581,7 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
     pricing_totale: formatEur(totale),
     link_pagamento: linkPagamento,
     pagamento_online_attivo: pagamentoOnlineAttivo,
-    pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Smartcom Solutions S.r.l.'),
+    pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Integra Solutions S.r.l.'),
     pagamento_iban: await configService.getTesto('pagamenti.iban', 'IT96S0853001002000000267119'),
     pagamento_banca: await configService.getTesto('pagamenti.banca', 'Banca d\'Alba'),
     promemoria,

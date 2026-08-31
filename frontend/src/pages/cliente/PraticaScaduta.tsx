@@ -41,7 +41,7 @@ export default function PraticaScaduta() {
         </h1>
         <p className="text-gray-600 mb-4">
           {info ? <>Gentile <strong>{info.ragione_sociale}</strong>, i</> : 'I'} termini per la
-          gestione del fine noleggio tramite <strong>Smartcom Solutions Srl</strong> sono
+          gestione del fine noleggio tramite <strong>Integra Solutions Srl</strong> sono
           scaduti{info?.data_fine_noleggio ? <> (fine noleggio: <strong>{info.data_fine_noleggio}</strong>)</> : null}.
           Per la gestione del Suo fine noleggio La invitiamo a contattare
           direttamente <strong>Grenke Italia S.p.A.</strong>
@@ -78,7 +78,7 @@ export default function PraticaScaduta() {
         )}
 
         <p className="text-xs text-gray-400 mt-8">
-          Noleggio Su Misura — Smartcom Solutions Srl
+          Noleggio Su Misura — Integra Solutions Srl
         </p>
       </div>
     </div>

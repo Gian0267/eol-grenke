@@ -47,7 +47,7 @@ export class SmtpEmailProvider implements EmailProvider {
   private from: string;
 
   constructor() {
-    this.from = process.env.SMTP_FROM || 'Noleggio Su Misura <noreply@noleggiosumisura.it>';
+    this.from = process.env.SMTP_FROM || 'Noleggio Su Misura <info@noleggiosumisura.it>';
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'localhost',
       port: Number(process.env.SMTP_PORT || 1025),
@@ -106,7 +106,7 @@ export class ResendEmailProvider implements EmailProvider {
     this.from =
       process.env.RESEND_FROM ||
       process.env.SMTP_FROM ||
-      'Noleggio Su Misura <noreply@noleggiosumisura.it>';
+      'Noleggio Su Misura <info@noleggiosumisura.it>';
   }
 
   async send(to: string, subject: string, html: string, opts?: SendOpts): Promise<SendResult> {

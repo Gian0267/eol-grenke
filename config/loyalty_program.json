@@ -5,7 +5,7 @@
     "_nome_commerciale": "Premio Fedeltà: Sconto Copertura Bronze",
     "abilitato": true,
     "calcolo_dinamico": true,
-    "a_carico_di": "Smartcom Solutions",
+    "a_carico_di": "Integra Solutions",
     "applicato_su": "Canone copertura danni accidentali BRONZE del nuovo contratto FLEX",
     "tagli_standard_eur": [25, 50, 75, 100, 125, 150, 200, 250, 300],
     "metodo_arrotondamento": "per_difetto",

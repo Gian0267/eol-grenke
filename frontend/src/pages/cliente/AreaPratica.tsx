@@ -288,7 +288,7 @@ export default function AreaPratica() {
 
         {/* Footer info */}
         <p className="text-center text-xs text-gray-400 pt-4">
-          Noleggio Su Misura — Smartcom Solutions Srl — 011 4557949
+          Noleggio Su Misura — Integra Solutions Srl — 011 4557949
         </p>
       </main>
     </div>

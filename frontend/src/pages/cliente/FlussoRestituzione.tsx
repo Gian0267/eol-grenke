@@ -9,7 +9,7 @@ const ISTRUZIONI = [
   { titolo: 'Factory reset', testo: 'Esegui il ripristino alle impostazioni di fabbrica (factory reset) di ogni dispositivo.' },
   { titolo: 'Verifica integrità', testo: 'Il dispositivo deve essere funzionante, privo di danni evidenti, e comprensivo di tutti gli accessori originali.' },
   { titolo: 'Imballa adeguatamente', testo: 'Imballa ogni dispositivo nel packaging originale o, in assenza, in un imballo adeguato.' },
-  { titolo: 'Spedisci a Collegno', testo: 'Spedisci a: Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Spese a carico del cliente.' },
+  { titolo: 'Spedisci a Collegno', testo: 'Spedisci a: Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Spese a carico del cliente.' },
 ];
 
 interface PraticaData {

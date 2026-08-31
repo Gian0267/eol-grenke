@@ -267,7 +267,7 @@ model Task_Escalation {
   @@index([assegnato_a_id, stato])
 }
 
-// Mail rilevanti intercettate sulla casella info@smartcomsolutions.it
+// Mail rilevanti intercettate sulla casella info@noleggiosumisura.it
 // (monitor IMAP in sola lettura — la casella non viene MAI modificata)
 model MonitoredEmail {
   id               String         @id @default(uuid())

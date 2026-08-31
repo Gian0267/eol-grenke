@@ -32,7 +32,7 @@ const ISTRUZIONI_RESTITUZIONE = [
   'Esegui il ripristino alle impostazioni di fabbrica (factory reset).',
   'Verifica l\'integrità: il dispositivo deve essere funzionante, senza danni, con tutti gli accessori originali.',
   'Imballa ogni dispositivo nel packaging originale o in un imballo adeguato.',
-  'Spedisci a: Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Spese a carico del cliente.',
+  'Spedisci a: Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Spese a carico del cliente.',
 ];
 
 function formatEur(n: number): string {

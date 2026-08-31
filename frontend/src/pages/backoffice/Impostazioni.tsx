@@ -655,7 +655,7 @@ function TabRecapiti({ items, localValues, updateLocal, onSave, onReset }: TabPr
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-800 mb-2">Recapiti aziendali</h2>
-      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti. Le voci "Monitor casella" governano la lettura di info@smartcomsolutions.it.</p>
+      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti. Le voci "Monitor casella" governano la lettura di info@noleggiosumisura.it.</p>
       {items.map(imp => (
         <FieldRow key={imp.chiave} imp={imp} value={localValues[imp.chiave] || ''} onChange={v => updateLocal(imp.chiave, v)} onSave={() => onSave(imp.chiave)} onReset={() => onReset(imp.chiave)}>
           {(imp.chiave === 'monitor.keywords' || imp.chiave === 'monitor.digest_destinatari') ? (

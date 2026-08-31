@@ -46,7 +46,7 @@ async function main() {
 
   // 2. Dati bancari
   const datiBancari = [
-    { chiave: 'pagamenti.intestatario', valore: 'Smartcom Solutions S.r.l.', label: 'Intestatario conto incassi', descrizione: 'Intestatario del conto corrente mostrato al cliente per il bonifico di riacquisto' },
+    { chiave: 'pagamenti.intestatario', valore: 'Integra Solutions S.r.l.', label: 'Intestatario conto incassi', descrizione: 'Intestatario del conto corrente mostrato al cliente per il bonifico di riacquisto' },
     { chiave: 'pagamenti.iban', valore: 'IT96S0853001002000000267119', label: 'IBAN incassi', descrizione: 'IBAN mostrato al cliente nella mascherina di pagamento e nella mail di invito al pagamento' },
     { chiave: 'pagamenti.banca', valore: 'Banca d\'Alba', label: 'Banca incassi', descrizione: 'Nome della banca del conto incassi' },
   ];

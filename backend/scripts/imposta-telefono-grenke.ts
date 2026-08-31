@@ -21,7 +21,7 @@ async function main() {
       tipo: 'TESTO',
       categoria: 'RECAPITI',
       label: 'Telefono Grenke (fine noleggio)',
-      descrizione: 'Numero Grenke indicato al cliente quando i termini di gestione Smartcom sono scaduti',
+      descrizione: 'Numero Grenke indicato al cliente quando i termini di gestione Integra Solutions sono scaduti',
     },
   });
   console.log('✅ recapiti.telefono_grenke = 02-30082525');

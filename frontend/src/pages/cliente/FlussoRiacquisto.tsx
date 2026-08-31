@@ -513,7 +513,7 @@ export default function FlussoRiacquisto() {
                 <p className="mb-2">2. La fattura elettronica sara emessa tramite Sistema di Interscambio (SDI) dall'ERP aziendale entro i termini di legge.</p>
                 <p className="mb-2">3. Alla conferma del pagamento verra generata una ricevuta di conferma (non fiscale).</p>
                 <p className="mb-2">4. I beni vengono ceduti nello stato di fatto in cui si trovano al momento della scadenza del contratto.</p>
-                <p className="mb-2">5. Smartcom Solutions Srl non presta garanzia sui beni ceduti, fatta salva la garanzia di legge per vizi occulti.</p>
+                <p className="mb-2">5. Integra Solutions Srl non presta garanzia sui beni ceduti, fatta salva la garanzia di legge per vizi occulti.</p>
                 <p>6. Il presente accordo e soggetto alla legge italiana. Per qualsiasi controversia sara competente il Foro di Torino.</p>
               </div>
 
@@ -667,7 +667,7 @@ export default function FlussoRiacquisto() {
               <dl className="space-y-3 text-sm">
                 <div>
                   <dt className="text-gray-400">Intestatario</dt>
-                  <dd className="font-medium text-[#1a3a52]">{configPagamento?.pagamento_intestatario || 'Smartcom Solutions S.r.l.'}</dd>
+                  <dd className="font-medium text-[#1a3a52]">{configPagamento?.pagamento_intestatario || 'Integra Solutions S.r.l.'}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-400">IBAN</dt>
@@ -807,7 +807,7 @@ export default function FlussoRiacquisto() {
                 {state.metodo_pagamento === 'FABRICK' ? (
                   <div className="space-y-2 text-sm text-left">
                     <div className="bg-white border rounded p-2"><span className="text-gray-400">IBAN:</span> IT60X0542811101000000123456</div>
-                    <div className="bg-white border rounded p-2"><span className="text-gray-400">Beneficiario:</span> Smartcom Solutions Srl</div>
+                    <div className="bg-white border rounded p-2"><span className="text-gray-400">Beneficiario:</span> Integra Solutions Srl</div>
                     <div className="bg-white border rounded p-2"><span className="text-gray-400">Causale:</span> Riacquisto {pratica.contratto.numero_nsm}</div>
                   </div>
                 ) : (

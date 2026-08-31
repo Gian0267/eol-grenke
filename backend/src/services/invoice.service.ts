@@ -84,7 +84,7 @@ export async function generaRicevutaPagamento(
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: `Ricevuta di conferma pagamento ${fatturaNumero}`,
-    Author: 'Noleggio Su Misura - Smartcom Solutions Srl',
+    Author: 'Noleggio Su Misura - Integra Solutions Srl',
   }});
 
   const pdfDone = collectPdf(doc);
@@ -114,7 +114,7 @@ export async function generaRicevutaPagamento(
     .text('Emittente');
   doc.moveDown(0.3);
   doc.fontSize(10).font('Helvetica');
-  doc.text('Smartcom Solutions Srl');
+  doc.text('Integra Solutions Srl');
   doc.text('Via Tunisia 5, 10093 Collegno (TO)');
   doc.text('P.IVA: 12345678901');
   doc.moveDown(1);
@@ -208,7 +208,7 @@ export async function generaRicevutaPagamento(
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
   doc.moveDown(0.3);
   doc.fontSize(8).fillColor('#999999');
-  doc.text('Smartcom Solutions Srl — Via Tunisia 5, 10093 Collegno (TO) — P.IVA 12345678901', { align: 'center' });
+  doc.text('Integra Solutions Srl — Via Tunisia 5, 10093 Collegno (TO) — P.IVA 12345678901', { align: 'center' });
   doc.text('Documento generato automaticamente dalla piattaforma Noleggio Su Misura', { align: 'center' });
 
   doc.end();

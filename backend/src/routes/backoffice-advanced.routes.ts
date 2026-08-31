@@ -488,7 +488,7 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
             n. <strong>${contratto.contratto_grenke_id}</strong>.</p>
             <p>In allegato trova la ricevuta n. ${result.fattura_numero}.</p>
             <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
-            <span style="font-size:13px;color:#6b7280;">Divisione Rental di Smartcom Solutions Srl</span></p>
+            <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Solutions Srl</span></p>
           </div>`;
         const sendResult = await emailProvider.sendWithAttachment(
           contratto.cliente.email,

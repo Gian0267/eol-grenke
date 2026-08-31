@@ -183,7 +183,7 @@ Per come è strutturato l'Accordo Remarketing Grenke-Smartcom, dopo la proroga d
 
 ### Decisione
 
-Gift card Smartcom Solutions di valore **dinamico**, calcolato come arrotondamento per difetto al taglio standard più vicino del margine lordo del vecchio contratto. Tagli: 25, 50, 75, 100, 125, 150, 200, 250, 300 €.
+Gift card Integra Solutions di valore **dinamico**, calcolato come arrotondamento per difetto al taglio standard più vicino del margine lordo del vecchio contratto. Tagli: 25, 50, 75, 100, 125, 150, 200, 250, 300 €.
 
 ### Contesto
 

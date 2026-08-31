@@ -120,7 +120,7 @@ export default function SegnalazioniCasella() {
         )}
       </div>
       <p className="text-sm text-stone mb-4">
-        Mail rilevanti intercettate su info@smartcomsolutions.it (lettura ogni 15 minuti, casella mai modificata).
+        Mail rilevanti intercettate su info@noleggiosumisura.it (lettura ogni 15 minuti, casella mai modificata).
       </p>
 
       {/* Filtri */}

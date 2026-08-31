@@ -1,5 +1,5 @@
 /**
- * Monitor IMAP della casella info@smartcomsolutions.it.
+ * Monitor IMAP della casella info@noleggiosumisura.it.
  *
  * VINCOLO ASSOLUTO: la casella non viene MAI modificata — connessione in sola
  * lettura (mailbox aperta readOnly: niente move, delete, flag o mark-as-read).
@@ -30,7 +30,7 @@ const KEYWORDS_DEFAULT = [
 ];
 
 // Mittenti interni: mai segnalati (evita auto-segnalazioni dei reminder dell'app)
-const DOMINI_INTERNI = ['smartcomsolutions.it', 'noleggiosumisura.it', 'smartcomgroup.it'];
+const DOMINI_INTERNI = ['noleggiosumisura.it', 'integrasolutions.it', 'integrasystems.it', 'pec.integrasystems.it', 'smartcomsolutions.it', 'smartcomgroup.it'];
 
 // Domini generici: esclusi dal collegamento per dominio (troppi falsi positivi)
 const DOMINI_GENERICI = new Set([

@@ -1,6 +1,6 @@
 # NSM EOL Grenke — Template applicativo
 
-Template applicativo per la gestione del workflow di **fine noleggio** (End Of Lease) dei contratti FLEX di Grenke Italia, per Smartcom Solutions Srl / brand Noleggio Su Misura (NSM).
+Template applicativo per la gestione del workflow di **fine noleggio** (End Of Lease) dei contratti FLEX di Grenke Italia, per Integra Solutions Srl / brand Noleggio Su Misura (NSM).
 
 > **Stato:** v1.0.0-template — tutte le 10 missioni completate. Pronto per la consegna al team di sviluppo AWS.
 
@@ -201,7 +201,7 @@ Tempo stimato: **10-15 settimane**.
 
 ## Contatti
 
-**Smartcom Solutions Srl** / **Noleggio Su Misura**
+**Integra Solutions Srl** / **Noleggio Su Misura**
 Via Tunisia 5, Collegno (TO) — P.IVA 12711040019
 Tel: 011 4557949 — info@noleggiosumisura.it
 
@@ -209,11 +209,11 @@ Tel: 011 4557949 — info@noleggiosumisura.it
 
 ## Licenza
 
-Codice proprietario — Smartcom Solutions Srl. Tutti i diritti riservati.
+Codice proprietario — Integra Solutions Srl. Tutti i diritti riservati.
 
-## Monitor casella info@smartcomsolutions.it (v1.2.0)
+## Monitor casella info@noleggiosumisura.it (v1.2.0)
 
-Modulo di monitoraggio IMAP **in sola lettura** della casella `info@smartcomsolutions.it`:
+Modulo di monitoraggio IMAP **in sola lettura** della casella `info@noleggiosumisura.it`:
 le mail che contengono le keyword configurate (es. "Fine contratto Grenke") vengono
 salvate come segnalazioni, mostrate nel backoffice ("Segnalazioni info@") e riepilogate
 in un digest email mattutino. **La casella non viene mai modificata**: nessun move,
@@ -227,7 +227,7 @@ Variabili d'ambiente (hPanel + `backend/.env`, vedi `backend/.env.example`):
 MONITOR_IMAP_HOST=pop.securemail.pro
 MONITOR_IMAP_PORT=993
 MONITOR_IMAP_SECURE=true
-MONITOR_IMAP_USER=info@smartcomsolutions.it
+MONITOR_IMAP_USER=info@noleggiosumisura.it
 MONITOR_IMAP_PASSWORD=***
 ```
 

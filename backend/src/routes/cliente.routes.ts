@@ -1800,7 +1800,7 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
       abilita_gift_card: await configService.getBooleano('flags.abilita_gift_card', true),
       abilita_opzione_rinnovo: await configService.getBooleano('flags.abilita_opzione_rinnovo', true),
       abilita_pagamento_online: await configService.getBooleano('flags.abilita_pagamento_online', false),
-      pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Smartcom Solutions S.r.l.'),
+      pagamento_intestatario: await configService.getTesto('pagamenti.intestatario', 'Integra Solutions S.r.l.'),
       pagamento_iban: await configService.getTesto('pagamenti.iban', 'IT96S0853001002000000267119'),
       pagamento_banca: await configService.getTesto('pagamenti.banca', 'Banca d\'Alba'),
       titolo_opzione_rinnovo: await configService.getTesto('cliente.titolo_opzione_rinnovo', 'Fai un nuovo contratto con noi'),

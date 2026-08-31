@@ -117,7 +117,7 @@ SMTP_HOST=smtp.sendgrid.net        # oppure email-smtp.eu-west-1.amazonaws.com (
 SMTP_PORT=587
 SMTP_USER=apikey                   # SendGrid: 'apikey', SES: access key
 SMTP_PASS=<api_key_or_password>
-SMTP_FROM=noreply@noleggiosumisura.it
+SMTP_FROM=info@noleggiosumisura.it
 ```
 
 **Opzioni consigliate:**

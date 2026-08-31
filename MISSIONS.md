@@ -91,7 +91,7 @@ Puoi copiare e incollare i prompt così come sono, oppure adattarli al tuo stile
 
 CONTESTO:
 Sto costruendo un template applicativo per gestire il workflow di fine
-noleggio dei contratti FLEX di Grenke per Smartcom Solutions / Noleggio
+noleggio dei contratti FLEX di Grenke per Integra Solutions / Noleggio
 Su Misura. Questo è il primo passo: setup del progetto e creazione dello
 schema database.
 
@@ -724,7 +724,7 @@ A — FLUSSO RINNOVO:
      * Durata desiderata (radio: 24/36/48 mesi)
      * Budget orientativo mensile (slider o input numerico, opzionale)
      * Note libere (textarea)
-   - Banner evidenziato: "🎁 Riceverai una gift card Smartcom Solutions
+   - Banner evidenziato: "🎁 Riceverai una gift card Integra Solutions
      di €[VALORE] alla firma del nuovo contratto FLEX!"
    - Bottone "Procedi" che richiede OTP FES
    - Pagina di conferma con messaggio: "La tua richiesta di rinnovo è

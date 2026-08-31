@@ -2,14 +2,14 @@
 
 **Versione:** 1.1
 **Data:** 11 maggio 2026
-**Autore:** Gian Luca Ciardo — Smartcom Solutions Srl
+**Autore:** Gian Luca Ciardo — Integra Solutions Srl
 **Destinatari:** Sviluppatori della piattaforma app.smartcomsolutions.it
 
 **Changelog v1.1 rispetto a v1.0:**
 - Aggiunto campo `contratto_nsm_id` con riconciliazione automatica all'importazione
 - Aggiunto ruolo `BACKOFFICE_INTERNO`
 - Riscritta sezione "Silenzio cliente": stato terminale di perdita definitiva
-- Modificata logica gift card: a carico Smartcom Solutions, valore dinamico arrotondato a taglio standard
+- Modificata logica gift card: a carico Integra Solutions, valore dinamico arrotondato a taglio standard
 - Integrato widget "Chiamami" globale + step intermedio prima del pagamento
 - Aggiunta escalation manuale telefonica a T-50/T-40/T-35
 - Nuova sezione KPI strategici con tasso di non-silenzio come KPI #1
@@ -21,14 +21,14 @@
 
 ### 1.1 Contesto di business
 
-Smartcom Solutions Srl, attraverso il brand Noleggio Su Misura (NSM), gestisce contratti di locazione operativa FLEX con il partner finanziario Grenke Italia S.p.A. Alla scadenza dei contratti FLEX, Smartcom — in forza dell'Accordo Remarketing sottoscritto con Grenke — è il soggetto autorizzato a gestire la fase di fine contratto con il cliente Conduttore.
+Integra Solutions Srl, attraverso il brand Noleggio Su Misura (NSM), gestisce contratti di locazione operativa FLEX con il partner finanziario Grenke Italia S.p.A. Alla scadenza dei contratti FLEX, Smartcom — in forza dell'Accordo Remarketing sottoscritto con Grenke — è il soggetto autorizzato a gestire la fase di fine contratto con il cliente Conduttore.
 
 Il presente template descrive il workflow operativo digitale che Smartcom utilizzerà per gestire la fase di fine noleggio dei contratti FLEX Grenke, in modo automatizzato, scalabile e tracciabile.
 
 ### 1.2 Obiettivi del template
 
 1. **Prevenire il silenzio cliente** — Il silenzio porta alla proroga automatica Grenke di 6 mesi, dopo la quale Smartcom è disintermediata definitivamente. Ogni cliente silente è una perdita irreversibile.
-2. **Massimizzare il rinnovo** — Convertire il cliente in fase EOL in cliente di un nuovo contratto FLEX, attraverso un incentivo concreto (gift card Smartcom Solutions).
+2. **Massimizzare il rinnovo** — Convertire il cliente in fase EOL in cliente di un nuovo contratto FLEX, attraverso un incentivo concreto (gift card Integra Solutions).
 3. **Self-service del riacquisto** — Permettere al cliente di riacquistare il bene attuale in autonomia, con pagamento integrato in piattaforma.
 4. **Tracciabilità completa** — Documentare ogni interazione cliente con valore probatorio sufficiente a sostenere eventuali contestazioni.
 5. **Efficienza operativa** — Ridurre al minimo l'intervento manuale del team NSM nella gestione di routine, concentrando l'effort sui casi complessi e a rischio.
@@ -355,11 +355,11 @@ function calcolaPricing(canone_mensile, numero_mesi) {
 
 > **AGGIORNAMENTO (giugno 2026):** la gift card è stata sostituita dal **"Premio Fedeltà: Sconto Copertura Bronze"** — uno sconto sul canone della copertura danni accidentali BRONZE del nuovo contratto FLEX. Il valore si calcola con le stesse fasce della gift card (tabella sotto). Alla conferma del rinnovo l'app genera un **codice sconto opaco monouso** (formato `NSM-XXXX-XXXX`, charset senza 0/O/1/I/L, tabella `Codice_Sconto`, stati GENERATO/UTILIZZATO/SCADUTO/ANNULLATO) mostrato al cliente, incluso nelle email di conferma e gestibile dal backoffice (pagina "Codici Sconto"). Il calcolo della riduzione canone (valore vs coefficiente finanziaria 18/24/36/48 mesi, floor a zero) avviene sulla piattaforma noleggio esterna, fuori perimetro. Le chiavi interne (`valore_gift_card`, `pricing.gift_card_tagli`, `pricing.gift_card_validita_mesi`, `flags.abilita_gift_card`) restano invariate per retrocompatibilità. I riferimenti a "gift card" nel resto di questo documento sono storici.
 
-Il cliente che sceglie "Rinnovo con nuovo contratto FLEX" e firma effettivamente il nuovo contratto riceve lo **Sconto Copertura Bronze** (storicamente: gift card Smartcom Solutions).
+Il cliente che sceglie "Rinnovo con nuovo contratto FLEX" e firma effettivamente il nuovo contratto riceve lo **Sconto Copertura Bronze** (storicamente: gift card Integra Solutions).
 
 **Caratteristiche dell'incentivo:**
 
-- **A carico di:** Smartcom Solutions Srl
+- **A carico di:** Integra Solutions Srl
 - **Valore:** dinamico, calcolato come **arrotondamento per difetto al taglio standard più vicino del margine lordo del vecchio contratto**
 
 **Tagli standard:** 25€, 50€, 75€, 100€, 125€, 150€, 200€, 250€, 300€
@@ -631,7 +631,7 @@ La pratica NON cambia stato (resta in `IN_ATTESA_DECISIONE`), ma viene annotata 
    - Crea task nell'area dell'agente assegnato (vedi regole 5.3)
    - Notifica via email l'agente assegnato
    - Registra `Audit_Event`
-5. **Nota importante per il cliente:** la gift card di [valore calcolato dinamicamente] € viene comunicata come parte del processo ("riceverai una gift card Smartcom Solutions di [X]€ alla firma del nuovo contratto FLEX, spendibile sul catalogo Smartcom Distribution")
+5. **Nota importante per il cliente:** la gift card di [valore calcolato dinamicamente] € viene comunicata come parte del processo ("riceverai una gift card Integra Solutions di [X]€ alla firma del nuovo contratto FLEX, spendibile sul catalogo Smartcom Distribution")
 
 ### 6.4 Flusso 4b — Cliente sceglie "Acquista il bene attuale"
 
@@ -1295,12 +1295,12 @@ Per garantire massima flessibilità nei test e nelle simulazioni, tutte le regol
   "gift_card": {
     "abilitato": true,
     "calcolo_dinamico": true,
-    "a_carico_di": "Smartcom Solutions",
+    "a_carico_di": "Integra Solutions",
     "spendibile_su": "Smartcom Distribution",
     "tagli_standard": [25, 50, 75, 100, 125, 150, 200, 250, 300],
     "metodo_arrotondamento": "per_difetto",
     "validita_mesi": 12,
-    "messaggio_marketing": "Rinnova il tuo contratto FLEX e ricevi una gift card Smartcom Solutions di {{valore}}€ spendibile su accessori e periferiche del catalogo Smartcom Distribution."
+    "messaggio_marketing": "Rinnova il tuo contratto FLEX e ricevi una gift card Integra Solutions di {{valore}}€ spendibile su accessori e periferiche del catalogo Smartcom Distribution."
   }
 }
 ```
@@ -1449,7 +1449,7 @@ Le seguenti decisioni sono ancora aperte e richiedono input prima dell'avvio del
 
 ### 13.1 Decisioni interne Smartcom
 
-1. **Modalità di consegna gift card Smartcom Solutions**: codice univoco via email? Buono spendibile online con QR code?
+1. **Modalità di consegna gift card Integra Solutions**: codice univoco via email? Buono spendibile online con QR code?
 2. **Catalogo Smartcom Distribution per gift card**: restrizioni di categoria o spendibile su tutto?
 3. **Email mittente per le comunicazioni NSM**: quale indirizzo? Va creato un alias dedicato (es. `finecontratti@noleggiosumisura.it`)?
 4. **Numero dedicato fine-noleggio**: usare il numero principale 011 4557949 o un secondo numero?
@@ -1474,7 +1474,7 @@ Le seguenti decisioni sono ancora aperte e richiedono input prima dell'avvio del
 
 ## 14. Riferimenti normativi e contrattuali
 
-- **Accordo Remarketing** sottoscritto tra Smartcom Solutions Srl e Grenke Italia S.p.A. (data: [data firma]) e relativi Allegati 01 (Tabella pricing) e 02 (Nomina a Responsabile esterno del trattamento)
+- **Accordo Remarketing** sottoscritto tra Integra Solutions Srl e Grenke Italia S.p.A. (data: [data firma]) e relativi Allegati 01 (Tabella pricing) e 02 (Nomina a Responsabile esterno del trattamento)
 - **Rinuncia IOL** alla facoltà di riacquisto e designazione di Smartcom (data: [data firma])
 - **Lettera di scadenza al Conduttore** — modello concordato con Grenke
 - **Regolamento UE 2016/679 (GDPR)** — protezione dati personali

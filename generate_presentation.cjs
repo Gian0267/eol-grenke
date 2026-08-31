@@ -2,7 +2,7 @@ const pptxgen = require("pptxgenjs");
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
-pres.author = "Gian Luca Ciardo — Smartcom Solutions Srl";
+pres.author = "Gian Luca Ciardo — Integra Solutions Srl";
 pres.title = "NSM EOL Grenke — Workflow Comunicazioni";
 
 // === PALETTE ===
@@ -76,7 +76,7 @@ const s1 = pres.addSlide();
 s1.background = { color: C.navy };
 s1.addText("Workflow EOL Grenke", { x: 0.8, y: 1.2, w: 8.4, h: 1.4, fontSize: 40, fontFace: "Georgia", color: C.white, bold: true, margin: 0 });
 s1.addText("Comunicazioni, Template Email e Escalation Telefoniche", { x: 0.8, y: 2.6, w: 8.4, h: 0.6, fontSize: 18, fontFace: "Calibri", color: C.midGray, margin: 0 });
-s1.addText("Smartcom Solutions Srl / Noleggio Su Misura", { x: 0.8, y: 3.6, w: 8.4, h: 0.4, fontSize: 14, fontFace: "Calibri", color: C.teal, margin: 0 });
+s1.addText("Integra Solutions Srl / Noleggio Su Misura", { x: 0.8, y: 3.6, w: 8.4, h: 0.4, fontSize: 14, fontFace: "Calibri", color: C.teal, margin: 0 });
 s1.addText("Maggio 2026", { x: 0.8, y: 4.3, w: 8.4, h: 0.3, fontSize: 12, fontFace: "Calibri", color: C.midGray, margin: 0 });
 
 // ========================================
@@ -84,7 +84,7 @@ s1.addText("Maggio 2026", { x: 0.8, y: 4.3, w: 8.4, h: 0.3, fontSize: 12, fontFa
 // ========================================
 const s2 = addContentSlide("Overview del progetto");
 s2.addText("Gestione End Of Lease dei contratti FLEX Grenke", { x: 0.6, y: 1.1, w: 8.8, h: 0.5, fontSize: 16, fontFace: "Georgia", color: C.textDark, bold: true, margin: 0 });
-s2.addText("Smartcom Solutions, tramite il brand Noleggio Su Misura, gestisce la fase di fine contratto dei leasing FLEX Grenke. Il workflow automatizza comunicazioni, decisioni cliente e pagamenti.", { x: 0.6, y: 1.6, w: 8.8, h: 0.7, fontSize: 12, fontFace: "Calibri", color: C.textMuted, margin: 0 });
+s2.addText("Integra Solutions, tramite il brand Noleggio Su Misura, gestisce la fase di fine contratto dei leasing FLEX Grenke. Il workflow automatizza comunicazioni, decisioni cliente e pagamenti.", { x: 0.6, y: 1.6, w: 8.8, h: 0.7, fontSize: 12, fontFace: "Calibri", color: C.textMuted, margin: 0 });
 
 addCard(s2, 0.6, 2.5, 4.15, 1.2, C.red, "Problema critico", [
   "Silenzio cliente = perdita DEFINITIVA",
@@ -457,7 +457,7 @@ const bullets = [
 ];
 sEnd.addText(bullets, { x: 0.8, y: 1.8, w: 8.4, h: 3.0, margin: 0 });
 
-sEnd.addText("Smartcom Solutions Srl / Noleggio Su Misura — Maggio 2026", { x: 0.8, y: 4.8, w: 8.4, h: 0.4, fontSize: 11, fontFace: "Calibri", color: C.midGray, margin: 0 });
+sEnd.addText("Integra Solutions Srl / Noleggio Su Misura — Maggio 2026", { x: 0.8, y: 4.8, w: 8.4, h: 0.4, fontSize: 11, fontFace: "Calibri", color: C.midGray, margin: 0 });
 
 // ========================================
 // WRITE FILE

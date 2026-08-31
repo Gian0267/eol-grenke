@@ -31,7 +31,7 @@ const ISTRUZIONI_OPERATIVE = [
   'Esegui il ripristino alle impostazioni di fabbrica (factory reset) di ogni dispositivo.',
   'Verifica l\'integrità del bene: il dispositivo deve essere funzionante, privo di danni evidenti, e comprensivo di tutti gli accessori originali (caricatore, cavo, ecc.).',
   'Imballa ogni dispositivo nel packaging originale o, in assenza, in un imballo adeguato che garantisca la protezione durante il trasporto.',
-  'Spedisci il pacco a: Smartcom Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Le spese di spedizione sono a carico del cliente.',
+  'Spedisci il pacco a: Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO). Le spese di spedizione sono a carico del cliente.',
 ];
 
 function formatDate(d: Date): string {
@@ -69,7 +69,7 @@ export async function generaVerbaleRestituzione(
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: 'Verbale di conferma restituzione',
-    Author: 'Noleggio Su Misura — Smartcom Solutions Srl',
+    Author: 'Noleggio Su Misura — Integra Solutions Srl',
   }});
 
   const pdfDone = collectPdf(doc);
@@ -77,7 +77,7 @@ export async function generaVerbaleRestituzione(
   // Header
   drawLogoHeader(doc);
   doc.fontSize(8).fillColor('#666666')
-    .text('Noleggio Su Misura è la divisione rental di Smartcom Solutions Srl');
+    .text('Noleggio Su Misura è la divisione rental di Integra Solutions Srl');
   doc.fillColor('#000000');
 
   doc.moveDown(0.5);
@@ -227,7 +227,7 @@ export async function generaConfermaRinnovo(
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: 'Conferma interesse al rinnovo',
-    Author: 'Noleggio Su Misura - Smartcom Solutions Srl',
+    Author: 'Noleggio Su Misura - Integra Solutions Srl',
   }});
 
   const pdfDone = collectPdf(doc);
@@ -376,7 +376,7 @@ export async function generaAuditExport(
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: toAscii('Audit trail — catena di hash'),
-    Author: 'Noleggio Su Misura — Smartcom Solutions Srl',
+    Author: 'Noleggio Su Misura — Integra Solutions Srl',
   }});
 
   const pdfDone = collectPdf(doc);

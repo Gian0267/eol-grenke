@@ -188,7 +188,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
     'start date': formatDateIt(new Date(scadenzaX.getFullYear() - 3, scadenzaX.getMonth(), scadenzaX.getDate())),
     'end of lease term': formatDateIt(scadenzaX),
     'NAV': 2400,
-    'broker name': 'Smartcom Solutions S.r.l.',
+    'broker name': 'Integra Solutions S.r.l.',
   });
 
   // 3) Genera i due file in memoria

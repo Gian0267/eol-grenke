@@ -59,7 +59,7 @@ templates/
 - Template engine: **Handlebars**
 - Branding: colori NSM (primary #1a3a52, accent verde #16a34a per rinnovo)
 - Footer obbligatorio con:
-  - Indirizzo Smartcom Solutions
+  - Indirizzo Integra Solutions
   - Recapiti (tel + email)
   - Link opt-out (diritto di opposizione GDPR)
   - Disclaimer privacy

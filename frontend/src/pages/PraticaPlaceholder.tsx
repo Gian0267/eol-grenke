@@ -16,7 +16,7 @@ export default function PraticaPlaceholder() {
           <p className="text-xs font-mono text-gray-700 break-all">{token}</p>
         </div>
         <p className="text-sm text-gray-400 mt-6">
-          Noleggio Su Misura — Smartcom Solutions Srl
+          Noleggio Su Misura — Integra Solutions Srl
         </p>
       </div>
     </div>
