@@ -568,6 +568,7 @@ router.get('/segnalazioni-casella', async (req: AuthenticatedRequest, res: Respo
         snippet: m.snippet,
         keywords: JSON.parse(m.matched_keywords),
         status: m.status,
+        casella: m.casella,
         contratto: m.contratto_eol
           ? { id: m.contratto_eol.id, contratto_nsm: m.contratto_eol.contratto_nsm_id, data_scadenza: m.contratto_eol.data_scadenza }
           : null,

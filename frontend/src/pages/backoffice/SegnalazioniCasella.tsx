@@ -12,6 +12,7 @@ interface Segnalazione {
   snippet: string;
   keywords: string[];
   status: 'NEW' | 'NOTIFIED' | 'HANDLED';
+  casella: string | null;
   contratto: { id: string; contratto_nsm: string; data_scadenza: string | null } | null;
 }
 
@@ -120,7 +121,7 @@ export default function SegnalazioniCasella() {
         )}
       </div>
       <p className="text-sm text-stone mb-4">
-        Mail rilevanti intercettate su info@noleggiosumisura.it (lettura ogni 15 minuti, casella mai modificata).
+        Mail rilevanti intercettate sulle caselle di contatto monitorate (lettura ogni 15 minuti, caselle mai modificate).
       </p>
 
       {/* Filtri */}
@@ -177,6 +178,7 @@ export default function SegnalazioniCasella() {
                 <tr>
                   <th className="px-4 py-3">Data</th>
                   <th className="px-4 py-3">Mittente</th>
+                  <th className="px-4 py-3">Casella</th>
                   <th className="px-4 py-3">Oggetto</th>
                   <th className="px-4 py-3">Keyword</th>
                   <th className="px-4 py-3">Contratto</th>
@@ -193,6 +195,9 @@ export default function SegnalazioniCasella() {
                     <td className="px-4 py-3 max-w-[220px]">
                       <p className="font-medium text-graphite truncate" title={m.from_address}>{m.from_name || m.from_address}</p>
                       {m.from_name && <p className="text-xs text-stone truncate">{m.from_address}</p>}
+                    </td>
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <span className="text-xs text-stone truncate block" title={m.casella ?? undefined}>{m.casella ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3 max-w-[320px]">
                       <p className="font-medium text-graphite truncate" title={m.subject}>{m.subject}</p>

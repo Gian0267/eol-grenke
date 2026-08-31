@@ -280,6 +280,7 @@ model MonitoredEmail {
   snippet          String // primi 300 caratteri del corpo testuale
   matched_keywords String // JSON array delle keyword trovate
   status           String         @default("NEW") // NEW | NOTIFIED | HANDLED
+  casella          String? // casella su cui la mail e' stata intercettata (null = monitor a casella singola)
   contratto_eol_id String?
   contratto_eol    Contratto_EOL? @relation(fields: [contratto_eol_id], references: [id])
   created_at       DateTime       @default(now())
@@ -287,4 +288,5 @@ model MonitoredEmail {
 
   @@index([status])
   @@index([received_at])
+  @@index([casella])
 }

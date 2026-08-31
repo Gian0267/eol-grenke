@@ -642,9 +642,20 @@ function TabRecapiti({ items, localValues, updateLocal, onSave, onReset }: TabPr
       if (user?.id) h['x-user-id'] = user.id;
       const res = await fetch('/api/backoffice/segnalazioni-casella/test-connessione', { method: 'POST', credentials: 'include', headers: h });
       const body = await res.json();
-      setTestEsito(body.ok
-        ? `✅ Connessione riuscita — ${body.messaggi} messaggi in INBOX (nessuno è stato toccato)`
-        : `❌ ${body.errore || body.error || 'Connessione fallita'}`);
+      // Esito per casella: con più caselle un "ok" complessivo nasconderebbe
+      // quale non risponde, e il monitor resterebbe cieco su quella.
+      const caselle: Array<{ etichetta: string; ok: boolean; messaggi?: number; errore?: string }> = body.caselle || [];
+      if (caselle.length > 0) {
+        setTestEsito(caselle
+          .map(c => c.ok
+            ? `✅ ${c.etichetta} — ${c.messaggi} messaggi in INBOX (nessuno è stato toccato)`
+            : `❌ ${c.etichetta} — ${c.errore || 'connessione fallita'}`)
+          .join('\n'));
+      } else {
+        setTestEsito(body.ok
+          ? `✅ Connessione riuscita — ${body.messaggi} messaggi in INBOX (nessuno è stato toccato)`
+          : `❌ ${body.errore || body.error || 'Connessione fallita'}`);
+      }
     } catch (e) {
       setTestEsito('❌ Errore di rete durante il test');
     } finally {
@@ -655,7 +666,7 @@ function TabRecapiti({ items, localValues, updateLocal, onSave, onReset }: TabPr
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-800 mb-2">Recapiti aziendali</h2>
-      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti. Le voci "Monitor casella" governano la lettura di info@noleggiosumisura.it.</p>
+      <p className="text-sm text-slate-400 mb-4">Questi dati appaiono nei PDF e nelle email inviate ai clienti. Le voci "Monitor casella" governano la lettura delle caselle di contatto monitorate.</p>
       {items.map(imp => (
         <FieldRow key={imp.chiave} imp={imp} value={localValues[imp.chiave] || ''} onChange={v => updateLocal(imp.chiave, v)} onSave={() => onSave(imp.chiave)} onReset={() => onReset(imp.chiave)}>
           {(imp.chiave === 'monitor.keywords' || imp.chiave === 'monitor.digest_destinatari') ? (
@@ -680,7 +691,7 @@ function TabRecapiti({ items, localValues, updateLocal, onSave, onReset }: TabPr
         >
           {testing ? 'Verifica in corso…' : 'Test connessione IMAP'}
         </button>
-        {testEsito && <p className="text-sm mt-3">{testEsito}</p>}
+        {testEsito && <p className="text-sm mt-3 whitespace-pre-line">{testEsito}</p>}
       </div>
     </div>
   );

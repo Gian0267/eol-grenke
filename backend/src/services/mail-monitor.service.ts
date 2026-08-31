@@ -1,5 +1,11 @@
 /**
- * Monitor IMAP della casella info@noleggiosumisura.it.
+ * Monitor IMAP delle caselle di contatto (info@ dei domini del gruppo).
+ *
+ * Le caselle sono una LISTA: riga Impostazione `monitor.caselle` (JSON, tipo
+ * NASCOSTA perche' contiene le password), con fallback alle variabili
+ * MONITOR_IMAP_* per il monitor a casella singola precedente.
+ * Una mail vista su piu' caselle produce UNA sola segnalazione (Message-ID
+ * univoco a DB); il campo `casella` registra dove e' stata intercettata.
  *
  * VINCOLO ASSOLUTO: la casella non viene MAI modificata — connessione in sola
  * lettura (mailbox aperta readOnly: niente move, delete, flag o mark-as-read).
@@ -23,10 +29,12 @@ import * as configService from './config.service.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const emailProvider = createEmailProvider();
 
+// Confronto per sottostringa su testo normalizzato (minuscole, senza accenti):
+// 'Riacquisto' NON copre 'ri-acquisto', da qui le due voci separate.
 const KEYWORDS_DEFAULT = [
-  'fine contratto', 'fine noleggio', 'fine locazione', 'eol', 'end of lease',
-  'grenke', 'restituzione', 'riscatto', 'riacquisto', 'proroga', 'rinnovo',
-  'scadenza contratto',
+  'Noleggio', 'Riscatto', 'Grenke', 'Ifis', 'Riacquisto', 'Ri-acquisto',
+  'fine contratto', 'fine noleggio', 'fine locazione', 'restituzione',
+  'proroga', 'rinnovo', 'scadenza',
 ];
 
 // Mittenti interni: mai segnalati (evita auto-segnalazioni dei reminder dell'app)
@@ -39,8 +47,9 @@ const DOMINI_GENERICI = new Set([
   'icloud.com', 'me.com', 'pec.it', 'legalmail.it', 'pecimprese.it', 'arubapec.it', 'postecert.it',
 ]);
 
-let fallimentiConsecutivi = 0;
-let alertInviato = false;
+// Stato per casella: una casella in errore non azzera il contatore delle altre
+const fallimentiConsecutivi = new Map<string, number>();
+const alertInviato = new Set<string>();
 
 function normalizza(testo: string): string {
   return testo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -97,16 +106,62 @@ async function collegaContratto(fromAddress: string): Promise<string | null> {
   return perDominio?.id ?? null;
 }
 
-function imapConfigurato(): boolean {
-  return Boolean(process.env.MONITOR_IMAP_HOST && process.env.MONITOR_IMAP_USER && process.env.MONITOR_IMAP_PASSWORD);
+export interface CasellaMonitor {
+  etichetta: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
 }
 
-function nuovoClient(): ImapFlow {
-  return new ImapFlow({
-    host: process.env.MONITOR_IMAP_HOST!,
+/**
+ * Caselle da monitorare. Sorgente primaria: impostazione `monitor.caselle`,
+ * array JSON di { etichetta?, host, port?, secure?, user, password }.
+ * Se assente o illeggibile si ricade sulle MONITOR_IMAP_* (casella singola),
+ * cosi' un errore di configurazione non spegne il monitor in silenzio.
+ */
+export async function getCaselle(): Promise<CasellaMonitor[]> {
+  const raw = (await configService.getTesto('monitor.caselle', '')).trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      const caselle: CasellaMonitor[] = (Array.isArray(parsed) ? parsed : [])
+        .filter((c: any) => c?.host && c?.user && c?.password)
+        .map((c: any) => ({
+          etichetta: String(c.etichetta || c.user),
+          host: String(c.host),
+          port: Number(c.port || 993),
+          secure: c.secure !== false,
+          user: String(c.user),
+          password: String(c.password),
+        }));
+      if (caselle.length > 0) return caselle;
+      console.error('[Monitor] monitor.caselle non contiene caselle valide: uso le MONITOR_IMAP_*');
+    } catch {
+      console.error('[Monitor] monitor.caselle non e\' JSON valido: uso le MONITOR_IMAP_*');
+    }
+  }
+  const host = process.env.MONITOR_IMAP_HOST;
+  const user = process.env.MONITOR_IMAP_USER;
+  const password = process.env.MONITOR_IMAP_PASSWORD;
+  if (!host || !user || !password) return [];
+  return [{
+    etichetta: user,
+    host,
     port: Number(process.env.MONITOR_IMAP_PORT || 993),
     secure: process.env.MONITOR_IMAP_SECURE !== 'false',
-    auth: { user: process.env.MONITOR_IMAP_USER!, pass: process.env.MONITOR_IMAP_PASSWORD! },
+    user,
+    password,
+  }];
+}
+
+function nuovoClient(casella: CasellaMonitor): ImapFlow {
+  return new ImapFlow({
+    host: casella.host,
+    port: casella.port,
+    secure: casella.secure,
+    auth: { user: casella.user, pass: casella.password },
     logger: false,
   });
 }
@@ -119,7 +174,7 @@ export interface MonitorPollResult {
   errori: string[];
 }
 
-/** Un giro di polling: legge le mail recenti (sola lettura) e salva le segnalazioni nuove. */
+/** Un giro di polling su TUTTE le caselle configurate. Una casella in errore non ferma le altre. */
 export async function pollMonitor(): Promise<MonitorPollResult> {
   const result: MonitorPollResult = { eseguito: false, esaminate: 0, nuove_segnalazioni: 0, errori: [] };
 
@@ -128,12 +183,23 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
     result.motivo = 'Monitor disattivato dalle impostazioni';
     return result;
   }
-  if (!imapConfigurato()) {
-    result.motivo = 'Credenziali IMAP non configurate (MONITOR_IMAP_*)';
+
+  const caselle = await getCaselle();
+  if (caselle.length === 0) {
+    result.motivo = 'Nessuna casella configurata (impostazione monitor.caselle o variabili MONITOR_IMAP_*)';
     return result;
   }
 
-  const client = nuovoClient();
+  const keywords = await getKeywords();
+  for (const casella of caselle) {
+    await pollCasella(casella, keywords, result);
+  }
+  return result;
+}
+
+/** Polling di una singola casella; accumula esiti ed errori nel result condiviso. */
+async function pollCasella(casella: CasellaMonitor, keywords: string[], result: MonitorPollResult): Promise<void> {
+  const client = nuovoClient(casella);
   try {
     await client.connect();
     // READ-ONLY: nessuna modifica alla casella, mai
@@ -144,7 +210,7 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
       // Passo 1: solo envelope, per individuare i Message-ID mai visti
       const candidate: Array<{ uid: number; messageId: string; from: string; fromName: string; subject: string; date: Date }> = [];
       for await (const msg of client.fetch({ since }, { uid: true, envelope: true, internalDate: true })) {
-        const messageId = msg.envelope?.messageId || `uid-${msg.uid}@${process.env.MONITOR_IMAP_USER}`;
+        const messageId = msg.envelope?.messageId || `uid-${msg.uid}@${casella.user}`;
         const fromAddr = msg.envelope?.from?.[0]?.address || '';
         candidate.push({
           uid: msg.uid,
@@ -155,7 +221,7 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
           date: msg.internalDate ? new Date(msg.internalDate) : msg.envelope?.date ? new Date(msg.envelope.date) : new Date(),
         });
       }
-      result.esaminate = candidate.length;
+      result.esaminate += candidate.length;
 
       const visti = new Set(
         (await prisma.monitoredEmail.findMany({
@@ -163,8 +229,6 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
           select: { message_id: true },
         })).map(m => m.message_id),
       );
-
-      const keywords = await getKeywords();
 
       for (const c of candidate) {
         if (visti.has(c.messageId)) continue;
@@ -181,21 +245,28 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
         if (matched.length === 0) continue;
 
         const contrattoId = await collegaContratto(c.from);
-        await prisma.monitoredEmail.create({
-          data: {
-            imap_uid: c.uid,
-            message_id: c.messageId,
-            from_address: c.from,
-            from_name: c.fromName || null,
-            subject: c.subject,
-            received_at: c.date,
-            snippet: corpo.slice(0, 300),
-            matched_keywords: JSON.stringify(matched),
-            status: 'NEW',
-            contratto_eol_id: contrattoId,
-          },
-        });
-        result.nuove_segnalazioni++;
+        try {
+          await prisma.monitoredEmail.create({
+            data: {
+              imap_uid: c.uid,
+              message_id: c.messageId,
+              from_address: c.from,
+              from_name: c.fromName || null,
+              subject: c.subject,
+              received_at: c.date,
+              snippet: corpo.slice(0, 300),
+              matched_keywords: JSON.stringify(matched),
+              status: 'NEW',
+              casella: casella.user,
+              contratto_eol_id: contrattoId,
+            },
+          });
+          result.nuove_segnalazioni++;
+        } catch (err: any) {
+          // P2002 = stessa mail gia' intercettata su un'altra casella in questo
+          // stesso giro: una sola segnalazione per Message-ID, non e' un errore.
+          if (err?.code !== 'P2002') throw err;
+        }
       }
     } finally {
       lock.release();
@@ -203,38 +274,39 @@ export async function pollMonitor(): Promise<MonitorPollResult> {
     await client.logout();
 
     result.eseguito = true;
-    fallimentiConsecutivi = 0;
-    alertInviato = false;
+    fallimentiConsecutivi.delete(casella.user);
+    alertInviato.delete(casella.user);
   } catch (err) {
     try { await client.logout(); } catch { /* già chiusa */ }
     const msg = err instanceof Error ? err.message : String(err);
-    result.errori.push(msg);
-    console.error('[Monitor] Errore polling IMAP:', msg);
+    result.errori.push(`${casella.etichetta}: ${msg}`);
+    console.error(`[Monitor] Errore polling IMAP su ${casella.user}:`, msg);
 
-    fallimentiConsecutivi++;
-    if (fallimentiConsecutivi >= 3 && !alertInviato) {
-      alertInviato = true;
-      await inviaAlertTecnico(msg).catch(e => console.error('[Monitor] Alert tecnico fallito:', e));
+    const falliti = (fallimentiConsecutivi.get(casella.user) ?? 0) + 1;
+    fallimentiConsecutivi.set(casella.user, falliti);
+    if (falliti >= 3 && !alertInviato.has(casella.user)) {
+      alertInviato.add(casella.user);
+      await inviaAlertTecnico(casella, falliti, msg).catch(e => console.error('[Monitor] Alert tecnico fallito:', e));
     }
   }
-  return result;
 }
 
-async function inviaAlertTecnico(ultimoErrore: string): Promise<void> {
+async function inviaAlertTecnico(casella: CasellaMonitor, falliti: number, ultimoErrore: string): Promise<void> {
   const destinatari = await getDestinatari();
   if (destinatari.length === 0) return;
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:14px;line-height:1.6;">
-      <p><strong>⚠️ Monitor casella info@ — connessione IMAP in errore</strong></p>
-      <p>Il monitoraggio della casella ${process.env.MONITOR_IMAP_USER} ha fallito ${fallimentiConsecutivi} tentativi consecutivi.</p>
+      <p><strong>⚠️ Monitor casella — connessione IMAP in errore</strong></p>
+      <p>Il monitoraggio della casella ${casella.user} ha fallito ${falliti} tentativi consecutivi.</p>
       <p>Ultimo errore: <code>${ultimoErrore}</code></p>
-      <p>Verificare credenziali e raggiungibilità del server ${process.env.MONITOR_IMAP_HOST}. Il monitor riproverà automaticamente a ogni ciclo.</p>
+      <p>Verificare credenziali e raggiungibilità del server ${casella.host}. Le altre caselle continuano a essere monitorate; il monitor riproverà automaticamente a ogni ciclo.</p>
     </div>`;
   for (const dest of destinatari) {
-    await emailProvider.send(dest, '[ALERT] Monitor casella info@ — connessione IMAP fallita', html, { cc: null });
+    await emailProvider.send(dest, `[ALERT] Monitor casella ${casella.user} — connessione IMAP fallita`, html, { cc: null });
   }
   await registraEvento(null, 'SISTEMA', 'MAIL_MONITOR', 'MONITOR_ALERT_TECNICO', {
-    fallimenti: fallimentiConsecutivi,
+    casella: casella.user,
+    fallimenti: falliti,
     errore: ultimoErrore,
     destinatari,
   });
@@ -326,18 +398,42 @@ export async function monitorTick(): Promise<{ poll: MonitorPollResult; digest: 
   return { poll, digest };
 }
 
-/** Verifica credenziali e conta le mail in INBOX senza processarle (per il bottone in Impostazioni). */
-export async function testConnessione(): Promise<{ ok: boolean; messaggi?: number; errore?: string }> {
-  if (!imapConfigurato()) return { ok: false, errore: 'Credenziali IMAP non configurate (variabili MONITOR_IMAP_*)' };
-  const client = nuovoClient();
-  try {
-    await client.connect();
-    const box = await client.mailboxOpen('INBOX', { readOnly: true });
-    const totale = box.exists;
-    await client.logout();
-    return { ok: true, messaggi: totale };
-  } catch (err) {
-    try { await client.logout(); } catch { /* già chiusa */ }
-    return { ok: false, errore: err instanceof Error ? err.message : String(err) };
+export interface TestCasellaResult {
+  casella: string;
+  etichetta: string;
+  ok: boolean;
+  messaggi?: number;
+  errore?: string;
+}
+
+/** Verifica credenziali e conta le mail in INBOX di OGNI casella, senza processarle. */
+export async function testConnessione(): Promise<{ ok: boolean; messaggi?: number; errore?: string; caselle: TestCasellaResult[] }> {
+  const caselle = await getCaselle();
+  if (caselle.length === 0) {
+    return { ok: false, errore: 'Nessuna casella configurata (impostazione monitor.caselle o variabili MONITOR_IMAP_*)', caselle: [] };
   }
+
+  const esiti: TestCasellaResult[] = [];
+  for (const casella of caselle) {
+    const client = nuovoClient(casella);
+    try {
+      await client.connect();
+      const box = await client.mailboxOpen('INBOX', { readOnly: true });
+      const totale = box.exists;
+      await client.logout();
+      esiti.push({ casella: casella.user, etichetta: casella.etichetta, ok: true, messaggi: totale });
+    } catch (err) {
+      try { await client.logout(); } catch { /* già chiusa */ }
+      esiti.push({ casella: casella.user, etichetta: casella.etichetta, ok: false, errore: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  const falliti = esiti.filter(e => !e.ok);
+  return {
+    // ok solo se TUTTE rispondono: un esito parziale non deve sembrare a posto
+    ok: falliti.length === 0,
+    messaggi: esiti.reduce((t, e) => t + (e.messaggi ?? 0), 0),
+    ...(falliti.length > 0 ? { errore: falliti.map(e => `${e.etichetta}: ${e.errore}`).join(' | ') } : {}),
+    caselle: esiti,
+  };
 }
