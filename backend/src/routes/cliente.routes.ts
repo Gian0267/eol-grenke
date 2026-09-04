@@ -1810,7 +1810,7 @@ router.get('/configurazione', verifyClienteToken, async (_req: ClienteAuthentica
       titolo_opzione_contatto: await configService.getTesto('cliente.titolo_opzione_contatto', 'Contatto personalizzato'),
       desc_opzione_contatto: await configService.getTesto('cliente.desc_opzione_contatto', 'Hai dubbi o esigenze particolari? Un nostro consulente ti ricontatterà.'),
       titolo_opzione_restituzione: await configService.getTesto('cliente.titolo_opzione_restituzione', 'Restituisci i beni'),
-      desc_opzione_restituzione: await configService.getTesto('cliente.desc_opzione_restituzione', 'Concludi il contratto e restituisci i beni alla società di leasing.'),
+      desc_opzione_restituzione: await configService.getTesto('cliente.desc_opzione_restituzione', 'Concludi il contratto e restituisci i beni alla società di noleggio.'),
       testo_widget_chiamami: await configService.getTesto('cliente.testo_widget_chiamami', 'Hai bisogno di parlare con noi prima di decidere?'),
       testo_avviso_proroga: await configService.getTesto('cliente.testo_avviso_proroga', 'In assenza di scelta entro la deadline, il contratto proseguirà in proroga con canoni invariati per 6 mesi.'),
     });

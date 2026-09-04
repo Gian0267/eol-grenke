@@ -166,7 +166,7 @@ export default function AreaPratica() {
     {
       id: 'restituzione',
       titolo: config?.titolo_opzione_restituzione || 'Restituisci i beni',
-      descrizione: config?.desc_opzione_restituzione || 'Concludi il contratto e restituisci i beni alla società di leasing.',
+      descrizione: config?.desc_opzione_restituzione || 'Concludi il contratto e restituisci i beni alla società di noleggio.',
       icona: <RotateCcw className="w-6 h-6" />,
       colore: 'border-[#6b7280]',
       bgColore: 'bg-gray-50',
