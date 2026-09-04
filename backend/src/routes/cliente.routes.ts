@@ -118,16 +118,16 @@ async function generaCodiceScontoSafe(contrattoEolId: string): Promise<Codice_Sc
   }
 }
 
-// I4 fix: IVA a margine — l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
+// IVA ordinaria sull'intero imponibile (deciso il 04/09/2026, in sostituzione
+// dell'IVA a margine). Il parametro `margine` resta nella firma perche' i
+// chiamanti lo passano, ma non concorre piu' al calcolo.
 function calcolaIvaAMargine(
   prezzoVendita: Prisma.Decimal,
-  margine: Prisma.Decimal,
+  _margine: Prisma.Decimal,
   ivaPerc: number,
 ): { iva: number; totale: number } {
-  // IVA a margine: se il margine è negativo o nullo non c'è IVA dovuta
-  const centMargine = Math.max(0, Math.round(Number(margine) * 100));
-  const ivaCentesimi = Math.round(centMargine * ivaPerc);
   const centVendita = Math.round(Number(prezzoVendita) * 100);
+  const ivaCentesimi = Math.round(centVendita * ivaPerc);
   return {
     iva: ivaCentesimi / 100,
     totale: (centVendita + ivaCentesimi) / 100,
