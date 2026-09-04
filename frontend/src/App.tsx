@@ -18,6 +18,7 @@ import ComunicazioniInviate from './pages/backoffice/ComunicazioniInviate'
 import SegnalazioniCasella from './pages/backoffice/SegnalazioniCasella'
 import AreaPratica from './pages/cliente/AreaPratica'
 import PraticaScaduta from './pages/cliente/PraticaScaduta'
+import EsitoPagamento from './pages/cliente/EsitoPagamento'
 import OpzionePlaceholder from './pages/cliente/OpzionePlaceholder'
 import FlussoRestituzione from './pages/cliente/FlussoRestituzione'
 import FlussoRiacquisto from './pages/cliente/FlussoRiacquisto'
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="utenti" element={<GestioneUtenti />} />
         </Route>
         <Route path="/pratica/scaduta" element={<PraticaScaduta />} />
+        <Route path="/pagamento/esito" element={<EsitoPagamento />} />
         <Route path="/pratica/:token" element={<ClienteLayout />}>
           <Route index element={<AreaPratica />} />
           <Route path="restituzione" element={<FlussoRestituzione />} />

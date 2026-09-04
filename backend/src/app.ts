@@ -37,6 +37,58 @@ if (!process.env.SESSION_SECRET) {
 
 // TODO produzione: sostituire origin:true con whitelist esplicita es. ['https://app.example.com']
 app.use(cors({ origin: true, credentials: true }));
+// Webhook Stripe — DEVE stare prima di express.json(): la firma si verifica sul
+// corpo grezzo, e un body gia' interpretato la invaliderebbe.
+// E' l'unica fonte attendibile dell'incasso: il ritorno del browser non basta,
+// il cliente puo' chiudere la scheda a pagamento avvenuto.
+app.post('/api/pagamenti/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const segreto = process.env.STRIPE_WEBHOOK_SECRET;
+  const firma = req.headers['stripe-signature'];
+  if (!segreto || typeof firma !== 'string') {
+    console.log('[Stripe webhook] Rifiutato: STRIPE_WEBHOOK_SECRET o firma mancanti');
+    res.status(400).json({ errore: 'Webhook non configurato' });
+    return;
+  }
+
+  let evento: { type: string; data: { object: Record<string, unknown> } };
+  try {
+    const { stripeProvider, stripeAttivo } = await import('./services/payment.service.js');
+    if (!stripeAttivo()) {
+      res.status(503).json({ errore: 'Stripe non attivo su questa istanza' });
+      return;
+    }
+    evento = (stripeProvider as { costruisciEvento(b: Buffer, f: string, s: string): any })
+      .costruisciEvento(req.body as Buffer, firma, segreto) as typeof evento;
+  } catch (err) {
+    // Firma non valida: qualcuno sta fingendo un incasso, oppure il segreto e' sbagliato
+    console.log(`[Stripe webhook] Firma non valida: ${err instanceof Error ? err.message : String(err)}`);
+    res.status(400).json({ errore: 'Firma non valida' });
+    return;
+  }
+
+  try {
+    const oggetto = evento.data.object as { id?: string };
+    const sessionId = oggetto.id;
+    if (sessionId) {
+      if (evento.type === 'checkout.session.completed') {
+        const { handlePaymentCallback } = await import('./services/payment.service.js');
+        await handlePaymentCallback(sessionId, 'success', 'STRIPE');
+        console.log(`[Stripe webhook] Incasso registrato: ${sessionId}`);
+      } else if (evento.type === 'checkout.session.expired') {
+        const { handlePaymentCallback } = await import('./services/payment.service.js');
+        await handlePaymentCallback(sessionId, 'failure', 'STRIPE');
+        console.log(`[Stripe webhook] Sessione scaduta: ${sessionId}`);
+      }
+    }
+    // Stripe riprova per giorni se non rispondiamo 2xx: confermiamo sempre la
+    // presa in carico, gli errori nostri li leggiamo dai log.
+    res.json({ received: true });
+  } catch (err) {
+    console.log(`[Stripe webhook] Errore elaborazione: ${err instanceof Error ? err.message : String(err)}`);
+    res.json({ received: true });
+  }
+});
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use(

@@ -901,6 +901,8 @@ router.post(
       res.json({
         success: true,
         session_id: result.session_id,
+        // URL della pagina di pagamento Stripe: il client deve reindirizzarci
+        redirect_url: result.redirect_url,
         importi: result.importi,
       });
     } catch (err) {

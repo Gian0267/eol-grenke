@@ -126,6 +126,9 @@ export default function FlussoRiacquisto() {
   const [loading, setLoading] = useState(true);
   const [errore, setErrore] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Con il pagamento online attivo il cliente sceglie prima carta o bonifico;
+  // il bonifico riusa la stessa schermata di quando l'online e' disattivato.
+  const [metodoScelto, setMetodoScelto] = useState<'CARTA' | 'BONIFICO' | null>(null);
 
   // Contatto form
   const [contattoNome, setContattoNome] = useState('');
@@ -260,6 +263,12 @@ export default function FlussoRiacquisto() {
     setSubmitting(true); setErrore(null);
     try {
       const data = await apiCall('/api/cliente/decisione/riacquisto/scegli-metodo', { metodo });
+      if (data.redirect_url && /^https?:\/\//.test(data.redirect_url)) {
+        // Stripe reale: si prosegue sulla pagina ospitata da loro, dove il
+        // cliente inserisce la carta. L'esito lo conferma il webhook.
+        window.location.href = data.redirect_url;
+        return;
+      }
       dispatch({ type: 'SCEGLI_METODO', metodo, session_id: data.session_id });
     } catch (err: any) { setErrore(err.message); }
     finally { setSubmitting(false); }
@@ -666,7 +675,7 @@ export default function FlussoRiacquisto() {
         )}
 
         {/* ===== STEP C (bonifico) — Dati bancari per il pagamento ===== */}
-        {state.step === 'STEP_C' && !(configPagamento?.abilita_pagamento_online ?? false) && (
+        {state.step === 'STEP_C' && (!(configPagamento?.abilita_pagamento_online ?? false) || metodoScelto === 'BONIFICO') && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border p-6 text-center">
               <Landmark className="w-12 h-12 text-[#2563eb] mx-auto mb-3" />
@@ -752,7 +761,7 @@ export default function FlussoRiacquisto() {
         )}
 
         {/* ===== STEP C (online) — Scelta metodo pagamento ===== */}
-        {state.step === 'STEP_C' && (configPagamento?.abilita_pagamento_online ?? false) && (
+        {state.step === 'STEP_C' && (configPagamento?.abilita_pagamento_online ?? false) && metodoScelto === null && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border p-6 text-center">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-2">Scegli il metodo di pagamento</h2>
@@ -763,25 +772,25 @@ export default function FlussoRiacquisto() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
-                onClick={() => handleScegliMetodo('FABRICK')}
-                disabled={submitting}
-                className="bg-white border-2 border-[#2563eb] rounded-xl p-6 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
-              >
-                <Landmark className="w-10 h-10 text-[#2563eb] mx-auto mb-3" />
-                <p className="font-bold text-[#2563eb] text-lg">Fabrick</p>
-                <p className="text-sm text-gray-500 mt-1">Bonifico istantaneo</p>
-                <p className="text-xs text-gray-400 mt-2">Open Banking PSD2</p>
-              </button>
-
-              <button
                 onClick={() => handleScegliMetodo('STRIPE')}
                 disabled={submitting}
                 className="bg-white border-2 border-[#7c3aed] rounded-xl p-6 text-center hover:bg-purple-50 transition-colors disabled:opacity-50"
               >
                 <CreditCard className="w-10 h-10 text-[#7c3aed] mx-auto mb-3" />
-                <p className="font-bold text-[#7c3aed] text-lg">Stripe</p>
-                <p className="text-sm text-gray-500 mt-1">Carta di credito / debito</p>
-                <p className="text-xs text-gray-400 mt-2">Visa, Mastercard, Amex</p>
+                <p className="font-bold text-[#7c3aed] text-lg">Carta di credito</p>
+                <p className="text-sm text-gray-500 mt-1">Pagamento immediato</p>
+                <p className="text-xs text-gray-400 mt-2">Visa, Mastercard, American Express</p>
+              </button>
+
+              <button
+                onClick={() => setMetodoScelto('BONIFICO')}
+                disabled={submitting}
+                className="bg-white border-2 border-[#2563eb] rounded-xl p-6 text-center hover:bg-blue-50 transition-colors disabled:opacity-50"
+              >
+                <Landmark className="w-10 h-10 text-[#2563eb] mx-auto mb-3" />
+                <p className="font-bold text-[#2563eb] text-lg">Bonifico bancario</p>
+                <p className="text-sm text-gray-500 mt-1">Ti mostriamo l'IBAN</p>
+                <p className="text-xs text-gray-400 mt-2">Conferma entro 1-2 giorni lavorativi</p>
               </button>
             </div>
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
 import { MockFabrickProvider } from '../providers/payment/fabrick.provider.js';
 import { MockStripeProvider } from '../providers/payment/stripe.provider.js';
+import { StripeProvider } from '../providers/payment/stripe.real.provider.js';
 import { generaRicevutaPagamento } from './invoice.service.js';
 import { registraEvento } from './audit.service.js';
 
@@ -13,7 +14,17 @@ const pricingRules = JSON.parse(
   readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'),
 );
 const fabrickProvider = new MockFabrickProvider();
-const stripeProvider = new MockStripeProvider();
+
+// Stripe reale quando c'e' la secret key, altrimenti il simulatore: in
+// sviluppo si prova il flusso senza chiavi, in produzione basta valorizzare
+// STRIPE_SECRET_KEY perche' l'incasso diventi vero.
+export const stripeProvider: MockStripeProvider | StripeProvider = process.env.STRIPE_SECRET_KEY
+  ? new StripeProvider(process.env.STRIPE_SECRET_KEY)
+  : new MockStripeProvider();
+
+export function stripeAttivo(): boolean {
+  return stripeProvider instanceof StripeProvider;
+}
 
 // IVA a margine: l'IVA si calcola solo sul margine (riacquisto - grenke), non sul prezzo pieno
 function calcolaImporti(netto: number, margine: number) {
@@ -31,7 +42,7 @@ function calcolaImporti(netto: number, margine: number) {
 export async function initiatePayment(
   contrattoEolId: string,
   metodo: 'FABRICK' | 'STRIPE',
-): Promise<{ session_id: string; importi: { importo_netto: number; importo_iva: number; importo_totale: number } }> {
+): Promise<{ session_id: string; redirect_url: string; importi: { importo_netto: number; importo_iva: number; importo_totale: number } }> {
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoEolId },
     include: { cliente: true },
@@ -67,7 +78,7 @@ export async function initiatePayment(
     importo_totale: importi.importo_totale,
   });
 
-  return { session_id: session.session_id, importi };
+  return { session_id: session.session_id, redirect_url: session.redirect_url, importi };
 }
 
 // --- Bonifico bancario manuale ---
@@ -214,7 +225,11 @@ export async function handlePaymentCallback(
   }
 
   const providerInstance = provider === 'FABRICK' ? fabrickProvider : stripeProvider;
-  providerInstance.simulateOutcome(sessionId, esito === 'success');
+  // simulateOutcome esiste solo nei mock: con Stripe reale l'esito arriva dal
+  // webhook firmato e non va (ne' puo') essere forzato da qui.
+  if ('simulateOutcome' in providerInstance) {
+    (providerInstance as { simulateOutcome(id: string, ok: boolean): void }).simulateOutcome(sessionId, esito === 'success');
+  }
 
   if (esito === 'success') {
     const providerStatus = await providerInstance.verifyPayment(sessionId);
