@@ -8,6 +8,9 @@ import { MockStripeProvider } from '../providers/payment/stripe.provider.js';
 import { StripeProvider } from '../providers/payment/stripe.real.provider.js';
 import { generaRicevutaPagamento } from './invoice.service.js';
 import { registraEvento } from './audit.service.js';
+import { loadDocument } from './storage.service.js';
+import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
+import { beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pricingRules = JSON.parse(
@@ -203,6 +206,93 @@ export async function verifyPayment(sessionId: string): Promise<{
   };
 }
 
+
+/**
+ * Invia al cliente la ricevuta di pagamento con il PDF allegato.
+ *
+ * Sta qui e non nelle rotte perche' serve a DUE percorsi: il bonifico
+ * confermato dal backoffice e l'incasso online chiuso dal webhook. Quando
+ * esisteva solo nella rotta del bonifico, chi pagava con carta non riceveva
+ * nulla (rilevato il 04/09/2026 sul primo pagamento Stripe andato a buon fine).
+ *
+ * Best effort: un invio fallito non annulla il pagamento, che resta registrato.
+ */
+export async function inviaRicevutaAlCliente(
+  contrattoEolId: string,
+  fatturaNumero: string,
+  fatturaPath: string,
+  operatoreId?: string,
+): Promise<boolean> {
+  try {
+    const contratto = await prisma.contratto_EOL.findUnique({
+      where: { id: contrattoEolId },
+      include: { cliente: true },
+    });
+    if (!contratto || contratto.cliente.opt_out_comunicazioni) return false;
+
+    const pdfBuffer = await loadDocument(fatturaPath);
+
+    // Riacquisto parziale: nella stessa mail va detto cosa resta da restituire
+    const daRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
+    const acquistati = beniInclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
+    const bloccoReso = daRestituire.length === 0 ? '' : `
+      <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;margin:18px 0;">
+        <p style="margin:0 0 8px;"><strong>Dispositivi da restituire</strong></p>
+        <p style="margin:0 0 8px;">L'acquisto riguarda: <strong>${acquistati.join(', ')}</strong>.
+        I restanti dispositivi del contratto devono essere restituiti:</p>
+        <p style="margin:0 0 8px;"><strong>${daRestituire.join(', ')}</strong></p>
+        <p style="margin:0 0 4px;">Prima della spedizione:</p>
+        <ol style="margin:0 0 8px;padding-left:20px;">
+          <li>Disattivi Find My iPhone / Samsung Knox</li>
+          <li>Esegua il reset del dispositivo</li>
+          <li>Verifichi funzionamento ed eventuali danni</li>
+          <li>Utilizzi l'imballo originale o equivalente</li>
+        </ol>
+        <p style="margin:0;">Spedisca a: <strong>Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO)</strong>.
+        Le spese di spedizione sono a carico del cliente.</p>
+      </div>`;
+
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
+        <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
+        <p>confermiamo di aver ricevuto il pagamento per il riacquisto dei beni del contratto
+        n. <strong>${contratto.contratto_grenke_id}</strong>.</p>
+        <p>In allegato trova la ricevuta n. ${fatturaNumero}.</p>
+        ${bloccoReso}
+        <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
+        <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Solutions Srl</span></p>
+      </div>`;
+
+    const oggetto = `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`;
+    const esito = await emailProviderPerAmbiente(contratto.ambiente).sendWithAttachment(
+      contratto.cliente.email,
+      oggetto,
+      html,
+      [{ filename: `ricevuta_${fatturaNumero}.pdf`, content: pdfBuffer }],
+    );
+
+    await prisma.comunicazione.create({
+      data: {
+        contratto_eol_id: contrattoEolId,
+        tipo: 'RICEVUTA_PAGAMENTO',
+        canale: 'EMAIL',
+        destinatario: contratto.cliente.email,
+        oggetto,
+        corpo_html: html,
+        allegati_json: JSON.stringify([`ricevuta_${fatturaNumero}.pdf`]),
+        data_invio: new Date(),
+        esito_invio: esito.success ? 'INVIATO' : 'ERRORE',
+        operatore_id: operatoreId ?? null,
+      },
+    });
+
+    return esito.success;
+  } catch (err) {
+    console.log(`[Ricevuta] Invio fallito per ${contrattoEolId}: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
+  }
+}
+
 export async function handlePaymentCallback(
   sessionId: string,
   esito: 'success' | 'failure',
@@ -255,6 +345,9 @@ export async function handlePaymentCallback(
       importo_totale: Number(pagamento.importo_totale),
       riferimento_transazione: providerStatus.transaction_id || null,
     });
+
+    // Senza questo, chi paga online non riceve mai la ricevuta
+    await inviaRicevutaAlCliente(pagamento.contratto_eol_id, fattura.fatturaNumero, fattura.pdfPath);
 
     return { stato: 'COMPLETATO', fattura_path: fattura.pdfPath };
   } else {

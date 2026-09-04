@@ -5,8 +5,6 @@ import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
 import { confermaBonificoRicevuto } from '../services/payment.service.js';
-import { loadDocument } from '../services/storage.service.js';
-import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { parseBeni, parseEsclusi, beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
 import { calcolaValoreGiftCard } from '../services/pricing.service.js';
@@ -584,72 +582,15 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
 
     const result = await confermaBonificoRicevuto(contrattoId, (req.user as any)?.id || 'system', riferimento);
 
-    // Invia la ricevuta al cliente via email (best effort: la registrazione
-    // del pagamento resta valida anche se l'invio fallisce)
-    let email_inviata = false;
-    try {
-      const contratto = await prisma.contratto_EOL.findUnique({
-        where: { id: contrattoId },
-        include: { cliente: true },
-      });
-      if (contratto && !contratto.cliente.opt_out_comunicazioni) {
-        const pdfBuffer = await loadDocument(result.fattura_path);
-        const emailProvider = emailProviderPerAmbiente(contratto.ambiente);
-        // Riacquisto parziale: il cliente deve sapere, nella stessa mail che gli
-        // conferma l'acquisto, quali dispositivi restano da restituire.
-        const daRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
-        const acquistati = beniInclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
-        const bloccoReso = daRestituire.length === 0 ? '' : `
-            <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;margin:18px 0;">
-              <p style="margin:0 0 8px;"><strong>Dispositivi da restituire</strong></p>
-              <p style="margin:0 0 8px;">L'acquisto riguarda: <strong>${acquistati.join(', ')}</strong>.
-              I restanti dispositivi del contratto devono essere restituiti:</p>
-              <p style="margin:0 0 8px;"><strong>${daRestituire.join(', ')}</strong></p>
-              <p style="margin:0 0 4px;">Prima della spedizione:</p>
-              <ol style="margin:0 0 8px;padding-left:20px;">
-                <li>Disattivi Find My iPhone / Samsung Knox</li>
-                <li>Esegua il reset del dispositivo</li>
-                <li>Verifichi funzionamento ed eventuali danni</li>
-                <li>Utilizzi l'imballo originale o equivalente</li>
-              </ol>
-              <p style="margin:0;">Spedisca a: <strong>Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO)</strong>.
-              Le spese di spedizione sono a carico del cliente.</p>
-            </div>`;
-        const html = `
-          <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
-            <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
-            <p>confermiamo di aver ricevuto il pagamento per il riacquisto dei beni del contratto
-            n. <strong>${contratto.contratto_grenke_id}</strong>.</p>
-            <p>In allegato trova la ricevuta n. ${result.fattura_numero}.</p>
-            ${bloccoReso}
-            <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
-            <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Solutions Srl</span></p>
-          </div>`;
-        const sendResult = await emailProvider.sendWithAttachment(
-          contratto.cliente.email,
-          `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`,
-          html,
-          [{ filename: `ricevuta_${result.fattura_numero}.pdf`, content: pdfBuffer }],
-        );
-        email_inviata = sendResult.success;
-        await prisma.comunicazione.create({
-          data: {
-            contratto_eol_id: contrattoId,
-            tipo: 'RICEVUTA_PAGAMENTO',
-            canale: 'EMAIL',
-            destinatario: contratto.cliente.email,
-            oggetto: `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`,
-            corpo_html: html,
-            allegati_json: JSON.stringify([`ricevuta_${result.fattura_numero}.pdf`]),
-            data_invio: new Date(),
-            esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
-            operatore_id: (req.user as any)?.id || null,
-          },
-        });
-      }
-    } catch (emailErr) {
-      console.error('[registra-pagamento] Invio ricevuta fallito:', emailErr);
-    }
+    // Ricevuta al cliente: stessa funzione usata dal webhook dei pagamenti
+    // online, cosi' bonifico e carta producono la stessa email.
+    const { inviaRicevutaAlCliente } = await import('../services/payment.service.js');
+    const email_inviata = await inviaRicevutaAlCliente(
+      contrattoId,
+      result.fattura_numero,
+      result.fattura_path,
+      (req.user as any)?.id || undefined,
+    );
 
     res.json({
       success: true,
