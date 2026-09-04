@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { emailProviderPerAmbiente, pecProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
-import { formatBeniLista } from '../lib/beni.js';
+import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -105,6 +105,11 @@ export async function inviaComunicazioneIniziale(
   });
 
   const beniFormatted = formatBeniLista(contratto.beni_json);
+  // Riacquisto parziale: la clausola "l'acquisto riguarda tutti i beni" sarebbe
+  // falsa per questo cliente, quindi i template la sostituiscono con l'elenco.
+  const riacquistoParziale = isRiacquistoParziale(contratto.beni_esclusi_json);
+  const beniRiacquisto = formatBeniInclusi(contratto.beni_json, contratto.beni_esclusi_json);
+  const beniDaRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene).join(', ');
 
   // Flag "Opzione Rinnovo attiva": quando è OFF i template nascondono l'opzione
   // rinnovo e le altre opzioni vengono rinumerate 1-2-3.
@@ -122,6 +127,9 @@ export async function inviaComunicazioneIniziale(
     numero_contratto_nsm: contratto.contratto_nsm_id,
     data_scadenza: formatDate(dataScadenza),
     beni: beniFormatted,
+    riacquisto_parziale: riacquistoParziale,
+    beni_riacquisto: beniRiacquisto,
+    beni_da_restituire: beniDaRestituire,
     monte_canoni: formatEur(Number(contratto.monte_canoni)),
     pricing_riacquisto: formatEur(Number(contratto.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(contratto.valore_gift_card)),

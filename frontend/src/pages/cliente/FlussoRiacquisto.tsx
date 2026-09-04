@@ -21,7 +21,7 @@ const API_BASE = '';
 // ---- Types ----
 interface PraticaData {
   cliente: { ragione_sociale: string };
-  contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[]; stato: string };
+  contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[]; stato: string; riacquisto_parziale: boolean; beni_riacquisto: string[]; beni_da_restituire: string[] };
   economica: { pricing_riacquisto: number; pricing_riacquisto_iva: number; pricing_riacquisto_totale: number };
 }
 
@@ -371,13 +371,27 @@ export default function FlussoRiacquisto() {
             <div className="bg-white rounded-xl border p-6">
               <h2 className="font-semibold text-[#1a3a52] text-lg mb-4">Stai prenotando l'acquisto di</h2>
               <ul className="space-y-2 mb-6">
-                {pratica.contratto.beni.map((bene, i) => (
+                {/* Con l'acquisto parziale il cliente compra solo i dispositivi
+                    concordati: mostrarli tutti gli farebbe credere il contrario. */}
+                {(pratica.contratto.riacquisto_parziale ? pratica.contratto.beni_riacquisto : pratica.contratto.beni).map((bene, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <CreditCard className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <span>{bene}</span>
                   </li>
                 ))}
               </ul>
+
+              {pratica.contratto.riacquisto_parziale && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm">
+                  <p className="font-semibold text-amber-900 mb-1">Da restituire a fine contratto</p>
+                  <p className="text-amber-900 mb-2">{pratica.contratto.beni_da_restituire.join(', ')}</p>
+                  <p className="text-amber-900">
+                    Questi dispositivi non rientrano nell'acquisto e vanno spediti a Integra Solutions Srl,
+                    Via Tunisia 5, 10093 Collegno (TO), previa disattivazione di Find My iPhone o Samsung Knox
+                    e reset del dispositivo. Le spese di spedizione sono a carico del cliente.
+                  </p>
+                </div>
+              )}
 
               <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">

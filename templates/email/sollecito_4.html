@@ -62,7 +62,7 @@
                   <td style="padding:0;">
                     <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.8;">
                       {{#if opzione_rinnovo_attiva}}<strong>Rinnovo</strong> &mdash; nuovo contratto + sconto copertura Bronze da {{valore_gift_card}}&euro;<br>{{/if}}
-                      <strong>Riacquisto</strong> &mdash; &euro;{{pricing_riacquisto}} + IVA <span style="color:#6b7280;">(tutti i beni del contratto, non &egrave; possibile acquistarne solo una parte)</span><br>
+                      <strong>Riacquisto</strong> &mdash; &euro;{{pricing_riacquisto}} + IVA <span style="color:#6b7280;">({{#if riacquisto_parziale}}solo: {{beni_riacquisto}}{{else}}tutti i beni del contratto, non &egrave; possibile acquistarne solo una parte{{/if}})</span><br>
                       <strong>Contatto</strong> &mdash; consulenza personalizzata<br>
                       <strong>Restituzione</strong> &mdash; riconsegna del bene
                     </p>

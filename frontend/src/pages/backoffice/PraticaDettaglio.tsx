@@ -332,6 +332,13 @@ export default function PraticaDettaglio() {
   // Registra pagamento (bonifico verificato)
   const [riferimentoBonifico, setRiferimentoBonifico] = useState('');
 
+  // Riacquisto parziale: quali dispositivi il cliente acquista e a che prezzo
+  interface BeneRiacquisto { indice: number; descrizione: string; seriale: string | null; canone_unitario: number | null; incluso: boolean }
+  const [beniRiacquisto, setBeniRiacquisto] = useState<BeneRiacquisto[] | null>(null);
+  const [prezzoParziale, setPrezzoParziale] = useState('');
+  const [pricingPieno, setPricingPieno] = useState<number | null>(null);
+  const [pricingGrenke, setPricingGrenke] = useState<number | null>(null);
+
   // Modifica contatti cliente (email / PEC)
   const [contattiEmail, setContattiEmail] = useState('');
   const [contattiPec, setContattiPec] = useState('');
@@ -441,6 +448,23 @@ export default function PraticaDettaglio() {
     fire(0.1, { spread: 120, startVelocity: 45 });
   }
 
+  async function loadBeniRiacquisto() {
+    setBeniRiacquisto(null);
+    try {
+      const res = await fetch(`/api/backoffice/pratiche-dettaglio/${id}/beni-riacquisto`, {
+        credentials: 'include', headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Caricamento beni fallito');
+      const body = await res.json();
+      setBeniRiacquisto(body.beni);
+      setPrezzoParziale(String(body.pricing_riacquisto));
+      setPricingPieno(body.pricing_riacquisto_pieno);
+      setPricingGrenke(body.pricing_grenke);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Errore');
+    }
+  }
+
   function openModal(key: string) {
     setModalOpen(key);
     // Reset form states
@@ -451,6 +475,7 @@ export default function PraticaDettaglio() {
     setDecisioneNote('');
     setRiferimentoBonifico('');
     setReinviaCanale('TUTTI');
+    if (key === 'beni-riacquisto') loadBeniRiacquisto();
     if (key === 'cambia-agente') loadAgenti();
     if (key === 'modifica-contatti') {
       setContattiEmail(pratica?.cliente.email || '');
@@ -649,6 +674,14 @@ export default function PraticaDettaglio() {
                     onClick={() => openModal('registra-pagamento')}
                   />
                 )}
+                {pratica.stato !== 'RIACQUISTO_PAGATO' &&
+                  ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<ClipboardEdit className="w-4 h-4" />}
+                    label="Beni del riacquisto"
+                    onClick={() => openModal('beni-riacquisto')}
+                  />
+                )}
                 <ActionBtn
                   icon={<ClipboardEdit className="w-4 h-4" />}
                   label="Decisione manuale"
@@ -845,6 +878,97 @@ export default function PraticaDettaglio() {
             Conferma
           </button>
         </div>
+      </Modal>
+
+      {/* Beni del riacquisto: concessione di acquisto parziale (solo backoffice) */}
+      <Modal open={modalOpen === 'beni-riacquisto'} title="Beni del riacquisto" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-3">
+          Di norma il cliente acquista <strong>tutti</strong> i dispositivi del contratto. Deselezionandone
+          qualcuno gli concedi un acquisto parziale: i dispositivi esclusi dovrà restituirli con la procedura
+          di reso ordinaria.
+        </p>
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4 text-sm text-amber-900">
+          Da Grenke acquistiamo comunque <strong>l'intero contratto</strong>
+          {pricingGrenke != null && <> (€ {pricingGrenke.toFixed(2)})</>}: la lista trasmessa a Grenke non cambia,
+          cambia solo quanto paga il cliente. Il margine si riduce di conseguenza.
+        </div>
+
+        {beniRiacquisto === null ? (
+          <p className="text-sm text-stone">Caricamento…</p>
+        ) : (
+          <>
+            <div className="space-y-2 mb-4">
+              {beniRiacquisto.map(b => (
+                <label key={b.indice} className="flex items-start gap-3 p-2 rounded-lg border border-border hover:bg-paper cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={b.incluso}
+                    onChange={e => setBeniRiacquisto(beniRiacquisto.map(x =>
+                      x.indice === b.indice ? { ...x, incluso: e.target.checked } : x))}
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-graphite">{b.descrizione}</span>
+                    {b.seriale && <span className="text-stone"> — S/N {b.seriale}</span>}
+                    {b.canone_unitario != null && <span className="text-stone"> — canone € {b.canone_unitario}</span>}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-graphite mb-1">Prezzo al cliente (netto, €)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={prezzoParziale}
+                onChange={e => setPrezzoParziale(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+              />
+              <p className="text-xs text-stone mt-1">
+                {beniRiacquisto.every(b => b.incluso)
+                  ? <>Tutti i dispositivi inclusi: al salvataggio viene ripristinato il prezzo pieno{pricingPieno != null && <> di € {pricingPieno.toFixed(2)}</>}.</>
+                  : <>Prezzo concordato per i soli dispositivi selezionati. Il prezzo pieno del contratto{pricingPieno != null && <> è € {pricingPieno.toFixed(2)}</>}.</>}
+              </p>
+            </div>
+
+            {/* Margine in tempo reale: da Grenke paghiamo comunque tutto, quindi
+                un prezzo parziale troppo basso porta la pratica in perdita. */}
+            {pricingGrenke != null && Number.isFinite(Number(prezzoParziale)) && prezzoParziale !== '' && (() => {
+              const margine = Number(prezzoParziale) - pricingGrenke;
+              return (
+                <div className={`rounded-lg border p-3 mb-4 text-sm ${margine < 0 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+                  Margine risultante: <strong>€ {margine.toFixed(2)}</strong>
+                  {margine < 0 && <> — la pratica va <strong>in perdita</strong>: da Grenke paghiamo € {pricingGrenke.toFixed(2)} per l'intero contratto.</>}
+                </div>
+              );
+            })()}
+
+            {beniRiacquisto.every(b => !b.incluso) && (
+              <p className="text-sm text-loss mb-3">
+                Non puoi escludere tutti i dispositivi: sarebbe una restituzione, non un riacquisto.
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setModalOpen(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper">
+                Annulla
+              </button>
+              <button
+                disabled={actionLoading || beniRiacquisto.every(b => !b.incluso)}
+                onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/beni-riacquisto`, {
+                  esclusi: beniRiacquisto.filter(b => !b.incluso).map(b => b.indice),
+                  pricing_riacquisto: Number(prezzoParziale),
+                })}
+                className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+              >
+                {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Salva
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
 
       {/* Registra pagamento (bonifico verificato) */}

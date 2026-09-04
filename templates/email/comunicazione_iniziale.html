@@ -76,7 +76,7 @@
                     <p style="margin:0;color:#374151;font-size:14px;line-height:1.5;">
                       Prezzo: <strong>&euro;{{pricing_riacquisto}} + IVA</strong><br>
                       Pagamento tramite bonifico istantaneo.<br>
-                      L'acquisto riguarda <strong>tutti i beni del contratto</strong>: non &egrave; possibile acquistarne solo una parte.
+                      {{#if riacquisto_parziale}}L'acquisto riguarda i soli dispositivi concordati con il nostro consulente: <strong>{{beni_riacquisto}}</strong>. Gli altri dovranno essere restituiti a fine contratto.{{else}}L'acquisto riguarda <strong>tutti i beni del contratto</strong>: non &egrave; possibile acquistarne solo una parte.{{/if}}
                     </p>
                   </td>
                 </tr>

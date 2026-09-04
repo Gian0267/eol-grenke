@@ -3,6 +3,8 @@ import { writeFileSync, readdirSync, statSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { registraEvento } from './audit.service.js';
+import { parseBeni, parseEsclusi } from '../lib/beni.js';
+import pricingRules from '../../../config/pricing_rules.json' with { type: 'json' };
 import { prisma } from '../lib/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,19 +37,32 @@ export async function previewExport(da: string, a: string, ambiente: 'TEST' | 'L
     orderBy: { data_scadenza: 'asc' },
   });
 
+  // Gli importi verso Grenke sono SEMPRE quelli dell'intero contratto
+  // (pricing_grenke), mai quanto ha pagato il cliente: se al cliente e' stato
+  // concesso di riscattare solo una parte dei dispositivi, noi acquistiamo
+  // comunque tutto. Usare l'importo del pagamento cliente sottostimerebbe il
+  // dovuto proprio nei casi in cui i due valori divergono.
+  const iva = Number(pricingRules.iva_percentuale) || 0;
+
   return pratiche.map(p => {
     const pag = p.pagamenti[0];
+    const netto = Number(p.pricing_grenke);
+    const importo_iva = Math.round(netto * iva * 100) / 100;
+    const esclusi = parseEsclusi(p.beni_esclusi_json);
+    const totBeni = parseBeni(p.beni_json).length;
     return {
       contratto_id: p.id,
       contratto_grenke_id: p.contratto_grenke_id,
       ragione_sociale: p.cliente.ragione_sociale,
       piva: p.cliente.piva,
       data_scadenza: new Date(p.data_scadenza!).toLocaleDateString('it-IT'),
-      importo_netto: pag ? Number(pag.importo_netto) : Number(p.pricing_riacquisto),
-      importo_iva: pag ? Number(pag.importo_iva) : 0,
-      importo_totale: pag ? Number(pag.importo_totale) : Number(p.pricing_riacquisto),
+      importo_netto: netto,
+      importo_iva,
+      importo_totale: Math.round((netto + importo_iva) * 100) / 100,
       stato_pagamento: pag?.stato || 'N/D',
-      note: '',
+      note: esclusi.length > 0
+        ? `Riacquisto cliente parziale (${totBeni - esclusi.length} di ${totBeni} dispositivi): acquisto da Grenke integrale`
+        : '',
     };
   });
 }
@@ -63,7 +78,7 @@ export async function generaExcel(
   const rows = all.filter(r => !esclusi.includes(r.contratto_id));
 
   const wsData = [
-    ['Numero contratto Grenke', 'Ragione sociale', 'P.IVA', 'Data scadenza', 'Importo riacquisto netto', 'IVA', 'Totale', 'Stato pagamento', 'Note'],
+    ['Numero contratto Grenke', 'Ragione sociale', 'P.IVA', 'Data scadenza', 'Importo riacquisto netto', 'IVA', 'Totale', 'Stato pagamento cliente', 'Note'],
     ...rows.map(r => [
       r.contratto_grenke_id,
       r.ragione_sociale,

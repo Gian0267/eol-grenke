@@ -28,7 +28,7 @@ import { registraEvento } from '../services/audit.service.js';
 import { generaCodice } from '../services/codice-sconto.service.js';
 import type { Codice_Sconto } from '@prisma/client';
 import { prisma } from '../lib/db.js';
-import { parseBeni, formatBene, formatBeniLista } from '../lib/beni.js';
+import { parseBeni, formatBene, formatBeniLista, beniInclusi, beniEsclusi, isRiacquistoParziale } from '../lib/beni.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -162,6 +162,12 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
     const deadlineDecisione = calcolaDeadline(dataScadenza);
 
     const beni = parseBeni(contratto.beni_json);
+    // Riacquisto parziale: il backoffice puo' aver escluso dei dispositivi.
+    // Il cliente deve vedere separatamente cosa acquista e cosa restituisce,
+    // altrimenti pagherebbe credendo di comprare l'intero contratto.
+    const parziale = isRiacquistoParziale(contratto.beni_esclusi_json);
+    const beniAcquisto = beniInclusi(contratto.beni_json, contratto.beni_esclusi_json);
+    const beniDaRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json);
 
     // Leggi feature flag Premio Fedeltà (chiave interna: flags.abilita_gift_card)
     const configService = await import('../services/config.service.js');
@@ -178,6 +184,9 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         numero_grenke: contratto.contratto_grenke_id,
         data_scadenza: contratto.data_scadenza,
         beni: beni.map(formatBene),
+        riacquisto_parziale: parziale,
+        beni_riacquisto: beniAcquisto.map(formatBene),
+        beni_da_restituire: beniDaRestituire.map(formatBene),
         monte_canoni: Number(contratto.monte_canoni),
         numero_mesi: contratto.numero_mesi,
         stato: contratto.stato,

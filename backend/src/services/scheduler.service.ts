@@ -9,7 +9,7 @@ import { registraEvento } from './audit.service.js';
 import { scadiCodici } from './codice-sconto.service.js';
 import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
-import { formatBeniLista } from '../lib/beni.js';
+import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -332,6 +332,9 @@ async function inviaSollecito(
   );
 
   const beniFormatted = formatBeniLista(pratica.beni_json);
+  const riacquistoParziale = isRiacquistoParziale(pratica.beni_esclusi_json);
+  const beniRiacquisto = formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json);
+  const beniDaRestituire = beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', ');
 
   const linkAreaCliente = pratica.token_accesso_cliente
     ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}`
@@ -350,6 +353,9 @@ async function inviaSollecito(
     numero_contratto_grenke: pratica.contratto_grenke_id,
     data_scadenza: formatDate(dataScadenza),
     beni: beniFormatted,
+    riacquisto_parziale: riacquistoParziale,
+    beni_riacquisto: beniRiacquisto,
+    beni_da_restituire: beniDaRestituire,
     monte_canoni: formatEur(Number(pratica.monte_canoni)),
     pricing_riacquisto: formatEur(Number(pratica.pricing_riacquisto)),
     valore_gift_card: formatEur(Number(pratica.valore_gift_card)),
@@ -457,6 +463,9 @@ async function creaEscalation(
   const color = colorMap[cfg.tipo] ?? colorMap['T_50']!;
 
   const beniFormatted = formatBeniLista(pratica.beni_json);
+  const riacquistoParziale = isRiacquistoParziale(pratica.beni_esclusi_json);
+  const beniRiacquisto = formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json);
+  const beniDaRestituire = beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', ');
 
   const storico = pratica.comunicazioni.map((c: any) => ({
     data: formatDate(new Date(c.data_invio)),
@@ -493,6 +502,9 @@ async function creaEscalation(
     data_scadenza: formatDate(new Date(pratica.data_scadenza)),
     monte_canoni: formatEur(monteCanoni),
     beni: beniFormatted,
+    riacquisto_parziale: riacquistoParziale,
+    beni_riacquisto: beniRiacquisto,
+    beni_da_restituire: beniDaRestituire,
     storico_comunicazioni: storico,
     tipo_escalation: `Tentativo ${cfg.tipo.replace('T_', 'T-')}`,
     colore_priorita: color.fg,
@@ -554,6 +566,9 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
   const invitoPagamentoTemplate = await loadTemplateFromDb('email.invito_pagamento');
 
   const beniFormatted = formatBeniLista(pratica.beni_json);
+  const riacquistoParziale = isRiacquistoParziale(pratica.beni_esclusi_json);
+  const beniRiacquisto = formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json);
+  const beniDaRestituire = beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', ');
 
   const pricingRules = JSON.parse(readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'));
   const netto = Number(pratica.pricing_riacquisto);
@@ -580,6 +595,9 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
     numero_contratto_grenke: pratica.contratto_grenke_id,
     data_scadenza: formatDate(new Date(pratica.data_scadenza)),
     beni: beniFormatted,
+    riacquisto_parziale: riacquistoParziale,
+    beni_riacquisto: beniRiacquisto,
+    beni_da_restituire: beniDaRestituire,
     pricing_netto: formatEur(netto),
     pricing_iva: formatEur(iva),
     pricing_totale: formatEur(totale),

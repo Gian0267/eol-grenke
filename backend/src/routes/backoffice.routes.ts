@@ -339,9 +339,13 @@ router.post('/pratiche/:id/sblocca-pagamento', async (req: AuthenticatedRequest,
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const cliente = pratica.cliente!;
+      const { formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } = await import('../lib/beni.js');
       const html = sbloccoTemplate({
         ragione_sociale: cliente.ragione_sociale,
         link: `${frontendUrl}/pratica/${pratica.token_accesso_cliente}/riacquisto`,
+        riacquisto_parziale: isRiacquistoParziale(pratica.beni_esclusi_json),
+        beni_riacquisto: formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json),
+        beni_da_restituire: beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', '),
       });
 
       await emailProviderPerAmbiente(pratica.ambiente).send(

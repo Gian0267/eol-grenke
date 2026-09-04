@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { resolve as pathResolve, dirname as pathDirname } from 'path';
 import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
-import { formatBene } from '../lib/beni.js';
+import { formatBene, beniInclusi, beniEsclusi, isRiacquistoParziale } from '../lib/beni.js';
 import { saveDocument } from './storage.service.js';
 
 const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
@@ -77,8 +77,11 @@ export async function generaRicevutaPagamento(
 
   const fatturaNumero = await getNextReceiptNumber(year, 'RICEVUTA_PAGAMENTO');
 
-  let beni: Array<{ descrizione?: string }> = [];
-  try { beni = JSON.parse(contratto.beni_json); } catch {}
+  // La ricevuta attesta cosa il cliente ha effettivamente acquistato: con un
+  // riacquisto parziale elenca i soli beni riscattati, non l'intero contratto.
+  const beni = beniInclusi(contratto.beni_json, contratto.beni_esclusi_json);
+  const daRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json);
+  const parziale = isRiacquistoParziale(contratto.beni_esclusi_json);
 
   const filename = `ricevuta_pagamento_${contratto.id}_${Date.now()}.pdf`;
 
@@ -198,6 +201,9 @@ export async function generaRicevutaPagamento(
   doc.moveDown(0.5);
   doc.font('Helvetica').fontSize(9).fillColor('#666666');
   doc.text(
+    (parziale
+      ? `Acquisto parziale concordato: la presente ricevuta riguarda i soli beni sopra indicati. I restanti beni del contratto (${daRestituire.map(formatBene).join(', ')}) devono essere restituiti secondo la procedura di reso. `
+      : '') +
     'La presente ricevuta attesta l\'avvenuto pagamento dell\'acconto per il riacquisto dei beni sopra indicati. ' +
     'Il trasferimento di proprieta avverra alla data T+11 dalla scadenza del contratto Grenke.',
     { align: 'justify' },

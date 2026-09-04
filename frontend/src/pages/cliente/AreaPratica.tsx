@@ -17,6 +17,9 @@ interface PraticaData {
     numero_grenke: string;
     data_scadenza: string;
     beni: string[];
+    riacquisto_parziale: boolean;
+    beni_riacquisto: string[];
+    beni_da_restituire: string[];
     monte_canoni: number;
     numero_mesi: number;
     stato: string;
@@ -142,7 +145,11 @@ export default function AreaPratica() {
     {
       id: 'riacquisto',
       titolo: config?.titolo_opzione_riacquisto || 'Prenota l\'acquisto del bene',
-      descrizione: config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. L\'acquisto riguarda tutti i beni del contratto: non è possibile acquistarne solo una parte. NON paghi ora! Il pagamento ti sarà richiesto 26 giorni prima della scadenza del contratto.',
+      // Con il riacquisto parziale la clausola "tutti i beni" e' falsa per
+      // questo cliente: la sostituiamo con l'elenco effettivo di cosa acquista.
+      descrizione: data.contratto.riacquisto_parziale
+        ? `Acquisto riservato ai soli dispositivi concordati: ${data.contratto.beni_riacquisto.join(', ')}. NON paghi ora! Il pagamento ti sarà richiesto 26 giorni prima della scadenza del contratto.`
+        : (config?.desc_opzione_riacquisto || 'Prenota l\'acquisto dei beni in locazione al prezzo di acquisto indicato. L\'acquisto riguarda tutti i beni del contratto: non è possibile acquistarne solo una parte. NON paghi ora! Il pagamento ti sarà richiesto 26 giorni prima della scadenza del contratto.'),
       icona: <ShoppingCart className="w-6 h-6" />,
       colore: 'border-[#2563eb]',
       bgColore: 'bg-blue-50',
@@ -225,6 +232,17 @@ export default function AreaPratica() {
               <span className="text-gray-500">Beni in locazione</span>
               <p className="font-medium">{data.contratto.beni.join(', ') || 'Come da contratto'}</p>
             </div>
+            {data.contratto.riacquisto_parziale && (
+              <div className="sm:col-span-2 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <p className="text-sm text-[#1a3a52]">
+                  <strong>Acquisto parziale concordato.</strong> Puoi acquistare:{' '}
+                  <strong>{data.contratto.beni_riacquisto.join(', ')}</strong>.
+                </p>
+                <p className="text-sm text-[#1a3a52] mt-1">
+                  Da restituire a fine contratto: <strong>{data.contratto.beni_da_restituire.join(', ')}</strong>.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

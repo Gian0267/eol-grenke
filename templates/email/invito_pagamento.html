@@ -53,8 +53,8 @@
               </p>
 
               <p style="color:#333333;font-size:14px;line-height:1.6;">
-                Puo' ora procedere con il pagamento per il riacquisto dei beni. L'acquisto riguarda
-                <strong>tutti i beni del contratto</strong>: non e' possibile acquistarne solo una parte.
+                Puo' ora procedere con il pagamento per il riacquisto dei beni. {{#if riacquisto_parziale}}L'acquisto riguarda i soli dispositivi concordati: <strong>{{beni_riacquisto}}</strong>.{{else}}L'acquisto riguarda
+                <strong>tutti i beni del contratto</strong>: non e' possibile acquistarne solo una parte.{{/if}}
               </p>
 
               <!-- Riepilogo beni -->

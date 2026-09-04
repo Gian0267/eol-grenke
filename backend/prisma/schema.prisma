@@ -28,6 +28,13 @@ model Contratto_EOL {
   valore_originario     Decimal?
   beni_json             String               // SQLite doesn't support JSON type natively, using String
   pricing_riacquisto    Decimal
+  // Riacquisto parziale (concessione riservata al backoffice): indici dei beni
+  // di beni_json che il cliente NON riscatta. Verso Grenke compriamo sempre
+  // l'intero contratto, quindi pricing_grenke non cambia mai.
+  beni_esclusi_json     String?
+  // Prezzo dell'intero contratto, conservato quando il riacquisto diventa
+  // parziale: permette di tornare al riacquisto totale senza ricalcoli.
+  pricing_riacquisto_pieno Decimal?
   pricing_grenke        Decimal
   margine_lordo         Decimal
   valore_gift_card      Decimal

@@ -8,6 +8,8 @@ import { confermaBonificoRicevuto } from '../services/payment.service.js';
 import { loadDocument } from '../services/storage.service.js';
 import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
+import { parseBeni, parseEsclusi, beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
+import { calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { prisma } from '../lib/db.js';
 
 const router = Router();
@@ -454,6 +456,118 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
   }
 });
 
+// GET /api/backoffice/pratiche-dettaglio/:id/beni-riacquisto — elenco dei beni
+// con lo stato di inclusione, per la modale del backoffice.
+router.get('/pratiche-dettaglio/:id/beni-riacquisto', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const c = await prisma.contratto_EOL.findUnique({ where: { id: req.params.id as string } });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+    const esclusi = new Set(parseEsclusi(c.beni_esclusi_json));
+    res.json({
+      beni: parseBeni(c.beni_json).map((b, i) => ({
+        indice: i,
+        descrizione: formatBene(b),
+        seriale: b.seriale ?? null,
+        canone_unitario: (b as any).canone_unitario ?? null,
+        incluso: !esclusi.has(i),
+      })),
+      pricing_riacquisto: Number(c.pricing_riacquisto),
+      pricing_riacquisto_pieno: c.pricing_riacquisto_pieno != null ? Number(c.pricing_riacquisto_pieno) : Number(c.pricing_riacquisto),
+      pricing_grenke: Number(c.pricing_grenke),
+      parziale: esclusi.size > 0,
+      modificabile: c.stato !== 'RIACQUISTO_PAGATO',
+    });
+  } catch (err) {
+    console.error('[beni-riacquisto/get] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/beni-riacquisto — concessione di
+// riacquisto parziale: il backoffice esclude dei dispositivi e fissa il prezzo
+// al cliente. Verso Grenke l'acquisto resta integrale, quindi pricing_grenke
+// non viene mai toccato e il margine si riduce di conseguenza (puo' andare
+// sotto zero: e' una scelta commerciale, non un errore da bloccare).
+router.post('/pratiche-dettaglio/:id/beni-riacquisto', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { esclusi, pricing_riacquisto } = req.body as { esclusi?: unknown; pricing_riacquisto?: unknown };
+    const id = req.params.id as string;
+
+    const c = await prisma.contratto_EOL.findUnique({ where: { id } });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+    if (c.stato === 'RIACQUISTO_PAGATO') {
+      res.status(409).json({ error: 'Pratica gia\' pagata: i beni non sono piu\' modificabili' });
+      return;
+    }
+
+    const beni = parseBeni(c.beni_json);
+    if (beni.length === 0) { res.status(400).json({ error: 'La pratica non ha beni censiti' }); return; }
+
+    const lista = Array.isArray(esclusi) ? esclusi : [];
+    const indici = [...new Set(lista.filter((n): n is number => Number.isInteger(n)))];
+    if (indici.some(i => i < 0 || i >= beni.length)) {
+      res.status(400).json({ error: 'Indice di bene non valido' });
+      return;
+    }
+    if (indici.length >= beni.length) {
+      res.status(400).json({ error: 'Non si possono escludere tutti i beni: sarebbe una restituzione, non un riacquisto' });
+      return;
+    }
+
+    const prezzo = Number(pricing_riacquisto);
+    if (!Number.isFinite(prezzo) || prezzo < 0) {
+      res.status(400).json({ error: 'Prezzo al cliente non valido' });
+      return;
+    }
+
+    // Il prezzo pieno si fissa alla prima esclusione e non cambia piu': serve a
+    // poter tornare al riacquisto totale con l'importo originale.
+    const pieno = c.pricing_riacquisto_pieno != null ? Number(c.pricing_riacquisto_pieno) : Number(c.pricing_riacquisto);
+    const parziale = indici.length > 0;
+    const nuovoPrezzo = parziale ? prezzo : pieno;
+    const margine = Number((nuovoPrezzo - Number(c.pricing_grenke)).toFixed(2));
+
+    const aggiornato = await prisma.contratto_EOL.update({
+      where: { id },
+      data: {
+        beni_esclusi_json: parziale ? JSON.stringify(indici.sort((a, b) => a - b)) : null,
+        pricing_riacquisto: new Prisma.Decimal(nuovoPrezzo.toFixed(2)),
+        pricing_riacquisto_pieno: new Prisma.Decimal(pieno.toFixed(2)),
+        margine_lordo: new Prisma.Decimal(margine.toFixed(2)),
+        valore_gift_card: new Prisma.Decimal((await calcolaValoreGiftCard(margine)).toFixed(2)),
+      },
+    });
+
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system',
+      parziale ? 'RIACQUISTO_PARZIALE_IMPOSTATO' : 'RIACQUISTO_PARZIALE_ANNULLATO', {
+        beni_esclusi: beniEsclusi(c.beni_json, aggiornato.beni_esclusi_json).map(formatBene),
+        beni_inclusi: beniInclusi(c.beni_json, aggiornato.beni_esclusi_json).map(formatBene),
+        pricing_riacquisto_precedente: Number(c.pricing_riacquisto),
+        pricing_riacquisto: nuovoPrezzo,
+        pricing_riacquisto_pieno: pieno,
+        pricing_grenke: Number(c.pricing_grenke),
+        margine_lordo: margine,
+      });
+
+    res.json({
+      success: true,
+      parziale,
+      pricing_riacquisto: nuovoPrezzo,
+      margine_lordo: margine,
+      beni_esclusi: beniEsclusi(c.beni_json, aggiornato.beni_esclusi_json).map(formatBene),
+    });
+  } catch (err) {
+    console.error('[beni-riacquisto/post] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/registra-pagamento — il backoffice
 // ha verificato l'accredito del bonifico e registra il pagamento del riacquisto:
 // pratica → RIACQUISTO_PAGATO, ricevuta generata e inviata al cliente.
@@ -481,12 +595,33 @@ router.post('/pratiche-dettaglio/:id/registra-pagamento', async (req: Authentica
       if (contratto && !contratto.cliente.opt_out_comunicazioni) {
         const pdfBuffer = await loadDocument(result.fattura_path);
         const emailProvider = emailProviderPerAmbiente(contratto.ambiente);
+        // Riacquisto parziale: il cliente deve sapere, nella stessa mail che gli
+        // conferma l'acquisto, quali dispositivi restano da restituire.
+        const daRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
+        const acquistati = beniInclusi(contratto.beni_json, contratto.beni_esclusi_json).map(formatBene);
+        const bloccoReso = daRestituire.length === 0 ? '' : `
+            <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;margin:18px 0;">
+              <p style="margin:0 0 8px;"><strong>Dispositivi da restituire</strong></p>
+              <p style="margin:0 0 8px;">L'acquisto riguarda: <strong>${acquistati.join(', ')}</strong>.
+              I restanti dispositivi del contratto devono essere restituiti:</p>
+              <p style="margin:0 0 8px;"><strong>${daRestituire.join(', ')}</strong></p>
+              <p style="margin:0 0 4px;">Prima della spedizione:</p>
+              <ol style="margin:0 0 8px;padding-left:20px;">
+                <li>Disattivi Find My iPhone / Samsung Knox</li>
+                <li>Esegua il reset del dispositivo</li>
+                <li>Verifichi funzionamento ed eventuali danni</li>
+                <li>Utilizzi l'imballo originale o equivalente</li>
+              </ol>
+              <p style="margin:0;">Spedisca a: <strong>Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO)</strong>.
+              Le spese di spedizione sono a carico del cliente.</p>
+            </div>`;
         const html = `
           <div style="font-family:Arial,Helvetica,sans-serif;color:#374151;font-size:15px;line-height:1.6;">
             <p>Gentile <strong>${contratto.cliente.ragione_sociale}</strong>,</p>
             <p>confermiamo di aver ricevuto il pagamento per il riacquisto dei beni del contratto
             n. <strong>${contratto.contratto_grenke_id}</strong>.</p>
             <p>In allegato trova la ricevuta n. ${result.fattura_numero}.</p>
+            ${bloccoReso}
             <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
             <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Solutions Srl</span></p>
           </div>`;
