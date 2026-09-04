@@ -17,7 +17,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL = `http://localhost:${process.env.PORT || 3001}`;
+// L'opt-out e' una rotta del backend, che in produzione serve anche il
+// frontend sullo stesso origin; in sviluppo Vite fa da proxy su /api. Usare
+// FRONTEND_URL evita il localhost cablato, che rendeva il link inutilizzabile
+// per il destinatario (43 comunicazioni cosi' fino al 01/09/2026).
+const BACKEND_URL = FRONTEND_URL;
 
 async function loadTemplateFromDb(chiaveEmail: string): Promise<HandlebarsTemplateDelegate> {
   const html = await configService.getHtml(chiaveEmail);
