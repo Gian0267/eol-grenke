@@ -92,7 +92,7 @@ const feaProvider = new MockFeaProvider();
 
 // I3 fix: shared deadline calculation
 function calcolaDeadline(dataScadenza: Date): Date {
-  const offsetDays = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
+  const offsetDays = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 21);
   return new Date(dataScadenza.getTime() - offsetDays * 24 * 60 * 60 * 1000);
 }
 

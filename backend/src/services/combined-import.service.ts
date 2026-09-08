@@ -22,7 +22,7 @@ import { calcolaPricing, calcolaValoreGiftCard } from './pricing.service.js';
  */
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 21);
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;

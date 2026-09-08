@@ -3,7 +3,7 @@ import multer from 'multer';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 21);
 import { verifyBackofficeToken, ambienteVista, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { previewCombinedImport, confirmCombinedImport } from '../services/combined-import.service.js';
 import { inviaComunicazioneIniziale } from '../services/email.service.js';

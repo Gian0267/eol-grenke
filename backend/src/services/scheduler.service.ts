@@ -15,7 +15,7 @@ import * as configService from './config.service.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 21);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // L'opt-out e' una rotta del backend, che in produzione serve anche il
 // frontend sullo stesso origin; in sviluppo Vite fa da proxy su /api. Usare
@@ -232,8 +232,13 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
   try {
     const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
     const giorniPromemoria = await configService.getNumero('timeline.invito_pagamento_promemoria', 23);
+    // DECISIONE_RIACQUISTO_IN_CORSO lo imposta il flusso cliente; quando la
+    // decisione la registra il backoffice lo stato resta DECISIONE_RIACQUISTO.
+    // Selezionarne uno solo lasciava senza invito al pagamento tutti i clienti
+    // gestiti manualmente (rilevato il 08/09/2026: tre pratiche reali oltre il
+    // T-26 e nessun invito partito).
     const praticheRiacquisto = await prisma.contratto_EOL.findMany({
-      where: { stato: 'DECISIONE_RIACQUISTO_IN_CORSO' },
+      where: { stato: { in: ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'] } },
       include: { cliente: true },
     });
 
@@ -316,6 +321,44 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
   return report;
 }
 
+
+/**
+ * Restituisce un token di accesso cliente valido, rigenerandolo se quello
+ * salvato e' scaduto.
+ *
+ * Serve perche' il token nasce con scadenza T-JWT_EXPIRES_OFFSET_DAYS al
+ * momento della comunicazione iniziale, mesi prima: se nel frattempo e'
+ * scaduto, ogni link successivo porterebbe il cliente alla pagina "Termini di
+ * gestione scaduti" invece che alla sua pratica.
+ *
+ * Non estende mai oltre la finestra di gestione: se T-offset e' gia' passato
+ * restituisce null, perche' a quel punto un link non deve piu' funzionare.
+ */
+async function tokenClienteValido(pratica: any): Promise<string | null> {
+  if (!pratica.data_scadenza) return null;
+  const exp = Math.floor((new Date(pratica.data_scadenza).getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000);
+  if (exp * 1000 <= Date.now()) return null;
+
+  if (pratica.token_accesso_cliente) {
+    try {
+      jwt.verify(pratica.token_accesso_cliente, JWT_SECRET);
+      return pratica.token_accesso_cliente;
+    } catch { /* scaduto o non verificabile: se ne conia uno nuovo */ }
+  }
+
+  const token = jwt.sign(
+    { contratto_eol_id: pratica.id, cliente_id: pratica.cliente_id, exp },
+    JWT_SECRET,
+  );
+  await prisma.contratto_EOL.update({
+    where: { id: pratica.id },
+    data: { token_accesso_cliente: token },
+  });
+  pratica.token_accesso_cliente = token;
+  console.log(`[Scheduler] Token cliente rigenerato per ${pratica.contratto_nsm_id} (scade ${new Date(exp * 1000).toISOString().slice(0, 10)})`);
+  return token;
+}
+
 async function inviaSollecito(
   pratica: any,
   cfg: { tipo: string; template: string; numero: number },
@@ -336,8 +379,9 @@ async function inviaSollecito(
   const beniRiacquisto = formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json);
   const beniDaRestituire = beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', ');
 
-  const linkAreaCliente = pratica.token_accesso_cliente
-    ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}`
+  const tokenValido = await tokenClienteValido(pratica);
+  const linkAreaCliente = tokenValido
+    ? `${FRONTEND_URL}/pratica/${tokenValido}`
     : FRONTEND_URL;
 
   // Flag "Opzione Rinnovo attiva": quando è OFF i solleciti nascondono la riga rinnovo.
@@ -577,8 +621,9 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
   const iva = centIva / 100;
   const totale = (centNetto + centIva) / 100;
 
-  const linkPagamento = pratica.token_accesso_cliente
-    ? `${FRONTEND_URL}/pratica/${pratica.token_accesso_cliente}/riacquisto`
+  const tokenPagamento = await tokenClienteValido(pratica);
+  const linkPagamento = tokenPagamento
+    ? `${FRONTEND_URL}/pratica/${tokenPagamento}/riacquisto`
     : FRONTEND_URL;
 
   // Pagamento online disattivato → la mail include le coordinate per il bonifico

@@ -12,7 +12,7 @@ import * as configService from './config.service.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 30);
+const JWT_EXPIRES_OFFSET_DAYS = Number(process.env.JWT_EXPIRES_OFFSET_DAYS || 21);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // L'opt-out e' una rotta del backend, che in produzione serve anche il
 // frontend sullo stesso origin; in sviluppo Vite fa da proxy su /api. Usare
