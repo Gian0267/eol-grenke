@@ -10,6 +10,72 @@ function diffDays(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / 86400000);
 }
 
+// GET /api/backoffice/dashboard/scadenza-grenke
+// Prossima trasmissione della lista riacquisti a Grenke (T-20 per difetto,
+// chiave timeline.consolidamento_lista). Entro quella data va incassato il
+// massimo possibile: dopo, il contratto non entra piu' nella lista.
+//
+// Le pratiche si raggruppano per data di scadenza — i contratti Grenke scadono
+// a blocchi — e si mostra il blocco con la scadenza piu' vicina che abbia
+// ancora qualcosa da incassare; se non ce n'e' nessuno, il prossimo in ordine
+// di tempo.
+router.get('/scadenza-grenke', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configService = await import('../services/config.service.js');
+    const giorni = await configService.getNumero('timeline.consolidamento_lista', 20);
+
+    const INCASSABILI = ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO', 'RIACQUISTO_IN_ATTESA_CHIAMATA'];
+
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where: {
+        ambiente: ambienteVista(req),
+        data_scadenza: { not: null },
+        stato: { in: [...INCASSABILI, 'RIACQUISTO_PAGATO'] },
+      },
+      select: { data_scadenza: true, stato: true, pricing_riacquisto: true },
+    });
+
+    if (pratiche.length === 0) {
+      res.json({ presente: false });
+      return;
+    }
+
+    const blocchi = new Map<string, (typeof pratiche)[number][]>();
+    for (const p of pratiche) {
+      const k = p.data_scadenza!.toISOString().slice(0, 10);
+      blocchi.set(k, [...(blocchi.get(k) ?? []), p]);
+    }
+
+    type Riga = (typeof pratiche)[number];
+    const ordinati: Array<[string, Riga[]]> = [...blocchi.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const scelto = ordinati.find(([, righe]) => righe.some((p: Riga) => INCASSABILI.includes(p.stato))) ?? ordinati[0]!;
+    const dataScadenza = scelto[0];
+    const arr: Riga[] = scelto[1];
+
+    const dataInvio = new Date(new Date(dataScadenza).getTime() - giorni * 86400000);
+    const oggi = new Date();
+    const pagate = arr.filter((p: Riga) => p.stato === 'RIACQUISTO_PAGATO');
+    const daIncassare = arr.filter((p: Riga) => INCASSABILI.includes(p.stato));
+    const somma = (l: Riga[]) => Math.round(l.reduce((t: number, p: Riga) => t + Number(p.pricing_riacquisto), 0) * 100) / 100;
+
+    res.json({
+      presente: true,
+      data_invio: dataInvio.toISOString(),
+      data_scadenza_contratti: new Date(dataScadenza).toISOString(),
+      giorni_mancanti: Math.ceil((dataInvio.getTime() - oggi.getTime()) / 86400000),
+      giorni_soglia: giorni,
+      totale: arr.length,
+      pagate: pagate.length,
+      da_incassare: daIncassare.length,
+      importo_incassato: somma(pagate),
+      importo_da_incassare: somma(daIncassare),
+    });
+  } catch (err) {
+    console.error('[scadenza-grenke] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // GET /api/backoffice/dashboard/risk-silence-counts
 router.get('/risk-silence-counts', async (req: AuthenticatedRequest, res: Response) => {
   try {

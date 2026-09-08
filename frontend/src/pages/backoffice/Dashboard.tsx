@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router-dom'
-import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox } from 'lucide-react'
+import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox, CalendarClock } from 'lucide-react'
+
+interface ScadenzaGrenke {
+  presente: boolean
+  data_invio?: string
+  data_scadenza_contratti?: string
+  giorni_mancanti?: number
+  giorni_soglia?: number
+  totale?: number
+  pagate?: number
+  da_incassare?: number
+  importo_incassato?: number
+  importo_da_incassare?: number
+}
 
 interface Utente {
   id: string
@@ -59,6 +72,7 @@ export default function Dashboard() {
   const [riskCounts, setRiskCounts] = useState<RiskSilenceCounts | null>(null)
   const [kpi, setKpi] = useState<Kpi | null>(null)
   const [pratiche, setPratiche] = useState<PraticaRecente[]>([])
+  const [grenke, setGrenke] = useState<ScadenzaGrenke | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,10 +103,11 @@ export default function Dashboard() {
       setLoading(true)
       setError(null)
       try {
-        const [riskRes, kpiRes, praticheRes] = await Promise.all([
+        const [riskRes, kpiRes, praticheRes, grenkeRes] = await Promise.all([
           fetch('/api/backoffice/dashboard/risk-silence-counts', opts),
           fetch('/api/backoffice/dashboard/kpi', opts),
           fetch('/api/backoffice/dashboard/pratiche-recenti', opts),
+          fetch('/api/backoffice/dashboard/scadenza-grenke', opts),
         ])
 
         if (!riskRes.ok || !kpiRes.ok || !praticheRes.ok) {
@@ -108,6 +123,8 @@ export default function Dashboard() {
         setRiskCounts(riskData)
         setKpi(kpiData)
         setPratiche(praticheData)
+        // Non blocca la dashboard: se fallisce, il riquadro semplicemente non compare
+        if (grenkeRes.ok) setGrenke(await grenkeRes.json())
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore sconosciuto')
       } finally {
@@ -146,6 +163,70 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Scadenza trasmissione lista a Grenke: entro quella data va incassato
+          il massimo possibile, dopo il contratto non entra piu' nella lista. */}
+      {grenke?.presente && (() => {
+        const gg = grenke.giorni_mancanti ?? 0
+        const scaduta = gg < 0
+        const urgente = gg >= 0 && gg <= 5
+        const tono = scaduta
+          ? { box: 'bg-danger border-danger-border/30', testo: 'text-danger-text', icona: 'text-danger-border' }
+          : urgente
+            ? { box: 'bg-warn border-warn-border/30', testo: 'text-warn-text', icona: 'text-warn-border' }
+            : { box: 'bg-ok border-ok-border/30', testo: 'text-ok-text', icona: 'text-ok-border' }
+        const dataInvio = new Date(grenke.data_invio!).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })
+        const dataScad = new Date(grenke.data_scadenza_contratti!).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        const eur = (n: number) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const quanti = scaduta
+          ? `scaduta da ${-gg} ${-gg === 1 ? 'giorno' : 'giorni'}`
+          : gg === 0 ? 'scade oggi' : `fra ${gg} ${gg === 1 ? 'giorno' : 'giorni'}`
+
+        return (
+          <section>
+            <h2 className="text-xl font-medium text-graphite mb-4">Trasmissione lista riacquisti a Grenke</h2>
+            <div className={`rounded-xl border p-5 ${tono.box}`}>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <CalendarClock className={`h-5 w-5 ${tono.icona}`} />
+                    <span className={`text-sm font-medium uppercase tracking-wide font-mono ${tono.testo}`}>
+                      T-{grenke.giorni_soglia}
+                    </span>
+                  </div>
+                  <p className={`text-3xl font-medium ${tono.testo}`}>{dataInvio}</p>
+                  <p className={`text-sm mt-1 ${tono.testo}/80`}>{quanti}</p>
+                  <p className={`text-xs mt-0.5 ${tono.testo}/60`}>
+                    Riguarda i contratti in scadenza il {dataScad}
+                  </p>
+                </div>
+
+                <div className="md:text-right">
+                  <p className={`text-4xl font-medium font-mono ${tono.testo}`}>
+                    {grenke.pagate}<span className="text-2xl opacity-60">/{grenke.totale}</span>
+                  </p>
+                  <p className={`text-sm mt-1 ${tono.testo}/80`}>pagamenti incassati</p>
+                  {(grenke.da_incassare ?? 0) > 0 && (
+                    <p className={`text-xs mt-0.5 ${tono.testo}/60`}>
+                      &euro; {eur(grenke.importo_da_incassare ?? 0)} ancora da incassare
+                      {' '}su {grenke.da_incassare} {grenke.da_incassare === 1 ? 'pratica' : 'pratiche'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {(grenke.da_incassare ?? 0) > 0 && (
+                <Link
+                  to="/backoffice/pratiche?stato=DECISIONE_RIACQUISTO"
+                  className={`inline-block mt-4 text-sm font-medium underline ${tono.testo}`}
+                >
+                  Vedi le pratiche da incassare
+                </Link>
+              )}
+            </div>
+          </section>
+        )
+      })()}
+
       {/* Sezione 1: Pratiche a rischio silenzio */}
       <section>
         <h2 className="text-xl font-medium text-graphite mb-4">Pratiche a rischio silenzio</h2>
