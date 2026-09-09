@@ -346,6 +346,13 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
 const socket = process.env.LSNODE_SOCKET;
 function onListen() {
   console.log(`NSM EOL Backend in ascolto${socket ? ` su socket ${socket}` : ` su porta ${port}`}`);
+  // In locale il DB e' quello di produzione: senza questo interruttore un
+  // `npm run dev` lasciato aperto manderebbe alle 02:00 solleciti e inviti
+  // veri ai clienti, in parallelo all'istanza su Hostinger.
+  if (process.env.DISABLE_SCHEDULER === '1') {
+    console.log('[Scheduler] DISATTIVATO da DISABLE_SCHEDULER=1 (nessun cron registrato)');
+    return;
+  }
   startSchedulerCron();
 }
 if (socket) {
