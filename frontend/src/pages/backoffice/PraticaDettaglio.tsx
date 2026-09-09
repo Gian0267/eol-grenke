@@ -1702,11 +1702,8 @@ function Row({
   return (
     <div className="flex flex-col sm:flex-row sm:gap-3">
       <dt className="text-stone sm:w-40 shrink-0">{label}</dt>
-      {/* min-w-0 permette alla cella di restringersi sotto la larghezza del
-          contenuto (in flex non accade da sola), break-words spezza le stringhe
-          senza spazi: PEC ed email lunghe uscivano dal riquadro. */}
       <dd
-        className={`text-graphite min-w-0 break-words ${mono ? 'font-mono text-xs' : ''} ${highlight ? 'font-semibold text-ok-text' : ''}`}
+        className={`text-graphite ${mono ? 'font-mono text-xs' : ''} ${highlight ? 'font-semibold text-ok-text' : ''}`}
       >
         {value || '—'}
       </dd>
