@@ -21,6 +21,7 @@ import {
   AlertCircle,
   AtSign,
   Trash2,
+  ExternalLink,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -80,6 +81,24 @@ interface Pagamento {
   metodo: string;
   stato: string;
   data_iniziato: string;
+  session_id?: string | null;
+  riferimento_transazione?: string | null;
+}
+
+/**
+ * Link alla dashboard Stripe per riscontrare l'incasso reale.
+ * La modalita' si deduce dal prefisso della sessione: le sessioni create con le
+ * chiavi di prova iniziano con cs_test_ e vivono su dashboard.stripe.com/test.
+ * Senza questa distinzione i pagamenti di collaudo porterebbero a una pagina
+ * inesistente nell'account live.
+ */
+function linkStripe(p: Pagamento): string | null {
+  if (p.metodo !== 'STRIPE') return null;
+  const prova = (p.session_id ?? '').startsWith('cs_test_');
+  const base = `https://dashboard.stripe.com/${prova ? 'test/' : ''}`;
+  if (p.riferimento_transazione) return `${base}payments/${p.riferimento_transazione}`;
+  if (p.session_id) return `${base}checkout/sessions/${p.session_id}`;
+  return null;
 }
 
 interface TimelineEntry {
@@ -1382,6 +1401,18 @@ function TabPanoramica({
                         {p.stato}
                       </span>
                       <div className="text-stone mt-0.5">{formatDateTime(p.data_iniziato)}</div>
+                      {linkStripe(p) && (
+                        <a
+                          href={linkStripe(p)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-flex hover:underline"
+                          title="Apre la transazione sulla dashboard Stripe"
+                        >
+                          Verifica su Stripe
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
