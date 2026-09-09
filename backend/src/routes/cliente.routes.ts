@@ -580,7 +580,12 @@ router.post(
         return;
       }
 
-      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA'];
+      // Solo per il riacquisto: DECISIONE_RIACQUISTO lo imposta il backoffice
+      // quando registra la decisione al posto del cliente. Escluderlo bloccava
+      // quei clienti con "Stato pratica non valido per riacquisto" se arrivavano
+      // qui da una pagina non aggiornata. Gli altri flussi restano invariati:
+      // chi ha gia' scelto il riacquisto non deve poter passare a un'altra opzione.
+      const statiValidi = ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE', 'LISTA_RICEVUTA', 'DECISIONE_RIACQUISTO'];
       if (!statiValidi.includes(contratto.stato)) {
         res.status(400).json({ errore: `Stato pratica non valido per riacquisto: ${contratto.stato}` });
         return;

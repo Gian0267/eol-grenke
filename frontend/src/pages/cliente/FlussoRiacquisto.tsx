@@ -157,8 +157,14 @@ export default function FlussoRiacquisto() {
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Errore caricamento')))
       .then(data => {
         setPratica(data);
-        // Se la pratica è già in stato riacquisto, controlla se il pagamento è disponibile
-        if (data.contratto.stato === 'DECISIONE_RIACQUISTO_IN_CORSO') {
+        // Decisione di riacquisto gia' presa: si riprende da dove si era rimasti,
+        // saltando la schermata di prenotazione. DECISIONE_RIACQUISTO_IN_CORSO lo
+        // imposta il flusso cliente, DECISIONE_RIACQUISTO il backoffice quando
+        // registra la decisione al posto del cliente: considerarne solo uno
+        // rimandava questi clienti alla prenotazione, dove il backend rifiutava
+        // lo stato con "Stato pratica non valido per riacquisto".
+        if (data.contratto.stato === 'DECISIONE_RIACQUISTO_IN_CORSO'
+          || data.contratto.stato === 'DECISIONE_RIACQUISTO') {
           fetch(`${API_BASE}/api/cliente/decisione/riacquisto/stato`, { headers })
             .then(r => r.ok ? r.json() : null)
             .then(statoData => {
