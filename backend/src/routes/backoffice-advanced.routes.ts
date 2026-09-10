@@ -1146,8 +1146,9 @@ router.post('/grenke-export/genera', async (req: AuthenticatedRequest, res: Resp
     const result = await generaExcel(da, a, esclusi || [], operatoreId, ambienteVista(req));
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[grenke-export/genera] Errore:', err);
-    res.status(500).json({ error: 'Errore interno' });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`[grenke-export/genera] Errore: ${msg}`);
+    res.status(500).json({ error: `Generazione del file fallita: ${msg}` });
   }
 });
 

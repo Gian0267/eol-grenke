@@ -1,5 +1,5 @@
 import XLSX from 'xlsx';
-import { writeFileSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, readdirSync, statSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { registraEvento } from './audit.service.js';
@@ -106,6 +106,11 @@ export async function generaExcel(
   const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
   const ts = now.toISOString().replace(/[:.]/g, '-').substring(0, 19);
   const filename = ambiente === 'TEST' ? `TEST_lista_riacquisti_${ym}_${ts}.xlsx` : `lista_riacquisti_${ym}_${ts}.xlsx`;
+  // La cartella non e' in git e ogni deploy ricrea la directory dell'app da
+  // zero: senza questa riga writeFileSync fallisce con ENOENT e l'export
+  // restituisce "Errore nella generazione del file".
+  mkdirSync(exportDir, { recursive: true });
+
   const filepath = resolve(exportDir, filename);
 
   const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
