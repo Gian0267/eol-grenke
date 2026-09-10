@@ -4,6 +4,7 @@ import { toast, Toaster } from 'sonner';
 interface PreviewRow {
   contratto_id: string;
   contratto_grenke_id: string;
+  contratto_nsm_id: string;
   ragione_sociale: string;
   piva: string;
   data_scadenza: string;
@@ -149,6 +150,7 @@ export default function EsportaListaGrenke() {
                       onChange={() => esclusi.size > 0 ? setEsclusi(new Set()) : setEsclusi(new Set(preview.map(r => r.contratto_id)))} />
                   </th>
                   <th className="px-4 py-2 font-medium">Contratto Grenke</th>
+                  <th className="px-4 py-2 font-medium">Contratto NSM</th>
                   <th className="px-4 py-2 font-medium">Ragione sociale</th>
                   <th className="px-4 py-2 font-medium">P.IVA</th>
                   <th className="px-4 py-2 font-medium">Scadenza</th>
@@ -165,6 +167,7 @@ export default function EsportaListaGrenke() {
                         onChange={() => toggleEscludi(r.contratto_id)} />
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">{r.contratto_grenke_id}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{r.contratto_nsm_id}</td>
                     <td className="px-4 py-2">{r.ragione_sociale}</td>
                     <td className="px-4 py-2 font-mono text-xs">{r.piva}</td>
                     <td className="px-4 py-2">{r.data_scadenza}</td>

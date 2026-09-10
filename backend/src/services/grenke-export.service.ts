@@ -13,6 +13,7 @@ const exportDir = resolve(__dirname, '../../../backend/storage/grenke-exports');
 export interface GrenkeExportRow {
   contratto_id: string;
   contratto_grenke_id: string;
+  contratto_nsm_id: string;
   ragione_sociale: string;
   piva: string;
   data_scadenza: string;
@@ -53,6 +54,7 @@ export async function previewExport(da: string, a: string, ambiente: 'TEST' | 'L
     return {
       contratto_id: p.id,
       contratto_grenke_id: p.contratto_grenke_id,
+      contratto_nsm_id: p.contratto_nsm_id,
       ragione_sociale: p.cliente.ragione_sociale,
       piva: p.cliente.piva,
       data_scadenza: new Date(p.data_scadenza!).toLocaleDateString('it-IT'),
@@ -78,9 +80,10 @@ export async function generaExcel(
   const rows = all.filter(r => !esclusi.includes(r.contratto_id));
 
   const wsData = [
-    ['Numero contratto Grenke', 'Ragione sociale', 'P.IVA', 'Data scadenza', 'Importo riacquisto netto', 'IVA', 'Totale', 'Stato pagamento cliente', 'Note'],
+    ['Numero contratto Grenke', 'Contratto NSM', 'Ragione sociale', 'P.IVA', 'Data scadenza', 'Importo riacquisto netto', 'IVA', 'Totale', 'Stato pagamento cliente', 'Note'],
     ...rows.map(r => [
       r.contratto_grenke_id,
+      r.contratto_nsm_id,
       r.ragione_sociale,
       r.piva,
       r.data_scadenza,
@@ -95,7 +98,7 @@ export async function generaExcel(
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   ws['!cols'] = [
-    { wch: 25 }, { wch: 35 }, { wch: 15 }, { wch: 14 },
+    { wch: 25 }, { wch: 22 }, { wch: 35 }, { wch: 15 }, { wch: 14 },
     { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 20 },
   ];
 
