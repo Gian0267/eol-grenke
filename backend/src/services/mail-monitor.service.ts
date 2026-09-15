@@ -352,7 +352,7 @@ export async function inviaDigestSeDovuto(adesso = new Date()): Promise<{ inviat
 
   const templatePath = resolve(__dirname, '../../../templates/email/digest_monitor.html');
   const template = Handlebars.compile(readFileSync(templatePath, 'utf-8'));
-  const frontendUrl = process.env.FRONTEND_URL || 'https://eol.smartcomgroup.it';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://eol.noleggiosumisura.it';
   const html = template({
     data: adesso.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome', day: '2-digit', month: 'long', year: 'numeric' }),
     totale: nuove.length,

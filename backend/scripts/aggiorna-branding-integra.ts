@@ -46,7 +46,14 @@ function applica(testo: string | null): string | null {
 async function main() {
   console.log(`Rebranding Integra Solutions — modalità: ${DRY ? 'DRY RUN' : 'SCRITTURA'}${DOMINIO ? ' + dominio' : ''}\n`);
 
-  const righe = await prisma.impostazione.findMany({ orderBy: { chiave: 'asc' } });
+  // Righe che NON sono testo ma configurazione: applicarci le sostituzioni le
+  // corromperebbe. `monitor.caselle` elenca le caselle IMAP monitorate, e la
+  // regola info@smartcomsolutions.it -> info@noleggiosumisura.it riscriverebbe
+  // la casella storica creando un doppione e smettendo di leggerla.
+  const ESCLUSE = ['monitor.caselle', 'pec.password'];
+
+  const righe = (await prisma.impostazione.findMany({ orderBy: { chiave: 'asc' } }))
+    .filter(r => !ESCLUSE.includes(r.chiave));
   let modificate = 0;
 
   for (const r of righe) {

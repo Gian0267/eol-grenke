@@ -603,6 +603,7 @@ export default function ListaPratiche() {
                       title="Seleziona/deseleziona tutte"
                     />
                   </th>
+                  <th className="px-3 py-3 font-medium text-stone text-center w-12">Azioni</th>
                   <ThSortable columnKey="contratto_nsm" label="Contr. NSM" onSort={handleSort}>
                     <SortIcon columnKey="contratto_nsm" />
                   </ThSortable>
@@ -615,7 +616,6 @@ export default function ListaPratiche() {
                   <ThSortable columnKey="stato" label="Stato" onSort={handleSort}>
                     <SortIcon columnKey="stato" />
                   </ThSortable>
-                  <th className="px-4 py-3 font-medium text-stone">Agente</th>
                   <th className="px-4 py-3 font-medium text-stone text-right whitespace-nowrap">
                     Ns. costo
                   </th>
@@ -623,7 +623,6 @@ export default function ListaPratiche() {
                     Riacquisto cliente
                   </th>
                   <th className="px-4 py-3 font-medium text-stone">Decisione</th>
-                  <th className="px-4 py-3 font-medium text-stone text-center">Azioni</th>
                 </tr>
               </thead>
               <tbody>
@@ -644,6 +643,15 @@ export default function ListaPratiche() {
                         className="w-4 h-4 accent-[#1a3a52] cursor-pointer"
                       />
                     </td>
+                    <td className="px-3 py-3 text-center">
+                      <Link
+                        to={`/backoffice/pratiche/${p.id}`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone hover:text-graphite hover:bg-paper/60 transition-colors"
+                        title="Dettaglio pratica"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_nsm}</td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{p.contratto_grenke}</td>
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate" title={p.cliente}>
@@ -658,19 +666,9 @@ export default function ListaPratiche() {
                         {statoLabel(p.stato)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{p.agente || '—'}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(p.pricing_grenke)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(p.pricing_riacquisto)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{p.decisione || '—'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Link
-                        to={`/backoffice/pratiche/${p.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone hover:text-graphite hover:bg-paper/60 transition-colors"
-                        title="Dettaglio pratica"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                    </td>
                   </tr>
                 ))}
               </tbody>

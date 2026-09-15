@@ -132,23 +132,26 @@ export default function BackofficeSidebar() {
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* Logo + brand — logo su targhetta bianca (sfondo sidebar scuro) */}
-      <div className="p-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="bg-white rounded-xl px-2 py-1.5 flex items-center justify-center shrink-0">
-            <img src="/nsm-logo.png" alt="Noleggio Su Misura" className={collapsed ? 'h-5' : 'h-6'} />
-          </div>
+      {/* Logo + brand — impilati: il logo sta sopra a piena larghezza e la
+          dicitura sotto, cosi' non va compresso per stare in linea. Variante
+          con wordmark bianco e senza targhetta, appoggiata allo sfondo. */}
+      <div className={`border-b border-white/10 ${collapsed ? 'px-2 py-4' : 'px-4 py-5'}`}>
+        <div className="flex flex-col items-center gap-2.5">
+          <img
+            src="/nsm-logo-chiaro.png"
+            alt="Noleggio Su Misura"
+            className={collapsed ? 'h-6' : 'h-11 w-auto'}
+          />
           {!collapsed && (
-            <div className="min-w-0">
-              <p className="font-medium text-sm truncate text-white">Backoffice</p>
-              <p className="text-xs text-white/50 truncate">EOL Grenke — FLEX</p>
-            </div>
+            <p className="text-xs text-white/60 tracking-wide text-center">
+              Gestione EOL Grenke
+            </p>
           )}
         </div>
       </div>
 
       {/* FLEX accent stripe */}
-      <div className="h-0.5 bg-flex" />
+      <div className="h-0.5 bg-white/20" />
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
@@ -160,7 +163,9 @@ export default function BackofficeSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 isActive
-                  ? 'bg-flex text-white font-medium'
+                  // Non piu' bg-flex: ora coincide con lo sfondo della sidebar
+                  // e la voce attiva sparirebbe. Un velo chiaro la stacca.
+                  ? 'bg-white/20 text-white font-medium'
                   : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`
             }
@@ -234,7 +239,7 @@ export default function BackofficeSidebar() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-50 bg-flex-dark text-white p-2 rounded-lg shadow-lg"
+        className="lg:hidden fixed top-3 left-3 z-50 bg-sidebar text-white p-2 rounded-lg shadow-lg"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -243,7 +248,7 @@ export default function BackofficeSidebar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 bg-flex-dark text-white z-50">
+          <div className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar text-white z-50">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-3 right-3 text-white/70 hover:text-white"
@@ -257,13 +262,13 @@ export default function BackofficeSidebar() {
 
       {/* Desktop sidebar */}
       <div
-        className={`hidden lg:flex flex-col bg-flex-dark text-white shrink-0 transition-all duration-200 ${
+        className={`hidden lg:flex flex-col bg-sidebar text-white shrink-0 transition-all duration-200 ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-3 -right-3 z-10 bg-flex-dark text-white/70 hover:text-white w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs"
+          className="absolute top-3 -right-3 z-10 bg-sidebar text-white/70 hover:text-white w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs"
           style={{ position: 'relative', alignSelf: 'flex-end', marginRight: '-12px', marginTop: '12px' }}
         >
           {collapsed ? '›' : '‹'}
