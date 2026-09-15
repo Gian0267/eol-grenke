@@ -34,7 +34,7 @@ const emailProvider = createEmailProvider();
 const KEYWORDS_DEFAULT = [
   'Noleggio', 'Riscatto', 'Grenke', 'Ifis', 'Riacquisto', 'Ri-acquisto',
   'fine contratto', 'fine noleggio', 'fine locazione', 'restituzione',
-  'proroga', 'rinnovo', 'scadenza',
+  'proroga', 'rinnovo',
 ];
 
 // Mittenti interni: mai segnalati (evita auto-segnalazioni dei reminder dell'app)
