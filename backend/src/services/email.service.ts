@@ -7,6 +7,7 @@ import { emailProviderPerAmbiente, pecProviderPerAmbiente } from '../providers/n
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
+import { origineCorrisponde } from '../lib/origine.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -114,6 +115,17 @@ export async function inviaComunicazioneIniziale(
   // Flag "Opzione Rinnovo attiva": quando è OFF i template nascondono l'opzione
   // rinnovo e le altre opzioni vengono rinumerate 1-2-3.
   const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
+
+  // Blocco "nuovo noleggio": solo per i clienti provenienti da Italiaonline.
+  // Le diciture stanno nelle Impostazioni perche' `origine` riporta il "broker
+  // name" del file Grenke, che puo' cambiare forma senza preavviso.
+  const dicitureIol = (await configService.getTesto('iol.diciture_origine', 'Italiaonline\nIOL'))
+    .split(/[\n,;]+/).map(d => d.trim()).filter(Boolean);
+  const clienteIol = origineCorrisponde(contratto.origine, dicitureIol);
+  const linkNuovoNoleggio = await configService.getTesto(
+    'iol.link_nuovo_noleggio',
+    'https://app.noleggiosumisura.it/start?agente=4af90182-76b9-46f7-a395-57b46155d95c-0b4a0690-a073-43d6-a08d-c17cfb13f444',
+  );
   const pagamentoOnlineAttivo = await configService.getBooleano('flags.abilita_pagamento_online', false);
 
   const templateVars = {
@@ -127,6 +139,9 @@ export async function inviaComunicazioneIniziale(
     numero_contratto_nsm: contratto.contratto_nsm_id,
     data_scadenza: formatDate(dataScadenza),
     beni: beniFormatted,
+    cliente_iol: clienteIol,
+    link_nuovo_noleggio: linkNuovoNoleggio,
+    email_nuovo_noleggio: await configService.getTesto('recapiti.email', 'info@noleggiosumisura.it'),
     riacquisto_parziale: riacquistoParziale,
     beni_riacquisto: beniRiacquisto,
     beni_da_restituire: beniDaRestituire,
