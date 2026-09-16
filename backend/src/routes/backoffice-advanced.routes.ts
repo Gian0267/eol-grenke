@@ -454,6 +454,27 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
   }
 });
 
+// GET /api/backoffice/origini — le origini realmente presenti a DB.
+// Il menu del filtro era cablato su ['Smartcom','IOL'], i codici dei dati di
+// prova: sui dati veri `origine` riporta il "broker name" del file Grenke
+// ("Italiaonline S.p.A", "Smartcom Solutions S.r.l."), quindi il filtro non
+// selezionava nulla — senza errori, solo risultati vuoti. Leggendole dal DB
+// il menu resta corretto qualunque dicitura usi Grenke.
+router.get('/origini', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const righe = await prisma.contratto_EOL.findMany({
+      where: { ambiente: ambienteVista(req) },
+      select: { origine: true },
+      distinct: ['origine'],
+      orderBy: { origine: 'asc' },
+    });
+    res.json(righe.map(r => r.origine).filter((o): o is string => Boolean(o && o.trim())));
+  } catch (err) {
+    console.error('[origini] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // GET /api/backoffice/pratiche-dettaglio/:id/beni-riacquisto — elenco dei beni
 // con lo stato di inclusione, per la modale del backoffice.
 router.get('/pratiche-dettaglio/:id/beni-riacquisto', async (req: AuthenticatedRequest, res: Response) => {

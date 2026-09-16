@@ -263,6 +263,13 @@ export default function ImportLista() {
             {preview.gia_presenti > 0 && (
               <span className="px-3 py-1.5 rounded-full bg-paper border text-stone">{preview.gia_presenti} già presenti</span>
             )}
+            {/* Conteggio calcolato qui e non dal backend: interessa solo a schermo,
+                per decidere se confermare o chiedere a Grenke un file corretto. */}
+            {preview.rows.filter(r => !r.origine).length > 0 && (
+              <span className="px-3 py-1.5 rounded-full bg-warn text-warn-text border border-warn-border/40 font-medium">
+                {preview.rows.filter(r => !r.origine).length} senza origine → importate come Smartcom
+              </span>
+            )}
             {preview.errori > 0 && (
               <span className="px-3 py-1.5 rounded-full bg-err text-err-text border border-err-border/40">{preview.errori} errori</span>
             )}
@@ -313,7 +320,21 @@ export default function ImportLista() {
                           </ul>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">{r.origine || '—'}</td>
+                      {/* Origine assente: il backend ripiega su "Smartcom" e il
+                          contratto viene classificato cosi' in silenzio, perdendo
+                          le comunicazioni riservate a Italiaonline. Va vista qui,
+                          prima della conferma: dopo non se ne accorge nessuno. */}
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {r.origine ? r.origine : (
+                          <span
+                            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 bg-warn text-warn-text font-medium"
+                            title="Il file Grenke non indica il broker per questa riga. Sara' importata come Smartcom."
+                          >
+                            <AlertTriangle className="w-3 h-3" />
+                            assente
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{fmtDate(r.data_scadenza)}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{r.canone_mensile !== undefined ? `${fmt(r.canone_mensile)} €` : '—'}</td>
                       <td className="px-4 py-3 text-right">{r.numero_mesi ?? '—'}</td>

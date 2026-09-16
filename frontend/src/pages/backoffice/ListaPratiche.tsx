@@ -75,7 +75,10 @@ const STATI = [
   { value: 'SILENZIO_PERDITA_DEFINITIVA', label: 'Silenzio / Perdita definitiva' },
 ] as const;
 
-const ORIGINI = ['Smartcom', 'IOL'] as const;
+// Le origini si leggono dal DB, non si elencano qui: `origine` riporta il
+// "broker name" del file Grenke, che sui dati veri e' "Italiaonline S.p.A" e
+// non il codice "IOL". Con l'elenco cablato il filtro non selezionava nulla,
+// senza dare errore.
 
 const DECISIONI = [
   { value: 'RINNOVO', label: 'Rinnovo' },
@@ -167,6 +170,7 @@ export default function ListaPratiche() {
   /* --- Data state --- */
   const [data, setData] = useState<PaginatedResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [origini, setOrigini] = useState<string[]>([]);
   const [agenti, setAgenti] = useState<Agente[]>([]);
   const [exporting, setExporting] = useState(false);
   const [sendingBatch, setSendingBatch] = useState(false);
@@ -218,6 +222,23 @@ export default function ListaPratiche() {
   }, [utente, buildQueryString]);
 
   /* --- Fetch agenti --- */
+  // Origini realmente presenti a DB: il menu del filtro deve corrispondere ai
+  // valori salvati, altrimenti seleziona il nulla senza dirlo.
+  useEffect(() => {
+    if (!utente) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/backoffice/origini', {
+          credentials: 'include',
+          headers: { 'x-user-id': utente.id },
+        });
+        if (res.ok) setOrigini(await res.json());
+      } catch {
+        /* silent: il filtro resta vuoto, la lista funziona lo stesso */
+      }
+    })();
+  }, [utente]);
+
   useEffect(() => {
     if (!utente) return;
     (async () => {
@@ -484,7 +505,7 @@ export default function ListaPratiche() {
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             >
               <option value="">Tutte le origini</option>
-              {ORIGINI.map((o) => (
+              {origini.map((o) => (
                 <option key={o} value={o}>
                   {o}
                 </option>
