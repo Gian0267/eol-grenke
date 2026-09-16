@@ -312,20 +312,18 @@ function TabTimeline({ items, localValues, updateLocal, onSave, onReset, onReset
 
 // ─── Tab: PRICING ───────────────────────────────────────────────
 function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabProps) {
-  const grenkePerc = parseFloat(localValues['pricing.grenke_percentuale'] || '5');
-  const riacquistoPerc = parseFloat(localValues['pricing.riacquisto_percentuale'] || '8');
+  const mensStd = parseFloat(localValues['pricing.mensilita_per_anno'] || '1');
+  const mensIol = parseFloat(localValues['pricing.mensilita_per_anno_iol'] || '1.5');
   const ivaPerc = parseFloat(localValues['pricing.iva_percentuale'] || '22');
   const tagli = (() => { try { return JSON.parse(localValues['pricing.gift_card_tagli'] || '[]'); } catch { return []; } })() as number[];
 
-  const canoneDemo = 70;
-  const mesiDemo = 36;
-  const monteCanoni = canoneDemo * mesiDemo;
-  const pGrenke = monteCanoni * grenkePerc / 100;
-  const pRiacquisto = monteCanoni * riacquistoPerc / 100;
-  const margine = pRiacquisto - pGrenke;
-  const iva = pRiacquisto * ivaPerc / 100;
-  let giftCard = 0;
-  for (const t of tagli) { if (t <= margine) giftCard = t; else break; }
+  // Esempio con un contratto tipico. Il costo Grenke non compare: non lo
+  // calcoliamo noi, arriva dal file Grenke pratica per pratica.
+  const canoneDemo = 100;
+  const mesiDemo = 24;
+  const anniDemo = mesiDemo / 12;
+  const prezzoStd = canoneDemo * anniDemo * mensStd;
+  const prezzoIol = canoneDemo * anniDemo * mensIol;
 
   const fmt = (n: number) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -349,24 +347,35 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
     <div>
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Pricing</h2>
 
-      {/* Live calculation */}
+      {/* Esempio live del prezzo proposto al cliente */}
       <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-        <h3 className="text-sm font-semibold text-blue-800 mb-2">Calcolo live (canone {fmt(canoneDemo)} x {mesiDemo} mesi)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          <div><span className="text-blue-600">Monte canoni:</span> <strong>{fmt(monteCanoni)}</strong></div>
-          <div><span className="text-blue-600">Pricing Grenke ({grenkePerc}%):</span> <strong>{fmt(pGrenke)}</strong></div>
-          <div><span className="text-blue-600">Pricing riacquisto ({riacquistoPerc}%):</span> <strong>{fmt(pRiacquisto)}</strong></div>
-          <div><span className="text-blue-600">Margine lordo:</span> <strong>{fmt(margine)}</strong></div>
-          <div><span className="text-blue-600">IVA ({ivaPerc}%):</span> <strong>{fmt(iva)}</strong></div>
-          <div><span className="text-blue-600">Sconto Bronze:</span> <strong>{fmt(giftCard)}</strong></div>
+        <h3 className="text-sm font-semibold text-blue-800 mb-2">
+          Esempio: contratto da {fmt(canoneDemo)} al mese per {mesiDemo} mesi ({anniDemo} anni)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-blue-600">Prezzo standard ({mensStd} mensilita/anno):</span>{' '}
+            <strong>{fmt(prezzoStd)}</strong>
+            <span className="text-blue-500"> + IVA {ivaPerc}% = {fmt(prezzoStd * (1 + ivaPerc / 100))}</span>
+          </div>
+          <div>
+            <span className="text-blue-600">Prezzo Italiaonline ({mensIol} mensilita/anno):</span>{' '}
+            <strong>{fmt(prezzoIol)}</strong>
+            <span className="text-blue-500"> + IVA {ivaPerc}% = {fmt(prezzoIol * (1 + ivaPerc / 100))}</span>
+          </div>
         </div>
+        <p className="text-xs text-blue-600 mt-2">
+          Il costo che Grenke ci addebita non si decide qui: arriva dal loro file (NAV x la percentuale
+          impostata sotto), quindi il margine cambia da pratica a pratica. Le nuove regole valgono per le
+          pratiche importate d'ora in avanti, non per quelle gia in archivio.
+        </p>
       </div>
 
       {numericItems.map(imp => (
         <FieldRow key={imp.chiave} imp={imp} value={localValues[imp.chiave] || ''} onChange={v => updateLocal(imp.chiave, v)} onSave={() => onSave(imp.chiave)} onReset={() => onReset(imp.chiave)}>
           <input
             type="number"
-            step={imp.chiave.includes('percentuale') || imp.chiave.includes('iva') ? '0.1' : '1'}
+            step={imp.chiave.includes('mensilita') ? '0.25' : imp.chiave.includes('percentuale') || imp.chiave.includes('iva') ? '0.1' : '1'}
             value={localValues[imp.chiave] || ''}
             onChange={e => updateLocal(imp.chiave, e.target.value)}
             className="w-40 px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500"

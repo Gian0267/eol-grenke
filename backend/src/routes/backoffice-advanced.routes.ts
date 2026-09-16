@@ -587,6 +587,79 @@ router.post('/pratiche-dettaglio/:id/beni-riacquisto', async (req: Authenticated
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/prezzo-riacquisto — prezzo su
+// misura per un singolo cliente, in deroga alle mensilita' configurate.
+//
+// E' ammesso solo finche' la comunicazione iniziale non e' partita: da quel
+// momento il cliente ha visto un importo, e cambiarlo sotto banco sarebbe
+// scorretto. Dopo l'invio resta la strada del riacquisto parziale, che il
+// cliente vede motivata dai beni esclusi. Verso Grenke non cambia nulla:
+// pricing_grenke resta quello del file, il margine si adegua.
+router.post('/pratiche-dettaglio/:id/prezzo-riacquisto', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { pricing_riacquisto, motivazione } = req.body as { pricing_riacquisto?: unknown; motivazione?: string };
+    const id = req.params.id as string;
+
+    const c = await prisma.contratto_EOL.findUnique({ where: { id } });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+
+    if (c.stato !== 'LISTA_RICEVUTA') {
+      res.status(409).json({
+        error: 'La comunicazione al cliente e\' gia\' partita: il prezzo non e\' piu\' modificabile. Per una concessione usa "Beni del riacquisto".',
+      });
+      return;
+    }
+    if (parseEsclusi(c.beni_esclusi_json).length > 0) {
+      res.status(409).json({ error: 'Pratica con riacquisto parziale attivo: il prezzo si imposta da "Beni del riacquisto"' });
+      return;
+    }
+
+    const prezzo = Number(pricing_riacquisto);
+    if (!Number.isFinite(prezzo) || prezzo <= 0) {
+      res.status(400).json({ error: 'Prezzo al cliente non valido' });
+      return;
+    }
+    if (!motivazione || !motivazione.trim()) {
+      res.status(400).json({ error: 'Motivazione obbligatoria' });
+      return;
+    }
+
+    const margine = Number((prezzo - Number(c.pricing_grenke)).toFixed(2));
+
+    await prisma.contratto_EOL.update({
+      where: { id },
+      data: {
+        pricing_riacquisto: new Prisma.Decimal(prezzo.toFixed(2)),
+        // Il prezzo pieno segue: e' il riferimento a cui si torna annullando
+        // un'eventuale esclusione di beni piu' avanti.
+        pricing_riacquisto_pieno: new Prisma.Decimal(prezzo.toFixed(2)),
+        margine_lordo: new Prisma.Decimal(margine.toFixed(2)),
+        valore_gift_card: new Prisma.Decimal((await calcolaValoreGiftCard(margine)).toFixed(2)),
+      },
+    });
+
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'PREZZO_RIACQUISTO_PERSONALIZZATO',
+      pricing_riacquisto_precedente: Number(c.pricing_riacquisto),
+      pricing_riacquisto: prezzo,
+      pricing_grenke: Number(c.pricing_grenke),
+      margine_lordo: margine,
+      motivazione: motivazione.trim(),
+    });
+
+    res.json({ success: true, pricing_riacquisto: prezzo, margine_lordo: margine });
+  } catch (err) {
+    console.error('[prezzo-riacquisto] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/registra-pagamento — il backoffice
 // ha verificato l'accredito del bonifico e registra il pagamento del riacquisto:
 // pratica → RIACQUISTO_PAGATO, ricevuta generata e inviata al cliente.

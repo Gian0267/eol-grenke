@@ -138,7 +138,7 @@ export async function previewCombinedImport(
       continue;
     }
 
-    const pricing = await calcolaPricing(match.canone_mensile, match.numero_mesi, pricingGrenke);
+    const pricing = await calcolaPricing(match.canone_mensile, match.numero_mesi, pricingGrenke, r.origine);
     const valore_gift_card = await calcolaValoreGiftCard(pricing.margine_lordo);
 
     rows.push({

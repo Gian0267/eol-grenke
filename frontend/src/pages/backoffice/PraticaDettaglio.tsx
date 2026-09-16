@@ -22,6 +22,7 @@ import {
   AtSign,
   Trash2,
   ExternalLink,
+  Euro,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -359,6 +360,9 @@ export default function PraticaDettaglio() {
   const [pricingGrenke, setPricingGrenke] = useState<number | null>(null);
 
   // Modifica contatti cliente (email / PEC)
+  // Prezzo di riacquisto su misura (solo prima della comunicazione iniziale)
+  const [prezzoSuMisura, setPrezzoSuMisura] = useState('');
+
   const [contattiEmail, setContattiEmail] = useState('');
   const [contattiPec, setContattiPec] = useState('');
 
@@ -693,6 +697,18 @@ export default function PraticaDettaglio() {
                     onClick={() => openModal('registra-pagamento')}
                   />
                 )}
+                {pratica.stato === 'LISTA_RICEVUTA' &&
+                  ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<Euro className="w-4 h-4" />}
+                    label="Prezzo di riacquisto"
+                    onClick={() => {
+                      setPrezzoSuMisura(String(pratica.pricing_riacquisto));
+                      setMotivazione('');
+                      openModal('prezzo-riacquisto');
+                    }}
+                  />
+                )}
                 {pratica.stato !== 'RIACQUISTO_PAGATO' &&
                   ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
                   <ActionBtn
@@ -873,6 +889,81 @@ export default function PraticaDettaglio() {
             Conferma
           </button>
         </div>
+      </Modal>
+
+      {/* Prezzo di riacquisto su misura */}
+      <Modal open={modalOpen === 'prezzo-riacquisto'} title="Prezzo di riacquisto" onClose={() => setModalOpen(null)}>
+        {(() => {
+          const nuovo = parseFloat(prezzoSuMisura.replace(',', '.'));
+          const valido = Number.isFinite(nuovo) && nuovo > 0;
+          const nuovoMargine = valido ? nuovo - pratica.pricing_grenke : null;
+          const eur = (n: number) =>
+            n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+          return (
+            <>
+              <p className="text-sm text-stone mb-4">
+                Prezzo calcolato per questa pratica: <strong>{eur(pratica.pricing_riacquisto)}</strong> (IVA esclusa),
+                a fronte di un costo Grenke di <strong>{eur(pratica.pricing_grenke)}</strong>. Qui puoi proporre
+                un importo diverso a <strong>{pratica.cliente.ragione_sociale}</strong>, in deroga alle mensilita
+                configurate nelle Impostazioni.
+              </p>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-graphite mb-1">Nuovo prezzo al cliente (IVA esclusa) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={prezzoSuMisura}
+                    onChange={(e) => setPrezzoSuMisura(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+                  />
+                  {nuovoMargine !== null && (
+                    <p className={`text-xs mt-1 ${nuovoMargine < 0 ? 'text-red-600 font-medium' : 'text-stone'}`}>
+                      Margine risultante: {eur(nuovoMargine)}
+                      {nuovoMargine < 0 && ' — venderesti sotto il costo Grenke'}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-graphite mb-1">Motivazione *</label>
+                  <textarea
+                    value={motivazione}
+                    onChange={(e) => setMotivazione(e.target.value)}
+                    rows={3}
+                    placeholder="Perche questo cliente ha un prezzo diverso..."
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 resize-none"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-stone mb-4">
+                Resta modificabile solo finche la comunicazione al cliente non e partita. Verso Grenke non cambia
+                nulla: il contratto si riacquista comunque per intero.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setModalOpen(null)}
+                  className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+                >
+                  Annulla
+                </button>
+                <button
+                  disabled={actionLoading || !valido || !motivazione.trim()}
+                  onClick={() =>
+                    doAction(`/api/backoffice/pratiche-dettaglio/${id}/prezzo-riacquisto`, {
+                      pricing_riacquisto: nuovo,
+                      motivazione: motivazione.trim(),
+                    })
+                  }
+                  className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+                >
+                  {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salva prezzo
+                </button>
+              </div>
+            </>
+          );
+        })()}
       </Modal>
 
       {/* Sblocca pagamento */}
