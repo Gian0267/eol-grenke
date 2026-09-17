@@ -22,6 +22,60 @@ function diffDays(a: Date, b: Date): number {
 
 // ─── LISTA PRATICHE AVANZATA ───────────────────────────────────────────────
 
+// GET /api/backoffice/pratiche-avanzate/ids — solo gli id (con lo stato) di
+// TUTTE le pratiche che rispettano i filtri, senza paginazione.
+//
+// Serve alla lista per il "seleziona tutte": la selezione a video arriva solo
+// fino alla pagina corrente, e le azioni di gruppo che ne derivavano si
+// fermavano a 20 pratiche senza dirlo. Torna un payload leggero (due campi per
+// riga) proprio per poterlo chiedere sull'intero filtro.
+router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {
+      stato, agente_id, data_scadenza_from, data_scadenza_to,
+      origine, decisione, rischio_silenzio,
+    } = req.query as Record<string, string>;
+
+    const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
+    if (stato) where.stato = stato;
+    if (agente_id) where.agente_assegnato_id = agente_id;
+    if (origine) where.origine = origine;
+    if (data_scadenza_from || data_scadenza_to) {
+      where.data_scadenza = {};
+      if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
+      if (data_scadenza_to) where.data_scadenza.lte = new Date(data_scadenza_to);
+    }
+
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where,
+      select: {
+        id: true, stato: true, data_scadenza: true,
+        decisioni: { orderBy: { created_at: 'desc' as const }, take: 1, select: { opzione_scelta: true } },
+      },
+    });
+
+    // Stessi due filtri che la lista applica dopo la query, qui su tutto
+    // l'insieme invece che sulla sola pagina.
+    const now = new Date();
+    let righe = pratiche;
+    if (rischio_silenzio === 'true') {
+      righe = righe.filter(p => {
+        if (p.stato !== 'IN_ATTESA_DECISIONE' || !p.data_scadenza) return false;
+        const g = diffDays(p.data_scadenza, now);
+        return g >= 31 && g <= 50;
+      });
+    }
+    if (decisione) {
+      righe = righe.filter(p => (p.decisioni[0]?.opzione_scelta ?? null) === decisione);
+    }
+
+    res.json({ ids: righe.map(p => ({ id: p.id, stato: p.stato })), total: righe.length });
+  } catch (err) {
+    console.error('[pratiche-avanzate/ids] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // GET /api/backoffice/pratiche-avanzate
 router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response) => {
   try {

@@ -175,7 +175,12 @@ export default function ListaPratiche() {
   const [exporting, setExporting] = useState(false);
   const [sendingBatch, setSendingBatch] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // id -> stato. Non un Set: le azioni di gruppo devono sapere in che stato
+  // sono anche le pratiche selezionate su pagine non visibili.
+  const [selected, setSelected] = useState<Map<string, string>>(new Map());
+  // true quando la selezione copre l'intero filtro e non la sola pagina
+  const [selezioneEstesa, setSelezioneEstesa] = useState(false);
+  const [caricandoIds, setCaricandoIds] = useState(false);
   const [batchResult, setBatchResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   /* --- Build query string (shared between list + export) --- */
@@ -336,8 +341,8 @@ export default function ListaPratiche() {
 
   async function handleInviaComunicazioneBatch() {
     if (!utente) return;
-    const idsSelezionati = items.filter(p => selected.has(p.id)).map(p => p.id);
-    const inviabili = items.filter(p => selected.has(p.id) && p.stato === 'LISTA_RICEVUTA').length;
+    const idsSelezionati = Array.from(selected.keys());
+    const inviabili = Array.from(selected.values()).filter(st => st === 'LISTA_RICEVUTA').length;
     if (idsSelezionati.length === 0) {
       setBatchResult({ message: 'Nessuna pratica selezionata', type: 'error' });
       return;
@@ -370,7 +375,7 @@ export default function ListaPratiche() {
 
   async function handleEliminaSelezionate() {
     if (!utente) return;
-    const idsSelezionati = items.filter(p => selected.has(p.id)).map(p => p.id);
+    const idsSelezionati = Array.from(selected.keys());
     if (idsSelezionati.length === 0) {
       setBatchResult({ message: 'Nessuna pratica selezionata', type: 'error' });
       return;
@@ -405,10 +410,38 @@ export default function ListaPratiche() {
     }
   }
 
-  // Selezione di default: tutte le pratiche della pagina corrente
+  // Selezione di default: tutte le pratiche della pagina corrente. Non tocca
+  // una selezione estesa all'intero filtro, che altrimenti si perderebbe al
+  // primo cambio pagina o riordino.
   useEffect(() => {
-    setSelected(new Set((data?.items ?? []).map(p => p.id)));
-  }, [data]);
+    if (selezioneEstesa) return;
+    setSelected(new Map((data?.items ?? []).map(p => [p.id, p.stato])));
+  }, [data, selezioneEstesa]);
+
+  // Cambiare filtro cambia l'insieme: una selezione "tutte" non vale piu'.
+  useEffect(() => {
+    setSelezioneEstesa(false);
+  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, decisione, rischioSilenzio]);
+
+  /** Estende la selezione a tutte le pratiche del filtro, non solo alla pagina. */
+  async function selezionaTutteDelFiltro() {
+    if (!utente) return;
+    setCaricandoIds(true);
+    try {
+      const res = await fetch(`/api/backoffice/pratiche-avanzate/ids?${buildQueryString(false)}`, {
+        credentials: 'include',
+        headers: { 'x-user-id': utente.id },
+      });
+      if (!res.ok) throw new Error('Errore nel caricamento');
+      const body: { ids: Array<{ id: string; stato: string }> } = await res.json();
+      setSelected(new Map(body.ids.map(r => [r.id, r.stato])));
+      setSelezioneEstesa(true);
+    } catch {
+      setBatchResult({ message: 'Non sono riuscito a selezionare tutte le pratiche del filtro', type: 'error' });
+    } finally {
+      setCaricandoIds(false);
+    }
+  }
 
   /* --- Derived --- */
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
@@ -567,7 +600,7 @@ export default function ListaPratiche() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-flex rounded-lg hover:bg-flex-dark disabled:opacity-50 transition-colors"
           >
             {sendingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Invia comunicazione ({items.filter(p => selected.has(p.id)).length} sel.)
+            Invia comunicazione ({selected.size} sel.)
           </button>
           {utente && ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente.ruolo) && (
             <button
@@ -588,6 +621,35 @@ export default function ListaPratiche() {
             Esporta CSV
           </button>
         </div>
+
+        {/* Selezione: dire a chiare lettere fin dove arriva. Senza questa riga
+            l'invio si fermava alla pagina corrente e sembrava funzionare. */}
+        {data && data.total > items.length && selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg px-4 py-3 text-sm bg-amber-50 border border-amber-200 text-amber-900">
+            {selezioneEstesa ? (
+              <>
+                <span>Selezionate tutte le <strong>{selected.size}</strong> pratiche del filtro, comprese quelle delle altre pagine.</span>
+                <button
+                  onClick={() => { setSelezioneEstesa(false); setSelected(new Map(items.map(p => [p.id, p.stato]))); }}
+                  className="underline font-medium hover:opacity-80"
+                >
+                  Torna alla sola pagina
+                </button>
+              </>
+            ) : (
+              <>
+                <span>Selezionate <strong>{selected.size}</strong> pratiche di questa pagina, su <strong>{data.total}</strong> che rispettano il filtro.</span>
+                <button
+                  onClick={selezionaTutteDelFiltro}
+                  disabled={caricandoIds}
+                  className="underline font-medium hover:opacity-80 disabled:opacity-50"
+                >
+                  {caricandoIds ? 'Carico…' : `Seleziona tutte le ${data.total}`}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Batch result banner */}
         {batchResult && (
@@ -619,7 +681,16 @@ export default function ListaPratiche() {
                     <input
                       type="checkbox"
                       checked={items.length > 0 && items.every(p => selected.has(p.id))}
-                      onChange={e => setSelected(e.target.checked ? new Set(items.map(p => p.id)) : new Set())}
+                      onChange={e => {
+                        const next = new Map(selected);
+                        if (e.target.checked) {
+                          items.forEach(p => next.set(p.id, p.stato));
+                        } else {
+                          items.forEach(p => next.delete(p.id));
+                          setSelezioneEstesa(false);
+                        }
+                        setSelected(next);
+                      }}
                       className="w-4 h-4 accent-[#1a3a52] cursor-pointer"
                       title="Seleziona/deseleziona tutte"
                     />
@@ -657,8 +728,9 @@ export default function ListaPratiche() {
                         type="checkbox"
                         checked={selected.has(p.id)}
                         onChange={e => {
-                          const next = new Set(selected);
-                          if (e.target.checked) next.add(p.id); else next.delete(p.id);
+                          const next = new Map(selected);
+                          if (e.target.checked) next.set(p.id, p.stato);
+                          else { next.delete(p.id); setSelezioneEstesa(false); }
                           setSelected(next);
                         }}
                         className="w-4 h-4 accent-[#1a3a52] cursor-pointer"
