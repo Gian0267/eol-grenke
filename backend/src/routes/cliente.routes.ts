@@ -187,7 +187,6 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         riacquisto_parziale: parziale,
         beni_riacquisto: beniAcquisto.map(formatBene),
         beni_da_restituire: beniDaRestituire.map(formatBene),
-        monte_canoni: Number(contratto.monte_canoni),
         numero_mesi: contratto.numero_mesi,
         stato: contratto.stato,
       },

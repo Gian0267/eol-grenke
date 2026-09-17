@@ -20,7 +20,6 @@ interface PraticaData {
     riacquisto_parziale: boolean;
     beni_riacquisto: string[];
     beni_da_restituire: string[];
-    monte_canoni: number;
     numero_mesi: number;
     stato: string;
   };
@@ -223,10 +222,6 @@ export default function AreaPratica() {
             <div>
               <span className="text-gray-500">Durata</span>
               <p className="font-medium">{data.contratto.numero_mesi} mesi</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Monte canoni</span>
-              <p className="font-medium">€ {formatEur(data.contratto.monte_canoni)}</p>
             </div>
             <div className="sm:col-span-2">
               <span className="text-gray-500">Beni in locazione</span>

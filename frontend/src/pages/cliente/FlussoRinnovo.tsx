@@ -9,7 +9,7 @@ const API_BASE = '';
 
 interface PraticaData {
   cliente: { ragione_sociale: string };
-  contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[]; monte_canoni: number };
+  contratto: { numero_nsm: string; numero_grenke: string; data_scadenza: string; beni: string[] };
   economica: {
     pricing_riacquisto: number;
     pricing_riacquisto_iva: number;
