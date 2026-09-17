@@ -2,11 +2,13 @@ import { Router, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest, ambienteVista } from '../middleware/auth.middleware.js';
 import { verifyBackofficeToken } from '../middleware/auth.middleware.js';
-import { inviaComunicazioneIniziale } from '../services/email.service.js';
+import { inviaComunicazioneIniziale, inviaPropostaNuovoNoleggio, TIPO_PROPOSTA_NOLEGGIO } from '../services/email.service.js';
 import { registraEvento } from '../services/audit.service.js';
 import { confermaBonificoRicevuto } from '../services/payment.service.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { parseBeni, parseEsclusi, beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
+import { origineCorrisponde } from '../lib/origine.js';
+import * as configService from '../services/config.service.js';
 import { calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { prisma } from '../lib/db.js';
 
@@ -583,6 +585,123 @@ router.post('/pratiche-dettaglio/:id/beni-riacquisto', async (req: Authenticated
     });
   } catch (err) {
     console.error('[beni-riacquisto/post] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// ─── PROPOSTA DI NUOVO NOLEGGIO ────────────────────────────────────────────
+//
+// Campagna commerciale separata dal fine contratto (vedi email.service.ts).
+// Parte a mano: un invio a clienti veri va guardato mentre succede, non
+// affidato allo scheduler.
+
+/** Destinatari candidati: un cliente per riga, gia' spogliato di chi non deve ricevere. */
+async function destinatariProposta(req: AuthenticatedRequest) {
+  const diciture = (await configService.getTesto('iol.diciture_origine', 'Italiaonline\nIOL'))
+    .split(/[\n,;]+/).map(d => d.trim()).filter(Boolean);
+
+  const pratiche = await prisma.contratto_EOL.findMany({
+    where: { ambiente: ambienteVista(req) },
+    select: {
+      id: true, origine: true, contratto_grenke_id: true, data_scadenza: true, stato: true,
+      cliente_id: true,
+      cliente: { select: { ragione_sociale: true, email: true, opt_out_comunicazioni: true } },
+      decisioni: { select: { id: true } },
+    },
+    orderBy: { data_scadenza: 'asc' },
+  });
+
+  const gia = new Set(
+    (await prisma.comunicazione.findMany({
+      where: { tipo: TIPO_PROPOSTA_NOLEGGIO, esito_invio: 'INVIATO' },
+      select: { contratto_eol: { select: { cliente_id: true } } },
+    })).map(c => c.contratto_eol.cliente_id),
+  );
+
+  // Una riga per cliente: la prima pratica in scadenza fa da riferimento.
+  const perCliente = new Map<string, any>();
+  for (const p of pratiche) {
+    if (!origineCorrisponde(p.origine, diciture)) continue;
+    if (perCliente.has(p.cliente_id)) continue;
+    perCliente.set(p.cliente_id, {
+      contratto_eol_id: p.id,
+      cliente_id: p.cliente_id,
+      ragione_sociale: p.cliente.ragione_sociale,
+      email: p.cliente.email,
+      origine: p.origine,
+      contratto_grenke_id: p.contratto_grenke_id,
+      data_scadenza: p.data_scadenza,
+      stato: p.stato,
+      ha_deciso: p.decisioni.length > 0,
+      gia_inviata: gia.has(p.cliente_id),
+      opt_out: p.cliente.opt_out_comunicazioni,
+      senza_email: !p.cliente.email,
+    });
+  }
+  return [...perCliente.values()];
+}
+
+// GET /api/backoffice/proposta-noleggio/destinatari — anteprima, non invia nulla
+router.get('/proposta-noleggio/destinatari', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+    const righe = await destinatariProposta(req);
+    res.json({
+      ambiente: ambienteVista(req),
+      totale: righe.length,
+      inviabili: righe.filter(r => !r.gia_inviata && !r.opt_out && !r.senza_email).length,
+      destinatari: righe,
+    });
+  } catch (err) {
+    console.error('[proposta-noleggio/destinatari] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/proposta-noleggio/invia — invio, solo agli id indicati
+router.post('/proposta-noleggio/invia', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    // Nessun invio "a tutti" implicito: il frontend manda la lista che
+    // l'operatore ha davanti, cosi' non puo' partire piu' di quanto ha visto.
+    const { contratti } = req.body as { contratti?: unknown };
+    const ids = Array.isArray(contratti) ? contratti.filter((x): x is string => typeof x === 'string') : [];
+    if (ids.length === 0) {
+      res.status(400).json({ error: 'Nessun destinatario selezionato' });
+      return;
+    }
+
+    const ammessi = new Set((await destinatariProposta(req)).map(r => r.contratto_eol_id));
+    // Niente fallback 'system': operatore_id e' una FK su Utente_NSM, e una
+    // stringa inventata farebbe fallire la registrazione della Comunicazione
+    // dopo che la mail e' gia' partita.
+    const operatoreId = (req.user as any)?.id as string | undefined;
+
+    let inviate = 0; const saltate: string[] = []; const errori: string[] = [];
+    for (const id of ids) {
+      if (!ammessi.has(id)) { saltate.push(`${id}: non fra i destinatari ammessi`); continue; }
+      const r = await inviaPropostaNuovoNoleggio(id, operatoreId);
+      if (r.success) inviate++;
+      else if (r.errori.some(e => e.includes('gia\' inviata') || e.includes('opt-out'))) saltate.push(r.errori.join('; '));
+      else errori.push(r.errori.join('; '));
+    }
+
+    res.json({
+      success: true,
+      messaggio: `${inviate} inviate, ${saltate.length} saltate, ${errori.length} errori`,
+      inviate, saltate, errori,
+    });
+  } catch (err) {
+    console.error('[proposta-noleggio/invia] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
   }
 });

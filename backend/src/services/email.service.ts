@@ -242,3 +242,149 @@ export async function inviaComunicazioneIniziale(
 
   return result;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Proposta di nuovo noleggio                                         */
+/* ------------------------------------------------------------------ */
+
+export const TIPO_PROPOSTA_NOLEGGIO = 'PROPOSTA_NUOVO_NOLEGGIO';
+
+/**
+ * Comunicazione commerciale a se' stante: propone di attivare un nuovo
+ * noleggio, indipendentemente da come il cliente decidera' sul contratto in
+ * scadenza.
+ *
+ * Nata come riquadro dentro la comunicazione iniziale, ne e' uscita il
+ * 17/09/2026 perche' Italiaonline non aveva ancora autorizzato a proporre
+ * nuovi noleggi ai propri clienti: da allora e' un invio separato, che parte
+ * a mano dal backoffice quando l'autorizzazione c'e'.
+ *
+ * Solo canale EMAIL: la PEC e' il canale delle comunicazioni contrattuali, e
+ * consumarne una per una proposta commerciale sarebbe fuori luogo (oltre che
+ * a pagamento).
+ *
+ * Va anche a chi non ha ancora deciso sul fine contratto — scelta esplicita
+ * del titolare — ma in quel caso la mail glielo ricorda e rimanda all'area
+ * riservata, per non lasciargli credere di aver assolto alla decisione.
+ */
+export async function inviaPropostaNuovoNoleggio(
+  contratto_eol_id: string,
+  operatoreId?: string,
+): Promise<InvioResult> {
+  const result: InvioResult = { success: false, contrattoId: contratto_eol_id, emailInviate: 0, errori: [] };
+
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contratto_eol_id },
+    include: { cliente: true, decisioni: true },
+  });
+  if (!contratto) {
+    result.errori.push('Contratto non trovato');
+    return result;
+  }
+
+  // L'opt-out vale anche qui, anzi soprattutto: e' una mail commerciale.
+  if (contratto.cliente.opt_out_comunicazioni) {
+    result.errori.push('Cliente ha richiesto opt-out comunicazioni');
+    return result;
+  }
+  if (!contratto.cliente.email) {
+    result.errori.push('Cliente senza indirizzo email');
+    return result;
+  }
+
+  // Una sola proposta per cliente, non per pratica: se domani un cliente avra'
+  // due contratti Italiaonline non deve ricevere due volte la stessa offerta.
+  const gia = await prisma.comunicazione.findFirst({
+    where: {
+      tipo: TIPO_PROPOSTA_NOLEGGIO,
+      esito_invio: 'INVIATO',
+      contratto_eol: { cliente_id: contratto.cliente_id },
+    },
+    select: { data_invio: true },
+  });
+  if (gia) {
+    result.errori.push(`Proposta gia' inviata a questo cliente il ${formatDate(gia.data_invio)}`);
+    return result;
+  }
+
+  const linkNuovoNoleggio = await configService.getTesto(
+    'iol.link_nuovo_noleggio',
+    'https://app.noleggiosumisura.it/start',
+  );
+
+  // Il richiamo alla decisione compare solo a chi non ha ancora scelto.
+  const decisioneMancante = contratto.decisioni.length === 0;
+  let linkAreaCliente = '';
+  if (decisioneMancante && contratto.data_scadenza) {
+    const exp = Math.floor(
+      (new Date(contratto.data_scadenza).getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000,
+    );
+    // Un token gia' scaduto darebbe un link morto: in quel caso si tace,
+    // invece di mandare il cliente contro un errore.
+    if (exp > Math.floor(Date.now() / 1000)) {
+      const token = jwt.sign(
+        { contratto_eol_id: contratto.id, cliente_id: contratto.cliente_id, exp },
+        JWT_SECRET,
+      );
+      linkAreaCliente = `${FRONTEND_URL}/pratica/${token}`;
+    }
+  }
+
+  const templateVars = {
+    ragione_sociale: contratto.cliente.ragione_sociale,
+    numero_contratto_grenke: contratto.contratto_grenke_id,
+    data_scadenza: contratto.data_scadenza ? formatDate(new Date(contratto.data_scadenza)) : '',
+    link_nuovo_noleggio: linkNuovoNoleggio,
+    email_nuovo_noleggio: await configService.getTesto('recapiti.email', 'info@noleggiosumisura.it'),
+    decisione_mancante: decisioneMancante && linkAreaCliente !== '',
+    link_area_cliente: linkAreaCliente,
+  };
+
+  let templateHtml = await configService.getHtml('email.proposta_nuovo_noleggio');
+  if (!templateHtml) {
+    templateHtml = readFileSync(
+      resolve(__dirname, '../../../templates/email/proposta_nuovo_noleggio.html'),
+      'utf-8',
+    );
+  }
+  const html = Handlebars.compile(templateHtml)(templateVars);
+  const oggetto = await configService.getTesto(
+    'email.proposta_nuovo_noleggio_oggetto',
+    'Dispositivi nuovi per la Sua azienda',
+  );
+
+  const provider = emailProviderPerAmbiente(contratto.ambiente);
+  const sendResult = await provider.send(contratto.cliente.email, oggetto, html);
+
+  await prisma.comunicazione.create({
+    data: {
+      contratto_eol_id: contratto.id,
+      tipo: TIPO_PROPOSTA_NOLEGGIO,
+      canale: 'EMAIL',
+      destinatario: contratto.cliente.email,
+      oggetto,
+      corpo_html: html,
+      data_invio: new Date(),
+      esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
+      operatore_id: operatoreId ?? null,
+    },
+  });
+
+  if (!sendResult.success) {
+    result.errori.push(`Errore invio a ${contratto.cliente.email}: ${sendResult.error}`);
+    return result;
+  }
+
+  result.success = true;
+  result.emailInviate = 1;
+
+  // Lo stato della pratica NON cambia: questa comunicazione e' commerciale e
+  // non fa avanzare il fine contratto.
+  await registraEvento(contratto.id, 'BACKOFFICE', operatoreId ?? 'system', 'COMUNICAZIONE_INVIATA', {
+    tipo: TIPO_PROPOSTA_NOLEGGIO,
+    destinatario: contratto.cliente.email,
+    decisione_mancante: decisioneMancante,
+  });
+
+  return result;
+}

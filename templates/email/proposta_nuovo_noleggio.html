@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispositivi nuovi per la Sua azienda</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a3a52;padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">Integra Solutions Srl</h1>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:13px;">Noleggio Su Misura &mdash; Divisione Rental di Integra Solutions Srl</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+
+              <p style="margin:0 0 16px;color:#1a3a52;font-size:15px;line-height:1.6;">
+                Gentile <strong>{{ragione_sociale}}</strong>,
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                ci occupiamo della fase di fine contratto del Suo noleggio operativo
+                n. <strong>{{numero_contratto_grenke}}</strong>, in scadenza il
+                <strong>{{data_scadenza}}</strong>. Con questa comunicazione vogliamo
+                segnalarLe una possibilit&agrave; in pi&ugrave;, indipendente da quella scelta.
+              </p>
+
+              <!-- Proposta -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="border:1px solid #d7dce1;border-radius:8px;padding:20px 24px;">
+                    <p style="margin:0 0 8px;color:#0B7FA6;font-size:13px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">Le servono dei dispositivi nuovi?</p>
+                    <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6;">
+                      Indipendentemente da come decider&agrave; per i beni attuali, pu&ograve; attivare
+                      un nuovo noleggio di dispositivi. Configuri da s&eacute; la soluzione che
+                      preferisce, in pochi minuti:
+                    </p>
+                    <p style="margin:0 0 16px;">
+                      <a href="{{{link_nuovo_noleggio}}}" target="_blank" style="display:inline-block;background-color:#0B7FA6;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:700;">Configura un nuovo noleggio</a>
+                    </p>
+                    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
+                      Preferisce essere seguito da un nostro consulente? Scriva a
+                      <a href="mailto:{{email_nuovo_noleggio}}" style="color:#0B7FA6;">{{email_nuovo_noleggio}}</a>
+                      indicando i Suoi dati e la ricontatteremo.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Richiamo alla decisione di fine contratto: questa mail arriva anche
+                   a chi non ha ancora scelto, e non deve fargli credere di aver
+                   assolto a qualcosa. Il link all'area riservata e' lo stesso della
+                   comunicazione iniziale. -->
+              {{#if decisione_mancante}}
+              <p style="margin:0 0 24px;color:#374151;font-size:14px;line-height:1.6;background-color:#fef9c3;border-left:3px solid #facc15;padding:14px 16px;">
+                Le ricordiamo che per il contratto in scadenza attendiamo ancora una Sua
+                indicazione: pu&ograve; comunicarcela nella Sua
+                <a href="{{{link_area_cliente}}}" style="color:#1a3a52;font-weight:700;">area riservata</a>.
+                Questa proposta non sostituisce quella scelta.
+              </p>
+              {{/if}}
+
+              <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
+                Cordiali saluti,<br>
+                <strong>Il Team Noleggio Su Misura</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0 0 4px;color:#64748b;font-size:13px;text-align:center;">
+                Integra Solutions Srl &mdash; Via Tunisia 5, Collegno (TO) &mdash; P.IVA 12711040019
+              </p>
+              <p style="margin:0 0 12px;color:#64748b;font-size:13px;text-align:center;">
+                Tel: 011 4557949 &nbsp;|&nbsp; <a href="mailto:info@noleggiosumisura.it" style="color:#2563eb;text-decoration:none;">info@noleggiosumisura.it</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
