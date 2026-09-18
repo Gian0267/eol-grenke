@@ -53,6 +53,21 @@ function formatDataOra(d: string): string {
   return new Date(d).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * Prepara l'HTML archiviato per l'anteprima.
+ *
+ * Aggiunge <base target="_blank"> cosi' OGNI link si apre in una scheda nuova:
+ * senza, quelli privi di target proverebbero a navigare il riquadro (bloccato
+ * dalla sandbox) o, peggio, a portare l'operatore fuori dal gestionale.
+ */
+function perAnteprima(html: string): string {
+  const base = '<base target="_blank">';
+  const i = html.search(/<head[^>]*>/i);
+  if (i === -1) return base + html;
+  const fine = html.indexOf('>', i) + 1;
+  return html.slice(0, fine) + base + html.slice(fine);
+}
+
 export default function ComunicazioniInviate({ canale }: { canale: 'EMAIL' | 'PEC' }) {
   const [items, setItems] = useState<Riga[]>([]);
   const [tipi, setTipi] = useState<string[]>([]);
@@ -274,8 +289,14 @@ export default function ComunicazioniInviate({ canale }: { canale: 'EMAIL' | 'PE
               {dettaglio.corpo_html ? (
                 <iframe
                   title="Anteprima comunicazione"
-                  srcDoc={dettaglio.corpo_html}
-                  sandbox=""
+                  srcDoc={perAnteprima(dettaglio.corpo_html)}
+                  // Con sandbox="" i link erano morti: il riquadro non poteva
+                  // aprire finestre, e cliccare non faceva nulla (il tasto
+                  // destro mostrava comunque l'indirizzo). Si concedono solo
+                  // le finestre nuove, e che la pagina aperta non erediti la
+                  // gabbia. Niente allow-scripts: qui si guarda dell'HTML
+                  // archiviato, non deve poter eseguire niente.
+                  sandbox="allow-popups allow-popups-to-escape-sandbox"
                   className="w-full h-[65vh] bg-white rounded-lg border border-border"
                 />
               ) : (
