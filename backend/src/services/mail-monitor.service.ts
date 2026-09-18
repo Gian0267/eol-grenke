@@ -176,31 +176,41 @@ function nuovoClient(casella: CasellaMonitor): ImapFlow {
  */
 export async function scaricaCorpo(casellaUser: string | null, uid: number): Promise<string | null> {
   const caselle = await getCaselle();
-  const casella = casellaUser
-    ? caselle.find(c => c.user.toLowerCase() === casellaUser.toLowerCase())
-    : caselle[0];
-  if (!casella) return null;
+  if (caselle.length === 0) return null;
 
-  const client = nuovoClient(casella);
-  try {
-    await client.connect();
-    const lock = await client.getMailboxLock('INBOX', { readOnly: true });
+  // Le segnalazioni raccolte prima del monitor multi-casella non hanno
+  // `casella`: il loro UID appartiene a una delle caselle configurate, ma non
+  // sappiamo quale. Si provano tutte, invece di indovinare la prima.
+  const daProvare = casellaUser
+    ? caselle.filter(c => c.user.toLowerCase() === casellaUser.toLowerCase())
+    : caselle;
+  if (daProvare.length === 0) return null;
+
+  for (const casella of daProvare) {
+    const client = nuovoClient(casella);
     try {
-      const { content } = await client.download(String(uid), undefined, { uid: true });
-      const chunks: Buffer[] = [];
-      for await (const chunk of content) chunks.push(chunk as Buffer);
-      const parsed = await simpleParser(Buffer.concat(chunks));
-      const corpo = parsed.text || (parsed.html ? stripHtml(String(parsed.html)) : '');
-      return corpo || null;
+      await client.connect();
+      const lock = await client.getMailboxLock('INBOX', { readOnly: true });
+      try {
+        const scaricato = await client.download(String(uid), undefined, { uid: true });
+        // UID inesistente in questa casella: download non torna un flusso.
+        if (!scaricato?.content) continue;
+        const chunks: Buffer[] = [];
+        for await (const chunk of scaricato.content) chunks.push(chunk as Buffer);
+        const parsed = await simpleParser(Buffer.concat(chunks));
+        const corpo = parsed.text || (parsed.html ? stripHtml(String(parsed.html)) : '');
+        if (corpo) return corpo;
+      } finally {
+        lock.release();
+      }
+    } catch (err) {
+      console.error(`[Monitor] Corpo non recuperabile (uid ${uid} su ${casella.user}):`, err instanceof Error ? err.message : err);
     } finally {
-      lock.release();
+      await client.logout().catch(() => {});
     }
-  } catch (err) {
-    console.error(`[Monitor] Corpo non recuperabile (uid ${uid} su ${casella.user}):`, err instanceof Error ? err.message : err);
-    return null;
-  } finally {
-    await client.logout().catch(() => {});
   }
+
+  return null;
 }
 
 export interface MonitorPollResult {
