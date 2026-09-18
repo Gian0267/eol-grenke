@@ -505,6 +505,37 @@ router.post('/pratiche-dettaglio/:id/proposta-noleggio', async (req: Authenticat
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/simula-invito-pagamento
+//
+// Anticipa l'invito al pagamento che lo scheduler manderebbe al T-26, per
+// provare il flusso di riacquisto senza aspettare la data. Solo TEST: il
+// controllo vero sta nel servizio, qui si filtra solo il ruolo.
+router.post('/pratiche-dettaglio/:id/simula-invito-pagamento', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { promemoria } = req.body as { promemoria?: unknown };
+    const { simulaInvitoPagamento } = await import('../services/scheduler.service.js');
+    const esito = await simulaInvitoPagamento(req.params.id as string, { promemoria: promemoria === true });
+
+    if (!esito.ok) { res.status(400).json({ error: esito.errore }); return; }
+
+    res.json({
+      success: true,
+      messaggio: promemoria === true
+        ? 'Promemoria di pagamento inviato (ambiente TEST)'
+        : 'Invito al pagamento inviato (ambiente TEST)',
+    });
+  } catch (err) {
+    console.error('[simula-invito-pagamento] Errore:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/note — appunti del backoffice.
 //
 // Campo unico, sovrascritto: chi scrive si aspetta di ritrovare cio' che ha

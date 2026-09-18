@@ -708,3 +708,41 @@ export function startSchedulerCron(): void {
   });
   console.log('[Scheduler] Cron job registrato: 0 2 * * * (ogni giorno alle 02:00)');
 }
+
+/**
+ * Manda subito l'invito al pagamento di una pratica, senza aspettare il T-26.
+ *
+ * Serve a provare il flusso di riacquisto dall'inizio alla fine in ambiente di
+ * prova: e' la STESSA funzione che usa lo scheduler, cosi' cio' che si vede e'
+ * cio' che ricevera' un cliente vero, non una riproduzione somigliante.
+ *
+ * Limitata all'ambiente TEST di proposito. Su una pratica LIVE significherebbe
+ * chiedere dei soldi a un'azienda fuori dal momento previsto, e non deve poter
+ * succedere per un clic sbagliato.
+ */
+export async function simulaInvitoPagamento(
+  contrattoId: string,
+  opts?: { promemoria?: boolean },
+): Promise<{ ok: true } | { ok: false; errore: string }> {
+  const pratica = await prisma.contratto_EOL.findUnique({
+    where: { id: contrattoId },
+    include: { cliente: true },
+  });
+  if (!pratica) return { ok: false, errore: 'Pratica non trovata' };
+
+  if (pratica.ambiente !== 'TEST') {
+    return { ok: false, errore: 'La simulazione vale solo in ambiente TEST: su una pratica LIVE l\'invito parte dallo scheduler al T-26' };
+  }
+  if (!['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato)) {
+    return {
+      ok: false,
+      errore: `Stato "${pratica.stato}": l'invito al pagamento si manda a chi ha scelto il riacquisto. Registra prima la decisione.`,
+    };
+  }
+  if (!pratica.data_scadenza) {
+    return { ok: false, errore: 'La pratica non ha una data di scadenza: il link di pagamento non puo\' essere generato' };
+  }
+
+  await inviaInvitoPagamento(pratica, opts);
+  return { ok: true };
+}

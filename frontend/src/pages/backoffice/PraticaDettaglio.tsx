@@ -26,6 +26,7 @@ import {
   Building2,
   Sparkles,
   Save,
+  FlaskConical,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -136,6 +137,7 @@ interface Pratica {
   agente: string | null;
   cliente_iol: boolean;
   note: string | null;
+  ambiente: string;
   proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
@@ -751,6 +753,15 @@ export default function PraticaDettaglio() {
                   label="Modifica deadline"
                   onClick={() => openModal('modifica-deadline')}
                 />
+                {pratica.ambiente === 'TEST' &&
+                  ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato) &&
+                  ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<FlaskConical className="w-4 h-4" />}
+                    label="Simula richiesta pagamento"
+                    onClick={() => openModal('simula-pagamento')}
+                  />
+                )}
                 {pratica.stato === 'RIACQUISTO_IN_ATTESA_CHIAMATA' && (
                   <ActionBtn
                     icon={<Unlock className="w-4 h-4" />}
@@ -956,6 +967,47 @@ export default function PraticaDettaglio() {
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
+          </button>
+        </div>
+      </Modal>
+
+      {/* Simulazione dell'invito al pagamento (solo TEST) */}
+      <Modal open={modalOpen === 'simula-pagamento'} title="Simula la richiesta di pagamento" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-4">
+          Manda subito a <strong>{pratica.cliente.ragione_sociale}</strong> l&apos;invito al pagamento che lo
+          scheduler manderebbe 26 giorni prima della scadenza. &Egrave; la stessa identica mail, con link di
+          pagamento funzionante: quello che vedi &egrave; quello che riceverebbe un cliente vero.
+        </p>
+        <div className="mb-5 flex gap-2 items-start rounded-lg border border-border bg-paper p-3">
+          <FlaskConical className="w-4 h-4 text-stone shrink-0 mt-0.5" />
+          <p className="text-sm text-stone">
+            Pratica in ambiente <strong>TEST</strong>: la mail non raggiunge il cliente, viene dirottata sulla
+            casella di raccolta. Si pu&ograve; ripetere quante volte serve.
+          </p>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            Annulla
+          </button>
+          <button
+            disabled={actionLoading}
+            onClick={() =>
+              doAction(`/api/backoffice/pratiche-dettaglio/${id}/simula-invito-pagamento`, { promemoria: true })
+            }
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper disabled:opacity-50"
+          >
+            Manda il promemoria
+          </button>
+          <button
+            disabled={actionLoading}
+            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/simula-invito-pagamento`)}
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Manda l&apos;invito
           </button>
         </div>
       </Modal>
