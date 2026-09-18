@@ -457,7 +457,7 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
       {/* Left: email list */}
       <div className="w-56 shrink-0 border-r border-slate-100 pr-4">
         <h3 className="text-sm font-semibold text-slate-600 mb-2">Template email</h3>
-        {items.map(imp => (
+        {items.filter(i => i.tipo !== 'TESTO').map(imp => (
           <button
             key={imp.chiave}
             onClick={() => setSelected(imp)}
@@ -468,6 +468,25 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
             {imp.label}
           </button>
         ))}
+
+        {/* Testi della ricevuta PDF: non sono template HTML, stanno qui
+            perche' e' dove si va a cercare i testi mandati ai clienti. */}
+        {items.some(i => i.tipo === 'TESTO') && (
+          <>
+            <h3 className="text-sm font-semibold text-slate-600 mt-4 mb-2">Ricevuta di pagamento (PDF)</h3>
+            {items.filter(i => i.tipo === 'TESTO').map(imp => (
+              <button
+                key={imp.chiave}
+                onClick={() => setSelected(imp)}
+                className={`w-full text-left px-3 py-2 text-sm rounded mb-1 transition-colors ${
+                  selected?.chiave === imp.chiave ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {imp.label.replace('Ricevuta: ', '')}
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Right: editor */}
@@ -477,9 +496,11 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-slate-800">{selected.label}</h3>
               <div className="flex gap-2">
-                <button onClick={handlePreview} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200">
-                  <Eye size={14} /> Anteprima
-                </button>
+                {selected.tipo !== 'TESTO' && (
+                  <button onClick={handlePreview} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200">
+                    <Eye size={14} /> Anteprima
+                  </button>
+                )}
                 <button onClick={() => onSave(selected.chiave)} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
                   <Save size={14} /> Salva
                 </button>
@@ -490,6 +511,7 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
             </div>
 
             {/* Variables sidebar */}
+            {selected.tipo !== 'TESTO' && (
             <div className="flex gap-1.5 flex-wrap mb-3">
               <span className="text-xs text-slate-400 mr-1 self-center">Variabili:</span>
               {VARIABILI.map(v => (
@@ -505,11 +527,28 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
                 </button>
               ))}
             </div>
+            )}
 
-            <TipTapEditor
-              content={localValues[selected.chiave] || ''}
-              onChange={v => updateLocal(selected.chiave, v)}
-            />
+            {selected.tipo === 'TESTO' ? (
+              <>
+                <p className="text-xs text-slate-500 mb-2">{selected.descrizione}</p>
+                <textarea
+                  value={localValues[selected.chiave] || ''}
+                  onChange={e => updateLocal(selected.chiave, e.target.value)}
+                  rows={5}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                />
+                <p className="text-xs text-slate-400 mt-2">
+                  Testo semplice: finisce dentro un PDF, quindi grassetti ed elenchi non hanno effetto.
+                  Ragione sociale, indirizzo e P.IVA della ricevuta arrivano invece dalla scheda Recapiti.
+                </p>
+              </>
+            ) : (
+              <TipTapEditor
+                content={localValues[selected.chiave] || ''}
+                onChange={v => updateLocal(selected.chiave, v)}
+              />
+            )}
           </>
         )}
       </div>

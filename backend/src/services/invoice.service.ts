@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { prisma } from '../lib/db.js';
 import { formatBene, beniInclusi, beniEsclusi, isRiacquistoParziale } from '../lib/beni.js';
 import { saveDocument } from './storage.service.js';
+import * as configService from './config.service.js';
 
 const LOGO_PATH = pathResolve(pathDirname(fileURLToPath(import.meta.url)), '../../../loghi/nsm-logo.png');
 
@@ -83,6 +84,25 @@ export async function generaRicevutaPagamento(
   const daRestituire = beniEsclusi(contratto.beni_json, contratto.beni_esclusi_json);
   const parziale = isRiacquistoParziale(contratto.beni_esclusi_json);
 
+  // Dati dell'emittente e testi liberi: stanno nelle Impostazioni, non qui.
+  // Prima erano scritti nel codice, e la P.IVA era rimasta un segnaposto
+  // ("12345678901") finito su tre ricevute gia' in mano ai clienti.
+  const azienda = {
+    ragione_sociale: await configService.getTesto('recapiti.ragione_sociale', 'Integra Solutions Srl'),
+    indirizzo: await configService.getTesto('recapiti.indirizzo', 'Via Tunisia 5, 10093 Collegno (TO)'),
+    piva: await configService.getTesto('recapiti.piva', ''),
+  };
+  const testi = {
+    titolo: await configService.getTesto('ricevuta.titolo', 'RICEVUTA DI CONFERMA PAGAMENTO'),
+    voce_importo: await configService.getTesto('ricevuta.voce_importo', 'Riacquisto beni (acconto)'),
+    avvertenza_fiscale: await configService.getTesto('ricevuta.avvertenza_fiscale',
+      'AVVERTENZA: Questo documento non costituisce fattura fiscale ai sensi del DPR 633/72. La fattura elettronica sara emessa tramite Sistema di Interscambio (SDI) dall\'ERP aziendale.'),
+    nota_finale: await configService.getTesto('ricevuta.nota_finale',
+      'La presente ricevuta attesta l\'avvenuto pagamento dell\'acconto per il riacquisto dei beni sopra indicati. Il trasferimento di proprieta avverra alla data T+11 dalla scadenza del contratto Grenke.'),
+    nota_parziale: await configService.getTesto('ricevuta.nota_parziale',
+      'Acquisto parziale concordato: la presente ricevuta riguarda i soli beni sopra indicati. I restanti beni del contratto ({{beni_da_restituire}}) devono essere restituiti secondo la procedura di reso.'),
+  };
+
   const filename = `ricevuta_pagamento_${contratto.id}_${Date.now()}.pdf`;
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
@@ -103,7 +123,7 @@ export async function generaRicevutaPagamento(
 
   // Titolo
   doc.fontSize(18).font('Helvetica-Bold').fillColor('#1a3a52')
-    .text('RICEVUTA DI CONFERMA PAGAMENTO', { align: 'center' });
+    .text(testi.titolo, { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(12).font('Helvetica').fillColor('#333333')
     .text(`N. ${fatturaNumero}`, { align: 'center' });
@@ -117,9 +137,9 @@ export async function generaRicevutaPagamento(
     .text('Emittente');
   doc.moveDown(0.3);
   doc.fontSize(10).font('Helvetica');
-  doc.text('Integra Solutions Srl');
-  doc.text('Via Tunisia 5, 10093 Collegno (TO)');
-  doc.text('P.IVA: 12345678901');
+  doc.text(azienda.ragione_sociale);
+  doc.text(azienda.indirizzo);
+  doc.text(`P.IVA: ${azienda.piva}`);
   doc.moveDown(1);
 
   // Destinatario
@@ -175,7 +195,7 @@ export async function generaRicevutaPagamento(
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
   doc.moveDown(0.3);
 
-  doc.text('Riacquisto beni (acconto)', col1, doc.y);
+  doc.text(testi.voce_importo, col1, doc.y);
   doc.text(`EUR ${formatEur(Number(pagamento.importo_netto))}`, col2, doc.y - 12, { align: 'right', width: 145 });
   doc.moveDown(0.5);
 
@@ -193,28 +213,20 @@ export async function generaRicevutaPagamento(
 
   // Disclaimer fiscale SDI
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#991b1b');
-  doc.text(
-    'AVVERTENZA: Questo documento non costituisce fattura fiscale ai sensi del DPR 633/72. ' +
-    'La fattura elettronica sara emessa tramite Sistema di Interscambio (SDI) dall\'ERP aziendale.',
-    { align: 'justify' },
-  );
+  doc.text(testi.avvertenza_fiscale, { align: 'justify' });
   doc.moveDown(0.5);
   doc.font('Helvetica').fontSize(9).fillColor('#666666');
-  doc.text(
-    (parziale
-      ? `Acquisto parziale concordato: la presente ricevuta riguarda i soli beni sopra indicati. I restanti beni del contratto (${daRestituire.map(formatBene).join(', ')}) devono essere restituiti secondo la procedura di reso. `
-      : '') +
-    'La presente ricevuta attesta l\'avvenuto pagamento dell\'acconto per il riacquisto dei beni sopra indicati. ' +
-    'Il trasferimento di proprieta avverra alla data T+11 dalla scadenza del contratto Grenke.',
-    { align: 'justify' },
-  );
+  const notaParziale = parziale
+    ? testi.nota_parziale.replace('{{beni_da_restituire}}', daRestituire.map(formatBene).join(', ')) + ' '
+    : '';
+  doc.text(notaParziale + testi.nota_finale, { align: 'justify' });
   doc.moveDown(1.5);
 
   // Footer
   doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
   doc.moveDown(0.3);
   doc.fontSize(8).fillColor('#999999');
-  doc.text('Integra Solutions Srl — Via Tunisia 5, 10093 Collegno (TO) — P.IVA 12345678901', { align: 'center' });
+  doc.text(`${azienda.ragione_sociale} — ${azienda.indirizzo} — P.IVA ${azienda.piva}`, { align: 'center' });
   doc.text('Documento generato automaticamente dalla piattaforma Noleggio Su Misura', { align: 'center' });
 
   doc.end();
