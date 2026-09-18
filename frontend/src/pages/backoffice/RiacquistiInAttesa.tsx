@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User, FileText } from 'lucide-react';
 
 const API_BASE = '';
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -236,7 +237,7 @@ export default function RiacquistiInAttesa() {
                           </div>
                         </div>
 
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 flex flex-col gap-2 items-stretch">
                           {isRichiamato ? (
                             <div className="flex items-center gap-2 text-ok-text text-sm font-medium">
                               <CheckCircle2 className="w-5 h-5" /> Richiamato
@@ -255,6 +256,16 @@ export default function RiacquistiInAttesa() {
                               Segna come richiamato
                             </button>
                           )}
+                          {/* Prima di telefonare serve il quadro completo:
+                              senza questo si tornava indietro a cercarlo in
+                              lista. */}
+                          <Link
+                            to={`/backoffice/pratiche/${c.id}`}
+                            className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-graphite hover:bg-paper transition-colors flex items-center justify-center gap-2"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Apri la pratica
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -323,7 +334,7 @@ export default function RiacquistiInAttesa() {
                           )}
                         </div>
 
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 flex flex-col gap-2 items-stretch">
                           {isSbloccato ? (
                             <div className="flex items-center gap-2 text-ok-text text-sm font-medium">
                               <CheckCircle2 className="w-5 h-5" /> Sbloccato
@@ -342,6 +353,13 @@ export default function RiacquistiInAttesa() {
                               Sblocca pagamento
                             </button>
                           )}
+                          <Link
+                            to={`/backoffice/pratiche/${p.id}`}
+                            className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-graphite hover:bg-paper transition-colors flex items-center justify-center gap-2"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Apri la pratica
+                          </Link>
                         </div>
                       </div>
                     </div>
