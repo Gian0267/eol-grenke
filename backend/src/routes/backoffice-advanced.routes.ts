@@ -330,6 +330,9 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
     res.json({
       ...pratica,
       cliente_iol: origineCorrisponde(pratica.origine, dicitureIol),
+      invito_pagamento_inviato: pratica.comunicazioni
+        .filter(c => c.tipo === 'INVITO_PAGAMENTO' && c.esito_invio === 'INVIATO')
+        .sort((a, b) => b.data_invio.getTime() - a.data_invio.getTime())[0]?.data_invio ?? null,
       proposta_noleggio_inviata: propostaInviata?.data_invio ?? null,
       canone_mensile: Number(pratica.canone_mensile),
       monte_canoni: Number(pratica.monte_canoni),
@@ -505,12 +508,35 @@ router.post('/pratiche-dettaglio/:id/proposta-noleggio', async (req: Authenticat
   }
 });
 
-// POST /api/backoffice/pratiche-dettaglio/:id/simula-invito-pagamento
+// GET /api/backoffice/pratiche-dettaglio/:id/link-pagamento — il link da dare
+// al cliente a voce o per messaggio, senza passare per la mail.
 //
-// Anticipa l'invito al pagamento che lo scheduler manderebbe al T-26, per
-// provare il flusso di riacquisto senza aspettare la data. Solo TEST: il
-// controllo vero sta nel servizio, qui si filtra solo il ruolo.
-router.post('/pratiche-dettaglio/:id/simula-invito-pagamento', async (req: AuthenticatedRequest, res: Response) => {
+// E' lo stesso della mail di invito: al telefono non si detta un indirizzo
+// diverso da quello che il cliente ha in casella.
+router.get('/pratiche-dettaglio/:id/link-pagamento', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+    const { linkPagamentoPratica } = await import('../services/scheduler.service.js');
+    const esito = await linkPagamentoPratica(req.params.id as string);
+    if (!esito.ok) { res.status(400).json({ error: esito.errore }); return; }
+    res.json({ link: esito.link, scade: esito.scade });
+  } catch (err) {
+    console.error('[link-pagamento] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/invito-pagamento
+//
+// Anticipa l'invito al pagamento che lo scheduler manderebbe al T-26, su
+// richiesta dell'operatore. Vale anche sulle pratiche LIVE: li' sta chiedendo
+// dei soldi a un'azienda vera, quindi resta riservato a chi gestisce il
+// backoffice e la conferma a video lo dice a chiare lettere.
+router.post('/pratiche-dettaglio/:id/invito-pagamento', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ruolo = (req.user as any)?.ruolo;
     if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
@@ -519,19 +545,21 @@ router.post('/pratiche-dettaglio/:id/simula-invito-pagamento', async (req: Authe
     }
 
     const { promemoria } = req.body as { promemoria?: unknown };
-    const { simulaInvitoPagamento } = await import('../services/scheduler.service.js');
-    const esito = await simulaInvitoPagamento(req.params.id as string, { promemoria: promemoria === true });
+    const { inviaRichiestaPagamento } = await import('../services/scheduler.service.js');
+    const esito = await inviaRichiestaPagamento(req.params.id as string, {
+      promemoria: promemoria === true,
+      operatoreId: (req.user as any)?.id,
+    });
 
     if (!esito.ok) { res.status(400).json({ error: esito.errore }); return; }
 
+    const che = promemoria === true ? 'Promemoria di pagamento inviato' : 'Richiesta di pagamento inviata';
     res.json({
       success: true,
-      messaggio: promemoria === true
-        ? 'Promemoria di pagamento inviato (ambiente TEST)'
-        : 'Invito al pagamento inviato (ambiente TEST)',
+      messaggio: esito.ambiente === 'TEST' ? `${che} (ambiente TEST: resta in casa)` : `${che} al cliente`,
     });
   } catch (err) {
-    console.error('[simula-invito-pagamento] Errore:', err);
+    console.error('[invito-pagamento] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
   }
 });

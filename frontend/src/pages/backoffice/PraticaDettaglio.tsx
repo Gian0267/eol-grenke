@@ -27,6 +27,8 @@ import {
   Sparkles,
   Save,
   FlaskConical,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -138,6 +140,7 @@ interface Pratica {
   cliente_iol: boolean;
   note: string | null;
   ambiente: string;
+  invito_pagamento_inviato: string | null;
   proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
@@ -371,6 +374,45 @@ export default function PraticaDettaglio() {
 
   // Modifica contatti cliente (email / PEC)
   // Rete commerciale (agenzia e agente dell'export NSM)
+  // Link di pagamento da dare al cliente a voce o per messaggio
+  const [linkPagamento, setLinkPagamento] = useState<string | null>(null);
+  const [linkErrore, setLinkErrore] = useState<string | null>(null);
+  const [copiatoLink, setCopiatoLink] = useState(false);
+
+  async function caricaLinkPagamento() {
+    setLinkPagamento(null);
+    setLinkErrore(null);
+    try {
+      const res = await fetch(`/api/backoffice/pratiche-dettaglio/${id}/link-pagamento`, {
+        credentials: 'include',
+        headers: getHeaders(),
+      });
+      const body = await res.json();
+      if (!res.ok) { setLinkErrore(body.error || 'Link non disponibile'); return; }
+      setLinkPagamento(body.link);
+    } catch {
+      setLinkErrore('Non sono riuscito a recuperare il link');
+    }
+  }
+
+  async function copiaLinkPagamento() {
+    if (!linkPagamento) return;
+    try {
+      await navigator.clipboard.writeText(linkPagamento);
+    } catch {
+      // Appunti negati: si ripiega su una selezione nascosta, cosi' il link
+      // resta copiabile invece di lasciare un pulsante inerte.
+      const el = document.createElement('textarea');
+      el.value = linkPagamento;
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); } catch { /* niente da fare */ }
+      el.remove();
+    }
+    setCopiatoLink(true);
+    setTimeout(() => setCopiatoLink(false), 2000);
+  }
+
   // Appunti sulla pratica
   const [note, setNote] = useState('');
   const [noteCaricate, setNoteCaricate] = useState(false);
@@ -753,13 +795,12 @@ export default function PraticaDettaglio() {
                   label="Modifica deadline"
                   onClick={() => openModal('modifica-deadline')}
                 />
-                {pratica.ambiente === 'TEST' &&
-                  ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato) &&
+                {['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato) &&
                   ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
                   <ActionBtn
-                    icon={<FlaskConical className="w-4 h-4" />}
-                    label="Simula richiesta pagamento"
-                    onClick={() => openModal('simula-pagamento')}
+                    icon={<CreditCard className="w-4 h-4" />}
+                    label="Richiesta di pagamento"
+                    onClick={() => { caricaLinkPagamento(); openModal('invito-pagamento'); }}
                   />
                 )}
                 {pratica.stato === 'RIACQUISTO_IN_ATTESA_CHIAMATA' && (
@@ -971,43 +1012,97 @@ export default function PraticaDettaglio() {
         </div>
       </Modal>
 
-      {/* Simulazione dell'invito al pagamento (solo TEST) */}
-      <Modal open={modalOpen === 'simula-pagamento'} title="Simula la richiesta di pagamento" onClose={() => setModalOpen(null)}>
+      {/* Richiesta di pagamento su iniziativa dell'operatore */}
+      <Modal open={modalOpen === 'invito-pagamento'} title="Richiesta di pagamento" onClose={() => setModalOpen(null)}>
         <p className="text-sm text-stone mb-4">
-          Manda subito a <strong>{pratica.cliente.ragione_sociale}</strong> l&apos;invito al pagamento che lo
-          scheduler manderebbe 26 giorni prima della scadenza. &Egrave; la stessa identica mail, con link di
-          pagamento funzionante: quello che vedi &egrave; quello che riceverebbe un cliente vero.
+          Manda subito a <strong>{pratica.cliente.ragione_sociale}</strong> ({pratica.cliente.email}) la richiesta
+          di pagamento che lo scheduler manderebbe 26 giorni prima della scadenza. &Egrave; la stessa mail, con
+          link di pagamento funzionante.
         </p>
-        <div className="mb-5 flex gap-2 items-start rounded-lg border border-border bg-paper p-3">
-          <FlaskConical className="w-4 h-4 text-stone shrink-0 mt-0.5" />
-          <p className="text-sm text-stone">
-            Pratica in ambiente <strong>TEST</strong>: la mail non raggiunge il cliente, viene dirottata sulla
-            casella di raccolta. Si pu&ograve; ripetere quante volte serve.
+
+        {pratica.invito_pagamento_inviato && (
+          <div className="mb-4 flex gap-2 items-start rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-900">
+              Una richiesta &egrave; gi&agrave; partita il <strong>{formatDate(pratica.invito_pagamento_inviato)}</strong>.
+              Mandarne un&apos;altra &egrave; possibile, ma il cliente ricever&agrave; due volte la stessa cosa:
+              valuta il promemoria, che dice di ignorare la mail se ha gi&agrave; pagato.
+            </p>
+          </div>
+        )}
+
+        {pratica.ambiente === 'TEST' ? (
+          <div className="mb-5 flex gap-2 items-start rounded-lg border border-border bg-paper p-3">
+            <FlaskConical className="w-4 h-4 text-stone shrink-0 mt-0.5" />
+            <p className="text-sm text-stone">
+              Pratica in ambiente <strong>TEST</strong>: la mail non raggiunge il cliente, viene dirottata sulla
+              casella di raccolta. Si pu&ograve; ripetere quante volte serve.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-5 flex gap-2 items-start rounded-lg border border-red-200 bg-red-50 p-3">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-900">
+              Pratica <strong>LIVE</strong>: la mail parte davvero al cliente e gli chiede di pagare.
+              Non si annulla.
+            </p>
+          </div>
+        )}
+
+        {/* Il link da dare al cliente al telefono: e' lo stesso che finisce
+            nella mail, non un secondo indirizzo che vive di vita propria. */}
+        <div className="mb-5">
+          <p className="text-sm font-medium text-graphite mb-2">Link di pagamento</p>
+          {linkErrore ? (
+            <p className="text-sm text-red-600">{linkErrore}</p>
+          ) : linkPagamento ? (
+            <div className="flex gap-2 items-center">
+              <input
+                readOnly
+                value={linkPagamento}
+                onFocus={(e) => e.currentTarget.select()}
+                className="flex-1 min-w-0 px-3 py-2 text-xs font-mono border border-border rounded-lg bg-paper"
+              />
+              <button
+                onClick={copiaLinkPagamento}
+                className="shrink-0 px-3 py-2 text-sm rounded-lg border border-border hover:bg-paper flex items-center gap-1.5"
+              >
+                {copiatoLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiatoLink ? 'Copiato' : 'Copia'}
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-stone flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Recupero il link…
+            </p>
+          )}
+          <p className="text-xs text-stone mt-2">
+            &Egrave; lo stesso link contenuto nella mail. Puoi darlo al cliente al telefono o per messaggio,
+            anche senza mandare la comunicazione.
           </p>
         </div>
+
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setModalOpen(null)}
             className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
           >
-            Annulla
+            Chiudi
           </button>
           <button
             disabled={actionLoading}
-            onClick={() =>
-              doAction(`/api/backoffice/pratiche-dettaglio/${id}/simula-invito-pagamento`, { promemoria: true })
-            }
+            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/invito-pagamento`, { promemoria: true })}
             className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper disabled:opacity-50"
           >
             Manda il promemoria
           </button>
           <button
             disabled={actionLoading}
-            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/simula-invito-pagamento`)}
+            onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/invito-pagamento`)}
             className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Manda l&apos;invito
+            Manda la richiesta
           </button>
         </div>
       </Modal>

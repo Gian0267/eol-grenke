@@ -710,29 +710,27 @@ export function startSchedulerCron(): void {
 }
 
 /**
- * Manda subito l'invito al pagamento di una pratica, senza aspettare il T-26.
+ * Manda l'invito al pagamento di una pratica su richiesta dell'operatore,
+ * senza aspettare il T-26.
  *
- * Serve a provare il flusso di riacquisto dall'inizio alla fine in ambiente di
- * prova: e' la STESSA funzione che usa lo scheduler, cosi' cio' che si vede e'
- * cio' che ricevera' un cliente vero, non una riproduzione somigliante.
+ * E' la STESSA funzione che usa lo scheduler, cosi' cio' che parte a mano e'
+ * identico a cio' che parte da solo — link di pagamento compreso.
  *
- * Limitata all'ambiente TEST di proposito. Su una pratica LIVE significherebbe
- * chiedere dei soldi a un'azienda fuori dal momento previsto, e non deve poter
- * succedere per un clic sbagliato.
+ * Vale anche in ambiente LIVE: in quel caso sta chiedendo dei soldi a
+ * un'azienda vera, quindi chi chiama deve avere chiesto esplicitamente questa
+ * cosa. I controlli qui sotto restano l'ultima difesa contro l'invio a
+ * qualcuno che non ha scelto il riacquisto.
  */
-export async function simulaInvitoPagamento(
+export async function inviaRichiestaPagamento(
   contrattoId: string,
-  opts?: { promemoria?: boolean },
-): Promise<{ ok: true } | { ok: false; errore: string }> {
+  opts?: { promemoria?: boolean; operatoreId?: string },
+): Promise<{ ok: true; ambiente: string } | { ok: false; errore: string }> {
   const pratica = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoId },
     include: { cliente: true },
   });
   if (!pratica) return { ok: false, errore: 'Pratica non trovata' };
 
-  if (pratica.ambiente !== 'TEST') {
-    return { ok: false, errore: 'La simulazione vale solo in ambiente TEST: su una pratica LIVE l\'invito parte dallo scheduler al T-26' };
-  }
   if (!['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato)) {
     return {
       ok: false,
@@ -742,7 +740,52 @@ export async function simulaInvitoPagamento(
   if (!pratica.data_scadenza) {
     return { ok: false, errore: 'La pratica non ha una data di scadenza: il link di pagamento non puo\' essere generato' };
   }
+  // Un token gia' scaduto produrrebbe un link morto: meglio dirlo prima che
+  // far partire una mail con un pulsante che non porta da nessuna parte.
+  if (await tokenClienteValido(pratica) === null) {
+    return {
+      ok: false,
+      errore: 'Il contratto e\' troppo vicino alla scadenza (o gia\' scaduto): il link di pagamento non sarebbe piu\' valido',
+    };
+  }
 
-  await inviaInvitoPagamento(pratica, opts);
-  return { ok: true };
+  await inviaInvitoPagamento(pratica, { promemoria: opts?.promemoria });
+
+  await registraEvento(pratica.id, 'BACKOFFICE', opts?.operatoreId ?? 'system', 'MODIFICA_BACKOFFICE', {
+    sotto_azione: opts?.promemoria ? 'PROMEMORIA_PAGAMENTO_MANUALE' : 'INVITO_PAGAMENTO_MANUALE',
+    ambiente: pratica.ambiente,
+    destinatario: pratica.cliente.email,
+  });
+
+  return { ok: true, ambiente: pratica.ambiente };
+}
+
+/**
+ * Il link di pagamento della pratica, da dare al cliente a voce o per messaggio.
+ *
+ * E' lo stesso indirizzo che finisce nella mail di invito, ricavato dallo
+ * stesso token: cosi' l'operatore al telefono non detta qualcosa di diverso da
+ * quello che il cliente si ritrova in casella.
+ */
+export async function linkPagamentoPratica(
+  contrattoId: string,
+): Promise<{ ok: true; link: string; scade: string } | { ok: false; errore: string }> {
+  const pratica = await prisma.contratto_EOL.findUnique({ where: { id: contrattoId } });
+  if (!pratica) return { ok: false, errore: 'Pratica non trovata' };
+  if (!pratica.data_scadenza) return { ok: false, errore: 'La pratica non ha una data di scadenza' };
+
+  const token = await tokenClienteValido(pratica);
+  if (!token) {
+    return {
+      ok: false,
+      errore: 'Il contratto e\' troppo vicino alla scadenza (o gia\' scaduto): non e\' piu\' possibile generare un link valido',
+    };
+  }
+
+  const scade = new Date(new Date(pratica.data_scadenza).getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000);
+  return {
+    ok: true,
+    link: `${FRONTEND_URL}/pratica/${token}/riacquisto`,
+    scade: scade.toISOString(),
+  };
 }
