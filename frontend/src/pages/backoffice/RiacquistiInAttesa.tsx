@@ -4,6 +4,17 @@ import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User } from 'lucid
 const API_BASE = '';
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
 
+/** Riga "Agenzia · Agente" della rete commerciale, dalle colonne A e B NSM. */
+function ReteCommerciale({ agenzia, agente }: { agenzia?: string | null; agente?: string | null }) {
+  if (!agenzia && !agente) return null;
+  return (
+    <p className="text-xs text-stone mb-3">
+      <span className="font-medium text-graphite">{agenzia || '—'}</span>
+      {agente && <> &middot; {agente}</>}
+    </p>
+  );
+}
+
 interface PraticaRiacquisto {
   id: string;
   contratto_nsm_id: string;
@@ -13,6 +24,8 @@ interface PraticaRiacquisto {
   monte_canoni: string;
   pricing_riacquisto: string;
   updated_at: string;
+  agenzia: string | null;
+  agente: string | null;
   cliente: {
     ragione_sociale: string;
     piva: string;
@@ -41,6 +54,8 @@ interface RichiestaContatto {
   contratto_eol: {
     id: string;
     contratto_nsm_id: string;
+    agenzia: string | null;
+    agente: string | null;
     contratto_grenke_id: string;
     data_scadenza: string | null;
     canone_mensile: string;
@@ -177,6 +192,8 @@ export default function RiacquistiInAttesa() {
                             </span>
                           </div>
 
+                          <ReteCommerciale agenzia={c.agenzia} agente={c.agente} />
+
                           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm mb-3">
                             <div>
                               <span className="text-stone text-xs">Contratto Grenke</span>
@@ -268,6 +285,8 @@ export default function RiacquistiInAttesa() {
                               In attesa chiamata
                             </span>
                           </div>
+
+                          <ReteCommerciale agenzia={p.agenzia} agente={p.agente} />
 
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
                             <div>

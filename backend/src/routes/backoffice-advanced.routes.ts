@@ -694,6 +694,23 @@ router.post('/pratiche-dettaglio/:id/beni-riacquisto', async (req: Authenticated
   }
 });
 
+// GET /api/backoffice/link-onboarding — link di registrazione a un nuovo
+// noleggio, da passare a un cliente.
+//
+// Letto dalle Impostazioni (iol.link_nuovo_noleggio), non cablato nel
+// frontend: contiene l'identificativo dell'agente, e il giorno che cambia deve
+// bastare modificarlo da pannello. Aperto a tutti i ruoli di backoffice: e' un
+// link commerciale, non un dato riservato.
+router.get('/link-onboarding', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const link = await configService.getTesto('iol.link_nuovo_noleggio', '');
+    res.json({ link: link || null });
+  } catch (err) {
+    console.error('[link-onboarding] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // ─── PROPOSTA DI NUOVO NOLEGGIO ────────────────────────────────────────────
 //
 // Campagna commerciale separata dal fine contratto (vedi email.service.ts).

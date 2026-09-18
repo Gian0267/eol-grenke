@@ -260,6 +260,8 @@ router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Respo
             numero_mesi: true,
             pricing_riacquisto: true,
             stato: true,
+            agenzia: true,
+            agente: true,
             cliente: {
               select: {
                 ragione_sociale: true,

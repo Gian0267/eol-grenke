@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router-dom'
-import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox, CalendarClock } from 'lucide-react'
+import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox, CalendarClock, Link2, Copy, Check } from 'lucide-react'
 
 interface ScadenzaGrenke {
   presente: boolean
@@ -75,6 +75,27 @@ export default function Dashboard() {
   const [grenke, setGrenke] = useState<ScadenzaGrenke | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Link di registrazione a un nuovo noleggio, da passare a un cliente
+  const [linkOnboarding, setLinkOnboarding] = useState<string | null>(null)
+  const [copiato, setCopiato] = useState(false)
+
+  async function copiaLink() {
+    if (!linkOnboarding) return
+    try {
+      await navigator.clipboard.writeText(linkOnboarding)
+    } catch {
+      // Clipboard negata (contesto non sicuro, permessi): ripiego sulla
+      // selezione, cosi' il link resta comunque copiabile a mano.
+      const el = document.createElement('textarea')
+      el.value = linkOnboarding
+      document.body.appendChild(el)
+      el.select()
+      try { document.execCommand('copy') } catch { /* niente da fare */ }
+      el.remove()
+    }
+    setCopiato(true)
+    setTimeout(() => setCopiato(false), 2000)
+  }
 
   useEffect(() => {
     const raw = localStorage.getItem('nsm_user')
@@ -109,6 +130,12 @@ export default function Dashboard() {
           fetch('/api/backoffice/dashboard/pratiche-recenti', opts),
           fetch('/api/backoffice/dashboard/scadenza-grenke', opts),
         ])
+
+        // Non blocca nulla: se fallisce, il riquadro del link non compare
+        fetch('/api/backoffice/link-onboarding', opts)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => setLinkOnboarding(d?.link ?? null))
+          .catch(() => {})
 
         if (!riskRes.ok || !kpiRes.ok || !praticheRes.ok) {
           throw new Error('Errore nel caricamento dei dati')
@@ -163,6 +190,28 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Link di registrazione a un nuovo noleggio: si copia e si incolla al
+          cliente. Il valore arriva dalle Impostazioni, non e' cablato qui:
+          contiene l'identificativo dell'agente e un giorno potrebbe cambiare. */}
+      {linkOnboarding && (
+        <section>
+          <div className="bg-card rounded-xl border border-border p-4 flex flex-wrap items-center gap-3">
+            <Link2 className="w-5 h-5 text-flex shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-graphite">Link per un nuovo noleggio</p>
+              <p className="text-xs text-stone break-all">{linkOnboarding}</p>
+            </div>
+            <button
+              onClick={copiaLink}
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-flex text-white text-sm font-medium hover:bg-flex-dark transition-colors"
+            >
+              {copiato ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiato ? 'Copiato' : 'Copia link'}
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Scadenza trasmissione lista a Grenke: entro quella data va incassato
           il massimo possibile, dopo il contratto non entra piu' nella lista. */}
       {grenke?.presente && (() => {
