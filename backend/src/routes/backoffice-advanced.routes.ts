@@ -21,6 +21,48 @@ function diffDays(a: Date, b: Date): number {
 }
 
 /**
+ * Applica al `where` i due criteri che non si esprimono direttamente in query.
+ *
+ * "Rischio silenzio" e "Decisione" venivano valutati DOPO la paginazione, sulle
+ * sole venti righe della pagina: il risultato erano pagine mezze vuote e un
+ * totale che contava anche le pratiche scartate. Qui si ricavano prima gli id
+ * che corrispondono, e si restringe la query: cosi' la paginazione torna a
+ * dire il vero.
+ *
+ * La decisione considerata e' l'ULTIMA presa, non una qualsiasi: un cliente che
+ * cambia idea non deve comparire sotto entrambe le scelte.
+ */
+async function restringiPerDecisioneERischio(
+  req: AuthenticatedRequest,
+  where: any,
+  decisione?: string,
+  rischioSilenzio?: string,
+): Promise<void> {
+  if (!decisione && rischioSilenzio !== 'true') return;
+
+  const candidate = await prisma.contratto_EOL.findMany({
+    where,
+    select: {
+      id: true, stato: true, data_scadenza: true,
+      decisioni: { orderBy: { created_at: 'desc' as const }, take: 1, select: { opzione_scelta: true } },
+    },
+  });
+
+  const now = new Date();
+  const ammessi = candidate.filter(p => {
+    if (rischioSilenzio === 'true') {
+      if (p.stato !== 'IN_ATTESA_DECISIONE' || !p.data_scadenza) return false;
+      const g = diffDays(p.data_scadenza, now);
+      if (g < 31 || g > 50) return false;
+    }
+    if (decisione && (p.decisioni[0]?.opzione_scelta ?? null) !== decisione) return false;
+    return true;
+  }).map(p => p.id);
+
+  where.id = { in: ammessi };
+}
+
+/**
  * Tutte le grafie con cui un'agenzia compare sulle pratiche.
  *
  * Il nome arriva dalla colonna A dell'export NSM e non e' una chiave: filtrare
@@ -76,28 +118,9 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
       if (data_scadenza_to) where.data_scadenza.lte = new Date(data_scadenza_to);
     }
 
-    const pratiche = await prisma.contratto_EOL.findMany({
-      where,
-      select: {
-        id: true, stato: true, data_scadenza: true,
-        decisioni: { orderBy: { created_at: 'desc' as const }, take: 1, select: { opzione_scelta: true } },
-      },
-    });
+    await restringiPerDecisioneERischio(req, where, decisione, rischio_silenzio);
 
-    // Stessi due filtri che la lista applica dopo la query, qui su tutto
-    // l'insieme invece che sulla sola pagina.
-    const now = new Date();
-    let righe = pratiche;
-    if (rischio_silenzio === 'true') {
-      righe = righe.filter(p => {
-        if (p.stato !== 'IN_ATTESA_DECISIONE' || !p.data_scadenza) return false;
-        const g = diffDays(p.data_scadenza, now);
-        return g >= 31 && g <= 50;
-      });
-    }
-    if (decisione) {
-      righe = righe.filter(p => (p.decisioni[0]?.opzione_scelta ?? null) === decisione);
-    }
+    const righe = await prisma.contratto_EOL.findMany({ where, select: { id: true, stato: true } });
 
     res.json({ ids: righe.map(p => ({ id: p.id, stato: p.stato })), total: righe.length });
   } catch (err) {
@@ -138,6 +161,8 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
       if (data_scadenza_to) where.data_scadenza.lte = new Date(data_scadenza_to);
     }
 
+    await restringiPerDecisioneERischio(req, where, decisione, rischio_silenzio);
+
     const allowedSort = ['updated_at', 'data_scadenza', 'contratto_nsm_id', 'stato', 'created_at'];
     const orderField = allowedSort.includes(sortBy) ? sortBy : 'updated_at';
     const orderDir = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -158,7 +183,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     ]);
 
     const now = new Date();
-    let items = pratiche.map(p => {
+    const items = pratiche.map(p => {
       const giorni_a_scadenza = p.data_scadenza ? diffDays(p.data_scadenza, now) : null;
       return {
         id: p.id,
@@ -181,14 +206,6 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
         note_anteprima: p.note ? p.note.trim().slice(0, 200) : null,
       };
     });
-
-    if (rischio_silenzio === 'true') {
-      items = items.filter(p => p.stato === 'IN_ATTESA_DECISIONE' && p.giorni_a_scadenza !== null && p.giorni_a_scadenza >= 31 && p.giorni_a_scadenza <= 50);
-    }
-
-    if (decisione) {
-      items = items.filter(p => p.decisione === decisione);
-    }
 
     res.json({ items, total, page: Number(page), pageSize: Number(pageSize) });
   } catch (err) {
