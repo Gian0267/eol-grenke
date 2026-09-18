@@ -166,6 +166,43 @@ function nuovoClient(casella: CasellaMonitor): ImapFlow {
   });
 }
 
+/**
+ * Ripesca dalla casella il corpo di una mail gia' segnalata, per le
+ * segnalazioni raccolte quando salvavamo solo i primi 300 caratteri.
+ *
+ * Sempre in sola lettura, come tutto il monitor. Puo' non trovare nulla: la
+ * casella e' condivisa con delle persone, e la mail potrebbe essere stata
+ * spostata o cancellata. In quel caso si dice, invece di mostrare un vuoto.
+ */
+export async function scaricaCorpo(casellaUser: string | null, uid: number): Promise<string | null> {
+  const caselle = await getCaselle();
+  const casella = casellaUser
+    ? caselle.find(c => c.user.toLowerCase() === casellaUser.toLowerCase())
+    : caselle[0];
+  if (!casella) return null;
+
+  const client = nuovoClient(casella);
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX', { readOnly: true });
+    try {
+      const { content } = await client.download(String(uid), undefined, { uid: true });
+      const chunks: Buffer[] = [];
+      for await (const chunk of content) chunks.push(chunk as Buffer);
+      const parsed = await simpleParser(Buffer.concat(chunks));
+      const corpo = parsed.text || (parsed.html ? stripHtml(String(parsed.html)) : '');
+      return corpo || null;
+    } finally {
+      lock.release();
+    }
+  } catch (err) {
+    console.error(`[Monitor] Corpo non recuperabile (uid ${uid} su ${casella.user}):`, err instanceof Error ? err.message : err);
+    return null;
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 export interface MonitorPollResult {
   eseguito: boolean;
   motivo?: string;
@@ -255,6 +292,9 @@ async function pollCasella(casella: CasellaMonitor, keywords: string[], result: 
               subject: c.subject,
               received_at: c.date,
               snippet: corpo.slice(0, 300),
+              // Tetto prudenziale: una mail con un preventivo incollato dentro
+              // puo' essere enorme, e la riga finisce in ogni elenco.
+              corpo_testo: corpo.slice(0, 100_000),
               matched_keywords: JSON.stringify(matched),
               status: 'NEW',
               casella: casella.user,

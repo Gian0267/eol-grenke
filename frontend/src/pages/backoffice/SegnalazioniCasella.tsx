@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, Loader2, CheckCircle2, Search, Trash2 } from 'lucide-react';
+import { Inbox, Loader2, CheckCircle2, Search, Trash2, X, Mail } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 interface Segnalazione {
@@ -14,6 +14,13 @@ interface Segnalazione {
   status: 'NEW' | 'NOTIFIED' | 'HANDLED';
   casella: string | null;
   contratto: { id: string; contratto_nsm: string; data_scadenza: string | null } | null;
+}
+
+interface CorpoMail {
+  corpo: string | null;
+  origine: 'archivio' | 'casella' | 'non_recuperabile';
+  messaggio?: string;
+  snippet?: string;
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -42,6 +49,29 @@ export default function SegnalazioniCasella() {
   const [dataFrom, setDataFrom] = useState('');
   const [dataTo, setDataTo] = useState('');
   const [marking, setMarking] = useState<string | null>(null);
+  // Lettura della mail per intero
+  const [aperta, setAperta] = useState<Segnalazione | null>(null);
+  const [corpo, setCorpo] = useState<CorpoMail | null>(null);
+  const [caricandoCorpo, setCaricandoCorpo] = useState(false);
+
+  async function apri(m: Segnalazione) {
+    setAperta(m);
+    setCorpo(null);
+    setCaricandoCorpo(true);
+    try {
+      const res = await fetch(`/api/backoffice/segnalazioni-casella/${m.id}/corpo`, {
+        credentials: 'include',
+        headers: headers(),
+      });
+      if (!res.ok) throw new Error();
+      setCorpo(await res.json());
+    } catch {
+      toast.error('Non sono riuscito a caricare il testo della mail');
+      setCorpo({ corpo: null, origine: 'non_recuperabile', snippet: m.snippet });
+    } finally {
+      setCaricandoCorpo(false);
+    }
+  }
   const pageSize = 25;
 
   const headers = (): HeadersInit => {
@@ -200,8 +230,14 @@ export default function SegnalazioniCasella() {
                       <span className="text-xs text-stone truncate block" title={m.casella ?? undefined}>{m.casella ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3 max-w-[320px]">
-                      <p className="font-medium text-graphite truncate" title={m.subject}>{m.subject}</p>
-                      <p className="text-xs text-stone truncate" title={m.snippet}>{m.snippet}</p>
+                      <button
+                        onClick={() => apri(m)}
+                        className="text-left w-full group"
+                        title="Apri la mail per intero"
+                      >
+                        <p className="font-medium text-graphite truncate group-hover:text-flex group-hover:underline">{m.subject}</p>
+                        <p className="text-xs text-stone truncate">{m.snippet}</p>
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1 max-w-[180px]">
@@ -260,6 +296,77 @@ export default function SegnalazioniCasella() {
             <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-paper">Precedente</button>
             <span>Pagina {page} di {totPagine}</span>
             <button disabled={page >= totPagine} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-paper">Successiva</button>
+          </div>
+        </div>
+      )}
+
+      {/* Lettura della mail per intero: fino al 18/09/2026 in elenco c'erano
+          solo i primi 300 caratteri, e le risposte dei clienti finivano
+          tagliate a meta' frase. */}
+      {aperta && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" onClick={() => setAperta(null)}>
+          <div
+            className="bg-card rounded-xl border border-border w-full max-w-3xl max-h-[85vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-border flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-graphite break-words">{aperta.subject}</h3>
+                <p className="text-xs text-stone mt-1 break-all">
+                  Da <strong>{aperta.from_name || aperta.from_address}</strong>
+                  {aperta.from_name && ` <${aperta.from_address}>`}
+                  {' — '}
+                  {new Date(aperta.received_at).toLocaleString('it-IT')}
+                  {aperta.casella && ` — ricevuta su ${aperta.casella}`}
+                </p>
+              </div>
+              <button onClick={() => setAperta(null)} className="text-stone hover:text-graphite shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 overflow-y-auto">
+              {caricandoCorpo ? (
+                <div className="flex items-center gap-2 text-sm text-stone">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carico il testo…
+                </div>
+              ) : corpo?.corpo ? (
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm text-graphite leading-relaxed">
+                  {corpo.corpo}
+                </pre>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex gap-2 items-start bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
+                    <Mail className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p>{corpo?.messaggio || 'Testo completo non disponibile.'}</p>
+                  </div>
+                  {(corpo?.snippet || aperta.snippet) && (
+                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-stone leading-relaxed">
+                      {corpo?.snippet || aperta.snippet}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-3 border-t border-border flex items-center justify-between gap-3">
+              <span className="text-xs text-stone">
+                {corpo?.origine === 'casella' && 'Testo ripescato dalla casella e ora conservato.'}
+              </span>
+              <div className="flex gap-2">
+                {aperta.contratto && (
+                  <Link
+                    to={`/backoffice/pratiche/${aperta.contratto.id}`}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-paper"
+                  >
+                    Apri la pratica
+                  </Link>
+                )}
+                <button onClick={() => setAperta(null)} className="px-4 py-1.5 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark">
+                  Chiudi
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

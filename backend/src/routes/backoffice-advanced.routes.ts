@@ -978,6 +978,48 @@ router.get('/segnalazioni-casella', async (req: AuthenticatedRequest, res: Respo
   }
 });
 
+// GET /api/backoffice/segnalazioni-casella/:id/corpo — testo completo della mail
+//
+// Fino al 18/09/2026 salvavamo solo i primi 300 caratteri, e le risposte dei
+// clienti restavano tagliate a meta' frase. Ora il corpo si salva all'arrivo;
+// per le segnalazioni piu' vecchie si ripesca dalla casella alla prima
+// apertura e da li' in poi resta a database.
+router.get('/segnalazioni-casella/:id/corpo', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const m = await prisma.monitoredEmail.findUnique({ where: { id: req.params.id as string } });
+    if (!m) { res.status(404).json({ error: 'Segnalazione non trovata' }); return; }
+
+    if (m.corpo_testo) {
+      res.json({ corpo: m.corpo_testo, origine: 'archivio' });
+      return;
+    }
+
+    const { scaricaCorpo } = await import('../services/mail-monitor.service.js');
+    const corpo = await scaricaCorpo(m.casella, m.imap_uid);
+
+    if (!corpo) {
+      // Nessun testo da mostrare: meglio dirlo che lasciare un riquadro vuoto.
+      res.json({
+        corpo: null,
+        origine: 'non_recuperabile',
+        messaggio: 'Il testo completo non e\' piu\' recuperabile dalla casella (la mail potrebbe essere stata spostata o cancellata). Resta disponibile l\'anteprima.',
+        snippet: m.snippet,
+      });
+      return;
+    }
+
+    await prisma.monitoredEmail.update({
+      where: { id: m.id },
+      data: { corpo_testo: corpo.slice(0, 100_000) },
+    });
+
+    res.json({ corpo: corpo.slice(0, 100_000), origine: 'casella' });
+  } catch (err) {
+    console.error('[segnalazioni-casella/corpo] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/segnalazioni-casella/:id/gestita — status → HANDLED (audit)
 router.post('/segnalazioni-casella/:id/gestita', async (req: AuthenticatedRequest, res: Response) => {
   try {

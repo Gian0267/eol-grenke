@@ -292,6 +292,10 @@ model MonitoredEmail {
   subject          String
   received_at      DateTime
   snippet          String // primi 300 caratteri del corpo testuale
+  // Corpo completo. Nullable perche' le segnalazioni raccolte prima del
+  // 18/09/2026 hanno solo lo snippet: per quelle il corpo si ripesca dalla
+  // casella su richiesta, e da quel momento resta salvato qui.
+  corpo_testo      String?
   matched_keywords String // JSON array delle keyword trovate
   status           String         @default("NEW") // NEW | NOTIFIED | HANDLED
   casella          String? // casella su cui la mail e' stata intercettata (null = monitor a casella singola)
