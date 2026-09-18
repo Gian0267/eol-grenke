@@ -743,25 +743,17 @@ router.post(
         opzione: 'RIACQUISTO', decisione_id: decisione.id, ip,
       });
 
-      // Determina se il pagamento è immediato o differito (T-26)
-      const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
-      const oggi = new Date();
-      const scadenza = new Date(contratto.data_scadenza!);
-      const diffMs = scadenza.getTime() - oggi.getTime();
-      const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-
-      if (giorniAllaScadenza <= giorniPagamento) {
-        // Pagamento immediato: siamo già entro T-21
+      // Pagamento subito o alla data prevista (T-26, o prima se il backoffice
+      // ha gia' mandato la richiesta)
+      const finestra = await finestraPagamentoAperta(contratto);
+      if (finestra.aperta) {
         res.json({ success: true, decisione_id: decisione.id, pagamento_immediato: true });
       } else {
-        // Pagamento differito: invieremo le istruzioni di pagamento a T-23
-        const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
         res.json({
           success: true,
           decisione_id: decisione.id,
           pagamento_differito: true,
-          data_pagamento: dataPagamento.toISOString(),
+          data_pagamento: finestra.data_apertura?.toISOString(),
         });
       }
     } catch (err) {
@@ -770,6 +762,25 @@ router.post(
     }
   },
 );
+
+/**
+ * La finestra di pagamento e' aperta?
+ *
+ * Normalmente si apre al T-26. Ma se il backoffice ha mandato la richiesta
+ * prima, deve essere aperta comunque: il cliente ha in mano una mail che gli
+ * chiede di pagare, e trovarsi scritto "e' troppo presto" sarebbe assurdo.
+ */
+async function finestraPagamentoAperta(contratto: { data_scadenza: Date | null; pagamento_anticipato_il: Date | null }): Promise<{ aperta: boolean; data_apertura: Date | null }> {
+  if (contratto.pagamento_anticipato_il) return { aperta: true, data_apertura: contratto.pagamento_anticipato_il };
+  if (!contratto.data_scadenza) return { aperta: false, data_apertura: null };
+
+  const configService = await import('../services/config.service.js');
+  const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
+  const scadenza = new Date(contratto.data_scadenza);
+  const giorniAllaScadenza = Math.ceil((scadenza.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  const dataApertura = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
+  return { aperta: giorniAllaScadenza <= giorniPagamento, data_apertura: dataApertura };
+}
 
 // GET /api/cliente/decisione/riacquisto/stato — controlla se il pagamento è disponibile
 router.get(
@@ -811,23 +822,13 @@ router.get(
         return;
       }
 
-      const configService = await import('../services/config.service.js');
-      const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
-      const oggi = new Date();
-      const scadenza = new Date(contratto.data_scadenza!);
-      const diffMs = scadenza.getTime() - oggi.getTime();
-      const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-
-      if (giorniAllaScadenza <= giorniPagamento) {
-        res.json({
-          stato: 'PAGAMENTO_DISPONIBILE',
-          decisione_id: decisioneRiacquisto.id,
-        });
+      const finestra = await finestraPagamentoAperta(contratto);
+      if (finestra.aperta) {
+        res.json({ stato: 'PAGAMENTO_DISPONIBILE', decisione_id: decisioneRiacquisto.id });
       } else {
-        const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
         res.json({
           stato: 'PAGAMENTO_DIFFERITO',
-          data_pagamento: dataPagamento.toISOString(),
+          data_pagamento: finestra.data_apertura?.toISOString(),
           decisione_id: decisioneRiacquisto.id,
         });
       }
@@ -1560,19 +1561,10 @@ router.post(
       // Se il cliente tiene i beni: gestisci pagamento differito (come per riacquisto)
       let pagamento_info: { pagamento_differito?: boolean; data_pagamento?: string; pagamento_immediato?: boolean } = {};
       if (scelta_beni === 'TENGO') {
-        const configService = await import('../services/config.service.js');
-        const giorniPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
-        const oggi = new Date();
-        const scadenza = new Date(contratto.data_scadenza!);
-        const diffMs = scadenza.getTime() - oggi.getTime();
-        const giorniAllaScadenza = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-
-        if (giorniAllaScadenza <= giorniPagamento) {
-          pagamento_info = { pagamento_immediato: true };
-        } else {
-          const dataPagamento = new Date(scadenza.getTime() - giorniPagamento * 24 * 60 * 60 * 1000);
-          pagamento_info = { pagamento_differito: true, data_pagamento: dataPagamento.toISOString() };
-        }
+        const finestra = await finestraPagamentoAperta(contratto);
+        pagamento_info = finestra.aperta
+          ? { pagamento_immediato: true }
+          : { pagamento_differito: true, data_pagamento: finestra.data_apertura?.toISOString() };
       }
 
       await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {

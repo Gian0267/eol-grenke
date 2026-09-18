@@ -47,6 +47,10 @@ model Contratto_EOL {
   // notifiche.
   agenzia               String?
   agente                String?
+  // Quando il backoffice ha chiesto il pagamento prima del T-26. Da quel
+  // momento il cliente puo' pagare: altrimenti riceverebbe una mail che gli
+  // chiede di pagare e una pagina che gli risponde "e' troppo presto".
+  pagamento_anticipato_il DateTime?
   // Appunti del backoffice sulla pratica: esito di una telefonata, un accordo
   // preso, un promemoria. Testo libero, sovrascritto a ogni salvataggio — la
   // versione precedente resta nell'audit.

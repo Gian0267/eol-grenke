@@ -749,12 +749,24 @@ export async function inviaRichiestaPagamento(
     };
   }
 
+  // Chiedere il pagamento vuol dire renderlo possibile: senza questo il cliente
+  // riceve una mail che lo invita a pagare e trova una pagina che gli dice che
+  // e' troppo presto. Si segna solo la prima volta, per conservare la data in
+  // cui la finestra e' stata davvero aperta.
+  if (!pratica.pagamento_anticipato_il) {
+    await prisma.contratto_EOL.update({
+      where: { id: pratica.id },
+      data: { pagamento_anticipato_il: new Date() },
+    });
+  }
+
   await inviaInvitoPagamento(pratica, { promemoria: opts?.promemoria });
 
   await registraEvento(pratica.id, 'BACKOFFICE', opts?.operatoreId ?? 'system', 'MODIFICA_BACKOFFICE', {
     sotto_azione: opts?.promemoria ? 'PROMEMORIA_PAGAMENTO_MANUALE' : 'INVITO_PAGAMENTO_MANUALE',
     ambiente: pratica.ambiente,
     destinatario: pratica.cliente.email,
+    finestra_pagamento_aperta: true,
   });
 
   return { ok: true, ambiente: pratica.ambiente };
