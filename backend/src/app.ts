@@ -21,6 +21,7 @@ import { startSchedulerCron, runScheduler } from './services/scheduler.service.j
 import adminRoutes from './routes/admin.routes.js';
 import impostazioniRoutes from './routes/impostazioni.routes.js';
 import codiciScontoRoutes from './routes/codici-sconto.routes.js';
+import agenzieRoutes from './routes/agenzie.routes.js';
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? process.env.PORT ?? 3001);
@@ -116,6 +117,7 @@ app.use('/api/backoffice/dashboard', backofficeDashboardRoutes);
 app.use('/api/backoffice', backofficeAdvancedRoutes);
 app.use('/api/backoffice', codiciScontoRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/backoffice/agenzie', agenzieRoutes);
 app.use('/api/backoffice/impostazioni', impostazioniRoutes);
 app.use('/api/clienti', clientRoutes);
 app.use('/api/cliente', clienteRoutes);

@@ -12,6 +12,7 @@ import GestioneOutlier from './pages/backoffice/GestioneOutlier'
 import Reportistica from './pages/backoffice/Reportistica'
 import EsportaListaGrenke from './pages/backoffice/EsportaListaGrenke'
 import PropostaNuovoNoleggio from './pages/backoffice/PropostaNuovoNoleggio'
+import Agenzie from './pages/backoffice/Agenzie'
 import Impostazioni from './pages/backoffice/Impostazioni'
 import GestioneUtenti from './pages/backoffice/GestioneUtenti'
 import CodiciSconto from './pages/backoffice/CodiciSconto'
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="reportistica" element={<Reportistica />} />
           <Route path="export-grenke" element={<EsportaListaGrenke />} />
           <Route path="proposta-noleggio" element={<PropostaNuovoNoleggio />} />
+          <Route path="agenzie" element={<Agenzie />} />
           <Route path="impostazioni" element={<Impostazioni />} />
           <Route path="utenti" element={<GestioneUtenti />} />
         </Route>

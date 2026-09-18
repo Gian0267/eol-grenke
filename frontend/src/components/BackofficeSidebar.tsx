@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
   BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings, Users, Mail, MailCheck, Inbox,
-  FlaskConical, Loader2, Tag, Sparkles,
+  FlaskConical, Loader2, Tag, Sparkles, Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAmbiente, setAmbiente, puoVedereTest } from '../lib/ambiente';
@@ -124,6 +124,7 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/segnalazioni-casella', label: 'Segnalazioni info@', icon: Inbox, visible: isInternoOrAdmin },
     { to: '/backoffice/codici-sconto', label: 'Codici Sconto', icon: Tag, visible: isInternoOrAdmin },
     { to: '/backoffice/proposta-noleggio', label: 'Proposta noleggio', icon: Sparkles, visible: isInternoOrAdmin },
+    { to: '/backoffice/agenzie', label: 'Agenzie', icon: Building2, visible: isInternoOrAdmin },
     { to: '/backoffice/import', label: 'Importa contratti', icon: Upload, visible: isInternoOrAdmin },
     { to: '/backoffice/outlier', label: 'Outlier', icon: AlertTriangle, visible: isInternoOrAdmin },
     { to: '/backoffice/reportistica', label: 'Reportistica', icon: BarChart3, visible: true },

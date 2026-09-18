@@ -7,7 +7,7 @@ import { emailProviderPerAmbiente, pecProviderPerAmbiente } from '../providers/n
 import { registraEvento } from './audit.service.js';
 import { prisma } from '../lib/db.js';
 import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
-import { origineCorrisponde } from '../lib/origine.js';
+import { origineCorrisponde, normalizzaOrigine } from '../lib/origine.js';
 import * as configService from './config.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -307,10 +307,42 @@ export async function inviaPropostaNuovoNoleggio(
     return result;
   }
 
-  const linkNuovoNoleggio = await configService.getTesto(
-    'iol.link_nuovo_noleggio',
-    'https://app.noleggiosumisura.it/start',
-  );
+  // Quale link mettere nella mail. Porta l'identificativo dell'agente, quindi
+  // il contatto che ne nasce viene attribuito a qualcuno: sbagliarlo sposta una
+  // provvigione. Per questo non esiste un link di riserva — se non si sa quale
+  // usare, non si manda.
+  const dicitureIolLink = (await configService.getTesto('iol.diciture_origine', 'Italiaonline\nIOL'))
+    .split(/[\n,;]+/).map(d => d.trim()).filter(Boolean);
+  let linkNuovoNoleggio: string;
+
+  if (origineCorrisponde(contratto.origine, dicitureIolLink)) {
+    // Italiaonline ha un suo link unico, impostato a parte.
+    linkNuovoNoleggio = await configService.getTesto('iol.link_nuovo_noleggio', '');
+    if (!linkNuovoNoleggio) {
+      result.errori.push('Manca il link di registrazione per i clienti Italiaonline (Impostazioni)');
+      return result;
+    }
+  } else {
+    if (!contratto.agenzia) {
+      result.errori.push('La pratica non indica un\'agenzia: impossibile scegliere il link di registrazione');
+      return result;
+    }
+    // Il legame con l'anagrafica e' il nome scritto nell'export NSM, non una
+    // chiave: confronto tollerante, come per le origini.
+    const agenzie = await prisma.agenzia.findMany({ select: { nome: true, link_onboarding: true } });
+    const cercata = normalizzaOrigine(contratto.agenzia);
+    const trovata = agenzie.find(a => normalizzaOrigine(a.nome) === cercata);
+
+    if (!trovata) {
+      result.errori.push(`L'agenzia "${contratto.agenzia}" non e' in anagrafica: aggiungila e indica il suo link`);
+      return result;
+    }
+    if (!trovata.link_onboarding) {
+      result.errori.push(`L'agenzia "${trovata.nome}" non ha ancora un link di registrazione`);
+      return result;
+    }
+    linkNuovoNoleggio = trovata.link_onboarding;
+  }
 
   // Il richiamo alla decisione compare solo a chi non ha ancora scelto.
   const decisioneMancante = contratto.decisioni.length === 0;
