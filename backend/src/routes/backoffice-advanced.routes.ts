@@ -164,6 +164,11 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
         decisione: p.decisioni[0]?.opzione_scelta || null,
         giorni_a_scadenza,
         origine: p.origine,
+        agenzia: p.agenzia,
+        // Nota: in elenco serve solo sapere che c'e' (colora l'occhio) e poterla
+        // leggere passandoci sopra. Il testo intero sta nella scheda.
+        ha_note: Boolean(p.note && p.note.trim()),
+        note_anteprima: p.note ? p.note.trim().slice(0, 200) : null,
       };
     });
 
@@ -496,6 +501,46 @@ router.post('/pratiche-dettaglio/:id/proposta-noleggio', async (req: Authenticat
     res.json({ success: true, messaggio: 'Proposta di nuovo noleggio inviata' });
   } catch (err) {
     console.error('[proposta-noleggio singola] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/note — appunti del backoffice.
+//
+// Campo unico, sovrascritto: chi scrive si aspetta di ritrovare cio' che ha
+// lasciato, non un diario che cresce da solo. La versione precedente finisce
+// nell'audit, quindi nulla va perso davvero.
+router.post('/pratiche-dettaglio/:id/note', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { note } = req.body as { note?: unknown };
+    const id = req.params.id as string;
+
+    const c = await prisma.contratto_EOL.findUnique({ where: { id }, select: { note: true } });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+
+    const testo = typeof note === 'string' ? note.trim() : '';
+    if (testo.length > 5000) {
+      res.status(400).json({ error: 'Nota troppo lunga (massimo 5000 caratteri)' });
+      return;
+    }
+    const nuovo = testo || null;
+
+    if (nuovo === c.note) {
+      res.json({ success: true, note: nuovo, invariata: true });
+      return;
+    }
+
+    await prisma.contratto_EOL.update({ where: { id }, data: { note: nuovo } });
+
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: nuovo ? 'NOTE_AGGIORNATE' : 'NOTE_CANCELLATE',
+      note_precedenti: c.note,
+      note: nuovo,
+    });
+
+    res.json({ success: true, note: nuovo });
+  } catch (err) {
+    console.error('[note] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
   }
 });

@@ -25,6 +25,7 @@ import {
   Euro,
   Building2,
   Sparkles,
+  Save,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -134,6 +135,7 @@ interface Pratica {
   agenzia: string | null;
   agente: string | null;
   cliente_iol: boolean;
+  note: string | null;
   proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
@@ -367,11 +369,36 @@ export default function PraticaDettaglio() {
 
   // Modifica contatti cliente (email / PEC)
   // Rete commerciale (agenzia e agente dell'export NSM)
+  // Appunti sulla pratica
+  const [note, setNote] = useState('');
+  const [noteCaricate, setNoteCaricate] = useState(false);
+  const [salvandoNote, setSalvandoNote] = useState(false);
+
   const [retAgenzia, setRetAgenzia] = useState('');
   const [retAgente, setRetAgente] = useState('');
 
   // Prezzo di riacquisto su misura (solo prima della comunicazione iniziale)
   const [prezzoSuMisura, setPrezzoSuMisura] = useState('');
+
+  async function salvaNote() {
+    setSalvandoNote(true);
+    try {
+      const res = await fetch(`/api/backoffice/pratiche-dettaglio/${id}/note`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: getHeaders(),
+        body: JSON.stringify({ note }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      toast.success(note.trim() ? 'Nota salvata' : 'Nota rimossa');
+      await loadPratica();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Errore nel salvataggio');
+    } finally {
+      setSalvandoNote(false);
+    }
+  }
 
   const [contattiEmail, setContattiEmail] = useState('');
   const [contattiPec, setContattiPec] = useState('');
@@ -402,6 +429,10 @@ export default function PraticaDettaglio() {
       if (!res.ok) throw new Error(await res.text());
       const data: Pratica = await res.json();
       setPratica(data);
+      // La casella di testo si allinea al salvato, ma non mentre l'utente sta
+      // scrivendo: un ricaricamento non deve cancellargli la nota a meta'.
+      setNote((precedente) => (noteCaricate ? precedente : data.note ?? ''));
+      setNoteCaricate(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore sconosciuto';
       setError(msg);
@@ -659,7 +690,17 @@ export default function PraticaDettaglio() {
           </div>
 
           {/* Tab content */}
-          {tab === 'panoramica' && <TabPanoramica pratica={pratica} beni={beni} badge={badge} />}
+          {tab === 'panoramica' && (
+            <TabPanoramica
+              pratica={pratica}
+              beni={beni}
+              badge={badge}
+              note={note}
+              setNote={setNote}
+              salvaNote={salvaNote}
+              salvandoNote={salvandoNote}
+            />
+          )}
           {tab === 'timeline' && <TabTimeline timeline={pratica.timeline} />}
           {tab === 'richieste' && (
             <TabRichieste
@@ -1425,10 +1466,18 @@ function TabPanoramica({
   pratica,
   beni,
   badge,
+  note,
+  setNote,
+  salvaNote,
+  salvandoNote,
 }: {
   pratica: Pratica;
   beni: string[];
   badge: { bg: string; label: string };
+  note: string;
+  setNote: (v: string) => void;
+  salvaNote: () => void;
+  salvandoNote: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1514,6 +1563,36 @@ function TabPanoramica({
           </div>
         </div>
       )}
+
+      {/* Appunti: esito di una telefonata, un accordo preso, un promemoria.
+          In cima perche' e' cio' che serve sapere prima di richiamare. */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-graphite">Note</h3>
+          {note !== (pratica.note ?? '') && (
+            <button
+              onClick={salvaNote}
+              disabled={salvandoNote}
+              className="px-3 py-1.5 text-xs rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {salvandoNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Salva
+            </button>
+          )}
+        </div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={4}
+          maxLength={5000}
+          placeholder="Esito della telefonata, accordi presi, cosa fare al prossimo contatto…"
+          className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 resize-y"
+        />
+        <p className="text-xs text-stone mt-2">
+          Le vedono tutti quelli che aprono la pratica, e nella lista l&apos;icona diventa gialla.
+          Ogni modifica resta nel registro attivit&agrave;.
+        </p>
+      </div>
 
       {/* Contratto */}
       <div className="bg-card rounded-xl border border-border p-5">

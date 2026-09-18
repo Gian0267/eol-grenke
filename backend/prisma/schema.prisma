@@ -47,6 +47,10 @@ model Contratto_EOL {
   // notifiche.
   agenzia               String?
   agente                String?
+  // Appunti del backoffice sulla pratica: esito di una telefonata, un accordo
+  // preso, un promemoria. Testo libero, sovrascritto a ogni salvataggio — la
+  // versione precedente resta nell'audit.
+  note                  String?
   agente_originario_id  String?
   agente_originario     Utente_NSM?          @relation("AgenteOriginario", fields: [agente_originario_id], references: [id])
   agente_assegnato_id   String?

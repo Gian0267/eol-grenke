@@ -49,6 +49,9 @@ interface PraticaItem {
   decisione: string | null;
   giorni_a_scadenza: number | null;
   origine: string | null;
+  agenzia: string | null;
+  ha_note: boolean;
+  note_anteprima: string | null;
 }
 
 interface PaginatedResponse {
@@ -769,10 +772,17 @@ export default function ListaPratiche() {
                       />
                     </td>
                     <td className="px-3 py-3 text-center">
+                      {/* Occhio giallo = qualcuno ha lasciato una nota. Il
+                          testo compare passandoci sopra, cosi' non serve
+                          aprire la pratica per sapere cosa c'e' scritto. */}
                       <Link
                         to={`/backoffice/pratiche/${p.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone hover:text-graphite hover:bg-paper/60 transition-colors"
-                        title="Dettaglio pratica"
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                          p.ha_note
+                            ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                            : 'text-stone hover:text-graphite hover:bg-paper/60'
+                        }`}
+                        title={p.ha_note ? `Nota: ${p.note_anteprima}` : 'Dettaglio pratica'}
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
