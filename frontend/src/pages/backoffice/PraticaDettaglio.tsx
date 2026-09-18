@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Euro,
   Building2,
+  Sparkles,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -132,6 +133,8 @@ interface Pratica {
   origine: string;
   agenzia: string | null;
   agente: string | null;
+  cliente_iol: boolean;
+  proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
   codice_sconto: CodiceScontoInfo | null;
@@ -679,6 +682,13 @@ export default function PraticaDettaglio() {
                   label="Reinvia comunicazione"
                   onClick={() => openModal('reinvia')}
                 />
+                {['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<Sparkles className="w-4 h-4" />}
+                    label="Proposta nuovo noleggio"
+                    onClick={() => openModal('proposta-noleggio')}
+                  />
+                )}
                 <ActionBtn
                   icon={<UserCog className="w-4 h-4" />}
                   label="Cambia agente"
@@ -906,6 +916,56 @@ export default function PraticaDettaglio() {
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
           </button>
+        </div>
+      </Modal>
+
+      {/* Proposta di nuovo noleggio */}
+      <Modal open={modalOpen === 'proposta-noleggio'} title="Proposta di nuovo noleggio" onClose={() => setModalOpen(null)}>
+        {pratica.proposta_noleggio_inviata ? (
+          <p className="text-sm text-stone mb-5">
+            A <strong>{pratica.cliente.ragione_sociale}</strong> la proposta &egrave; gi&agrave; stata inviata il{' '}
+            <strong>{formatDate(pratica.proposta_noleggio_inviata)}</strong>. Si manda una volta sola per cliente:
+            un secondo invio verr&agrave; rifiutato.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-stone mb-4">
+              Mandiamo a <strong>{pratica.cliente.ragione_sociale}</strong> ({pratica.cliente.email}) la mail che
+              propone di attivare un nuovo noleggio, indipendentemente da come decider&agrave; per il contratto in
+              scadenza. Solo email, niente PEC. Lo stato della pratica non cambia.
+            </p>
+            {pratica.cliente_iol && (
+              <div className="mb-4 flex gap-2 items-start rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-900">
+                  Questo cliente arriva da <strong>Italiaonline</strong>. Verifica di avere la loro autorizzazione a
+                  proporre nuovi noleggi ai loro clienti: &egrave; il motivo per cui il riquadro era stato tolto dalla
+                  comunicazione iniziale.
+                </p>
+              </div>
+            )}
+            {!pratica.cliente.email && (
+              <p className="text-sm text-red-600 mb-4">Il cliente non ha un indirizzo email: l&apos;invio non e&apos; possibile.</p>
+            )}
+          </>
+        )}
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            {pratica.proposta_noleggio_inviata ? 'Chiudi' : 'Annulla'}
+          </button>
+          {!pratica.proposta_noleggio_inviata && (
+            <button
+              disabled={actionLoading || !pratica.cliente.email}
+              onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/proposta-noleggio`)}
+              className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+            >
+              {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Invia la proposta
+            </button>
+          )}
         </div>
       </Modal>
 

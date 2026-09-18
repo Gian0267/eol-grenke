@@ -276,8 +276,25 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
 
     const codiceSconto = await getCodicePerContratto(pratica.id);
 
+    // Proposta di nuovo noleggio: serve sapere se il cliente arriva da
+    // Italiaonline (il riconoscimento e' tollerante, non un confronto esatto:
+    // vedi lib/origine.ts) e se gliela abbiamo gia' mandata.
+    const dicitureIol = (await configService.getTesto('iol.diciture_origine', 'Italiaonline\nIOL'))
+      .split(/[\n,;]+/).map(d => d.trim()).filter(Boolean);
+    const propostaInviata = await prisma.comunicazione.findFirst({
+      where: {
+        tipo: TIPO_PROPOSTA_NOLEGGIO,
+        esito_invio: 'INVIATO',
+        contratto_eol: { cliente_id: pratica.cliente_id },
+      },
+      select: { data_invio: true },
+      orderBy: { data_invio: 'desc' },
+    });
+
     res.json({
       ...pratica,
+      cliente_iol: origineCorrisponde(pratica.origine, dicitureIol),
+      proposta_noleggio_inviata: propostaInviata?.data_invio ?? null,
       canone_mensile: Number(pratica.canone_mensile),
       monte_canoni: Number(pratica.monte_canoni),
       pricing_riacquisto: Number(pratica.pricing_riacquisto),
@@ -417,6 +434,37 @@ router.post('/pratiche-dettaglio/:id/modifica-deadline', async (req: Authenticat
     res.json({ success: true, messaggio: 'Deadline modificata' });
   } catch (err) {
     console.error('[modifica-deadline] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/proposta-noleggio — manda a
+// questo cliente la proposta di nuovo noleggio.
+//
+// Stessa mail della campagna massiva, mandata una pratica per volta: serve
+// quando un cliente lo chiede al telefono e non ha senso aspettare un invio di
+// gruppo. Non filtra per origine, a differenza della campagna: qui l'operatore
+// ha davanti il cliente e decide lui. La regola "una sola per cliente" resta,
+// ed e' il servizio a farla rispettare.
+router.post('/pratiche-dettaglio/:id/proposta-noleggio', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const operatoreId = (req.user as any)?.id as string | undefined;
+    const r = await inviaPropostaNuovoNoleggio(req.params.id as string, operatoreId);
+
+    if (!r.success) {
+      res.status(400).json({ error: r.errori.join('; ') || 'Invio non riuscito' });
+      return;
+    }
+
+    res.json({ success: true, messaggio: 'Proposta di nuovo noleggio inviata' });
+  } catch (err) {
+    console.error('[proposta-noleggio singola] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });
   }
 });
