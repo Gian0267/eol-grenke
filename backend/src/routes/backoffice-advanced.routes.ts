@@ -1059,6 +1059,55 @@ router.post('/segnalazioni-casella/:id/gestita', async (req: AuthenticatedReques
   }
 });
 
+// POST /api/backoffice/segnalazioni-casella/elimina — eliminazione di piu'
+// segnalazioni in un colpo solo.
+//
+// Sta PRIMA della rotta con :id per leggibilita', anche se i due percorsi non
+// si sovrappongono (uno ha un segmento in piu'). Come per la singola, la riga
+// resta a DB con status ELIMINATA: serve alla deduplicazione, altrimenti il
+// monitor ricreerebbe la segnalazione al giro successivo. La mail nella
+// casella non viene mai toccata.
+router.post('/segnalazioni-casella/elimina', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { ids } = req.body as { ids?: unknown };
+    const lista = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
+    if (lista.length === 0) {
+      res.status(400).json({ error: 'Nessuna segnalazione selezionata' });
+      return;
+    }
+
+    const righe = await prisma.monitoredEmail.findMany({
+      where: { id: { in: lista }, status: { not: 'ELIMINATA' } },
+    });
+
+    await prisma.monitoredEmail.updateMany({
+      where: { id: { in: righe.map(r => r.id) } },
+      data: { status: 'ELIMINATA' },
+    });
+
+    // Un evento per segnalazione, non uno cumulativo: l'audit e' per pratica e
+    // ognuna puo' essere legata a un contratto diverso.
+    for (const m of righe) {
+      await registraEvento(m.contratto_eol_id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MONITOR_SEGNALAZIONE_ELIMINATA', {
+        segnalazione_id: m.id,
+        mittente: m.from_address,
+        oggetto: m.subject,
+        status_precedente: m.status,
+        in_blocco: true,
+      });
+    }
+
+    res.json({
+      success: true,
+      eliminate: righe.length,
+      gia_eliminate: lista.length - righe.length,
+    });
+  } catch (err) {
+    console.error('[segnalazioni-casella/elimina-multiple] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/segnalazioni-casella/:id/elimina — la segnalazione
 // sparisce da elenco/conteggi/digest; la riga resta a DB per la deduplicazione.
 router.post('/segnalazioni-casella/:id/elimina', async (req: AuthenticatedRequest, res: Response) => {

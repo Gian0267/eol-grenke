@@ -49,6 +49,38 @@ export default function SegnalazioniCasella() {
   const [dataFrom, setDataFrom] = useState('');
   const [dataTo, setDataTo] = useState('');
   const [marking, setMarking] = useState<string | null>(null);
+  // Selezione per l'eliminazione in blocco. Vale solo sulla pagina a video:
+  // cambiando pagina o filtro si azzera, cosi' non si cancella per sbaglio
+  // roba che non si sta guardando.
+  const [selezionate, setSelezionate] = useState<Set<string>>(new Set());
+  const [eliminandoBlocco, setEliminandoBlocco] = useState(false);
+
+  const eliminaSelezionate = async () => {
+    const ids = [...selezionate];
+    if (ids.length === 0) return;
+    if (!confirm(
+      `Eliminare ${ids.length} ${ids.length === 1 ? 'segnalazione' : 'segnalazioni'}?\n\n` +
+      'Spariranno da elenco, conteggi e digest. Le mail nelle caselle non vengono toccate.',
+    )) return;
+    setEliminandoBlocco(true);
+    try {
+      const res = await fetch('/api/backoffice/segnalazioni-casella/elimina', {
+        method: 'POST',
+        credentials: 'include',
+        headers: headers(),
+        body: JSON.stringify({ ids }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Errore');
+      toast.success(`${d.eliminate} ${d.eliminate === 1 ? 'segnalazione eliminata' : 'segnalazioni eliminate'}`);
+      setSelezionate(new Set());
+      carica();
+    } catch {
+      toast.error('Impossibile eliminare le segnalazioni selezionate');
+    } finally {
+      setEliminandoBlocco(false);
+    }
+  };
   // Lettura della mail per intero
   const [aperta, setAperta] = useState<Segnalazione | null>(null);
   const [corpo, setCorpo] = useState<CorpoMail | null>(null);
@@ -100,6 +132,7 @@ export default function SegnalazioniCasella() {
   };
 
   useEffect(carica, [page, status, keyword, dataFrom, dataTo]);
+  useEffect(() => { setSelezionate(new Set()); }, [page, status, keyword, dataFrom, dataTo]);
 
   const elimina = async (id: string, oggetto: string) => {
     if (!confirm(`Eliminare la segnalazione "${oggetto}"?\n\nSparirà da elenco, conteggi e digest (la mail nella casella non viene toccata).`)) return;
@@ -192,6 +225,27 @@ export default function SegnalazioniCasella() {
       </div>
 
       {/* Tabella */}
+      {/* Barra della selezione: compare solo quando serve, cosi' l'eliminazione
+          in blocco non sta li' a portata di clic distratto. */}
+      {selezionate.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-paper px-4 py-3">
+          <span className="text-sm text-graphite">
+            <strong>{selezionate.size}</strong> {selezionate.size === 1 ? 'segnalazione selezionata' : 'segnalazioni selezionate'}
+            <button onClick={() => setSelezionate(new Set())} className="ml-3 text-stone underline hover:text-graphite">
+              annulla
+            </button>
+          </span>
+          <button
+            onClick={eliminaSelezionate}
+            disabled={eliminandoBlocco}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-700 border border-red-300 bg-white hover:bg-red-50 disabled:opacity-50"
+          >
+            {eliminandoBlocco ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Elimina selezionate
+          </button>
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 text-stone">
@@ -206,6 +260,15 @@ export default function SegnalazioniCasella() {
             <table className="w-full text-sm">
               <thead className="bg-paper text-left text-xs uppercase tracking-wide text-stone">
                 <tr>
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && items.every(m => selezionate.has(m.id))}
+                      onChange={e => setSelezionate(e.target.checked ? new Set(items.map(m => m.id)) : new Set())}
+                      className="w-4 h-4 accent-[var(--color-flex)] cursor-pointer"
+                      title="Seleziona tutte le segnalazioni di questa pagina"
+                    />
+                  </th>
                   <th className="px-4 py-3">Data</th>
                   <th className="px-4 py-3">Mittente</th>
                   <th className="px-4 py-3">Casella</th>
@@ -218,7 +281,19 @@ export default function SegnalazioniCasella() {
               </thead>
               <tbody>
                 {items.map(m => (
-                  <tr key={m.id} className="border-t border-border hover:bg-paper align-top">
+                  <tr key={m.id} className={`border-t border-border hover:bg-paper align-top ${selezionate.has(m.id) ? 'bg-paper' : ''}`}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selezionate.has(m.id)}
+                        onChange={e => {
+                          const next = new Set(selezionate);
+                          if (e.target.checked) next.add(m.id); else next.delete(m.id);
+                          setSelezionate(next);
+                        }}
+                        className="w-4 h-4 accent-[var(--color-flex)] cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-graphite">
                       {new Date(m.received_at).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </td>
