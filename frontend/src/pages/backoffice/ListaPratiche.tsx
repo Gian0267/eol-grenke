@@ -160,6 +160,10 @@ export default function ListaPratiche() {
   const [dataScadenzaTo, setDataScadenzaTo] = useState(searchParams.get('data_scadenza_to') ?? '');
   const [origine, setOrigine] = useState(searchParams.get('origine') ?? '');
   const [agenzia, setAgenzia] = useState(searchParams.get('agenzia') ?? '');
+  // Il nome cliente si applica a invio o col pulsante Filtra, non a ogni tasto
+  // premuto: altrimenti la lista si ricarica sei volte mentre si scrive.
+  const [cliente, setCliente] = useState(searchParams.get('cliente') ?? '');
+  const [clienteInput, setClienteInput] = useState(searchParams.get('cliente') ?? '');
   const [decisione, setDecisione] = useState(searchParams.get('decisione') ?? '');
   const [rischioSilenzio, setRischioSilenzio] = useState(searchParams.get('rischio_silenzio') === 'true');
 
@@ -204,11 +208,12 @@ export default function ListaPratiche() {
       if (dataScadenzaTo) params.set('data_scadenza_to', dataScadenzaTo);
       if (origine) params.set('origine', origine);
       if (agenzia) params.set('agenzia', agenzia);
+      if (cliente.trim()) params.set('cliente', cliente.trim());
       if (decisione) params.set('decisione', decisione);
       if (rischioSilenzio) params.set('rischio_silenzio', 'true');
       return params.toString();
     },
-    [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio, page, sortBy, sortOrder],
+    [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, cliente, decisione, rischioSilenzio, page, sortBy, sortOrder],
   );
 
   /* --- Fetch pratiche --- */
@@ -291,16 +296,18 @@ export default function ListaPratiche() {
     if (dataScadenzaTo) params.set('data_scadenza_to', dataScadenzaTo);
     if (origine) params.set('origine', origine);
     if (agenzia) params.set('agenzia', agenzia);
+    if (cliente.trim()) params.set('cliente', cliente.trim());
     if (decisione) params.set('decisione', decisione);
     if (rischioSilenzio) params.set('rischio_silenzio', 'true');
     if (page > 1) params.set('page', String(page));
     if (sortBy !== 'updated_at') params.set('sortBy', sortBy);
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder);
     setSearchParams(params, { replace: true });
-  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio, page, sortBy, sortOrder, setSearchParams]);
+  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, cliente, decisione, rischioSilenzio, page, sortBy, sortOrder, setSearchParams]);
 
   /* --- Handlers --- */
   function handleFilter() {
+    setCliente(clienteInput);
     setPage(1);
   }
 
@@ -311,6 +318,8 @@ export default function ListaPratiche() {
     setDataScadenzaTo('');
     setOrigine('');
     setAgenzia('');
+    setCliente('');
+    setClienteInput('');
     setDecisione('');
     setRischioSilenzio(false);
     setSortBy('updated_at');
@@ -438,7 +447,7 @@ export default function ListaPratiche() {
   // Cambiare filtro cambia l'insieme: una selezione "tutte" non vale piu'.
   useEffect(() => {
     setSelezioneEstesa(false);
-  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio]);
+  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, cliente, decisione, rischioSilenzio]);
 
   /** Estende la selezione a tutte le pratiche del filtro, non solo alla pagina. */
   async function selezionaTutteDelFiltro() {
@@ -490,6 +499,19 @@ export default function ListaPratiche() {
       {/* ---- Filter bar ---- */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Cliente: si applica a invio o col pulsante Filtra */}
+          <div>
+            <label className="block text-xs font-medium text-stone mb-1">Cliente</label>
+            <input
+              type="text"
+              value={clienteInput}
+              onChange={(e) => setClienteInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleFilter(); }}
+              placeholder="Nome o parte del nome"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
+            />
+          </div>
+
           {/* Stato */}
           <div>
             <label className="block text-xs font-medium text-stone mb-1">Stato</label>

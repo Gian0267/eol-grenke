@@ -55,7 +55,7 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
   try {
     const {
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, agenzia, decisione, rischio_silenzio,
+      origine, agenzia, cliente, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
@@ -65,6 +65,11 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
     // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
     // tutte le grafie che corrispondono, non sulla sola stringa scelta.
     if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
+    // Ricerca per nome cliente: parziale e senza distinzione fra maiuscole e
+    // minuscole, perche' nessuno ricorda la ragione sociale per intero.
+    if (cliente && cliente.trim()) {
+      where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
@@ -108,7 +113,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
       page = '1', pageSize = '20',
       sortBy = 'updated_at', sortOrder = 'desc',
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, agenzia, decisione, rischio_silenzio,
+      origine, agenzia, cliente, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const skip = (Number(page) - 1) * Number(pageSize);
@@ -122,6 +127,11 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
     // tutte le grafie che corrispondono, non sulla sola stringa scelta.
     if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
+    // Ricerca per nome cliente: parziale e senza distinzione fra maiuscole e
+    // minuscole, perche' nessuno ricorda la ragione sociale per intero.
+    if (cliente && cliente.trim()) {
+      where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
@@ -190,7 +200,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
 // GET /api/backoffice/pratiche-avanzate/export-csv
 router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine, agenzia } = req.query as Record<string, string>;
+    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine, agenzia, cliente } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
     if (stato) where.stato = stato;
@@ -199,6 +209,11 @@ router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, re
     // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
     // tutte le grafie che corrispondono, non sulla sola stringa scelta.
     if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
+    // Ricerca per nome cliente: parziale e senza distinzione fra maiuscole e
+    // minuscole, perche' nessuno ricorda la ragione sociale per intero.
+    if (cliente && cliente.trim()) {
+      where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
