@@ -23,6 +23,7 @@ import {
   Trash2,
   ExternalLink,
   Euro,
+  Building2,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -129,6 +130,8 @@ interface Pratica {
   valore_originario: number;
   stato: string;
   origine: string;
+  agenzia: string | null;
+  agente: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
   codice_sconto: CodiceScontoInfo | null;
@@ -360,6 +363,10 @@ export default function PraticaDettaglio() {
   const [pricingGrenke, setPricingGrenke] = useState<number | null>(null);
 
   // Modifica contatti cliente (email / PEC)
+  // Rete commerciale (agenzia e agente dell'export NSM)
+  const [retAgenzia, setRetAgenzia] = useState('');
+  const [retAgente, setRetAgente] = useState('');
+
   // Prezzo di riacquisto su misura (solo prima della comunicazione iniziale)
   const [prezzoSuMisura, setPrezzoSuMisura] = useState('');
 
@@ -677,6 +684,17 @@ export default function PraticaDettaglio() {
                   label="Cambia agente"
                   onClick={() => openModal('cambia-agente')}
                 />
+                {['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<Building2 className="w-4 h-4" />}
+                    label="Agenzia e agente"
+                    onClick={() => {
+                      setRetAgenzia(pratica.agenzia || '');
+                      setRetAgente(pratica.agente || '');
+                      openModal('rete-commerciale');
+                    }}
+                  />
+                )}
                 <ActionBtn
                   icon={<CalendarClock className="w-4 h-4" />}
                   label="Modifica deadline"
@@ -887,6 +905,58 @@ export default function PraticaDettaglio() {
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Conferma
+          </button>
+        </div>
+      </Modal>
+
+      {/* Agenzia e agente (dall'export NSM) */}
+      <Modal open={modalOpen === 'rete-commerciale'} title="Agenzia e agente" onClose={() => setModalOpen(null)}>
+        <p className="text-sm text-stone mb-4">
+          Come arrivano dall&apos;export NSM: agenzia dalla colonna A, agente dalla colonna B.
+          Sono etichette descrittive e non spostano task o notifiche, che restano legate
+          all&apos;agente assegnato.
+        </p>
+        <div className="space-y-3 mb-5">
+          <div>
+            <label className="block text-sm font-medium text-graphite mb-1">Agenzia</label>
+            <input
+              type="text"
+              value={retAgenzia}
+              onChange={(e) => setRetAgenzia(e.target.value)}
+              placeholder="Vuoto per togliere il valore"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-graphite mb-1">Agente</label>
+            <input
+              type="text"
+              value={retAgente}
+              onChange={(e) => setRetAgente(e.target.value)}
+              placeholder="Vuoto per togliere il valore"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setModalOpen(null)}
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper"
+          >
+            Annulla
+          </button>
+          <button
+            disabled={actionLoading}
+            onClick={() =>
+              doAction(`/api/backoffice/pratiche-dettaglio/${id}/rete-commerciale`, {
+                agenzia: retAgenzia,
+                agente: retAgente,
+              })
+            }
+            className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Salva
           </button>
         </div>
       </Modal>
@@ -1396,6 +1466,8 @@ function TabPanoramica({
           <Row label="Canone mensile" value={formatEur(pratica.canone_mensile)} />
           <Row label="Numero mesi" value={String(pratica.numero_mesi)} />
           <Row label="Monte canoni" value={formatEur(pratica.monte_canoni)} />
+          <Row label="Agenzia" value={pratica.agenzia || '—'} />
+          <Row label="Agente" value={pratica.agente || '—'} />
           {beni.length > 0 && (
             <div className="flex flex-col sm:flex-row sm:gap-3 pt-1">
               <dt className="text-stone sm:w-40 shrink-0">Beni</dt>

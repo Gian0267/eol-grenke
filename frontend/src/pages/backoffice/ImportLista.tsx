@@ -25,6 +25,8 @@ interface CombinedRow {
   contratto_nsm_id?: string;
   denominazione: string;
   origine?: string;
+  agenzia?: string | null;
+  agente?: string | null;
   data_scadenza?: string;
   pricing_grenke?: number;
   canone_mensile?: number;
@@ -289,6 +291,8 @@ export default function ImportLista() {
                   <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Contr. NSM</th>
                   <th className="px-4 py-3 font-medium text-stone">Denominazione</th>
                   <th className="px-4 py-3 font-medium text-stone">Origine</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Agenzia</th>
+                  <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Agente</th>
                   <th className="px-4 py-3 font-medium text-stone whitespace-nowrap">Scadenza</th>
                   <th className="px-4 py-3 font-medium text-stone text-right">Canone</th>
                   <th className="px-4 py-3 font-medium text-stone text-right">Mesi</th>
@@ -335,6 +339,11 @@ export default function ImportLista() {
                           </span>
                         )}
                       </td>
+                      {/* Colonne A e B dell'export NSM: si controllano qui,
+                          perche' dopo la conferma correggerle e' una pratica
+                          per volta. */}
+                      <td className="px-4 py-3 text-xs">{r.agenzia || <span className="text-stone">—</span>}</td>
+                      <td className="px-4 py-3 text-xs">{r.agente || <span className="text-stone">—</span>}</td>
                       <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{fmtDate(r.data_scadenza)}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{r.canone_mensile !== undefined ? `${fmt(r.canone_mensile)} €` : '—'}</td>
                       <td className="px-4 py-3 text-right">{r.numero_mesi ?? '—'}</td>

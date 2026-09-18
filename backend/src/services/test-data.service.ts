@@ -105,6 +105,7 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
   nsmHeader[26] = 'Nome Firmatario'; nsmHeader[27] = 'Cognome Firmatario'; nsmHeader[28] = 'Telefono Firmatario';
   nsmHeader[38] = 'Descrizione'; nsmHeader[39] = 'Quantità'; nsmHeader[40] = 'Seriale';
   nsmHeader[43] = 'Prezzo mensile unitario'; nsmHeader[44] = 'Prezzo mensile servizi totale';
+  const AGENTI_TEST = ['Mario Rossi', 'Luca Verdi', 'Anna Bianchi', 'Paolo Neri'];
   const nsmRows: unknown[][] = [nsmHeader];
 
   for (let i = 0; i < AZIENDE_TEST.length; i++) {
@@ -131,7 +132,9 @@ export async function resetTestData(): Promise<ResetTestDataResult> {
       const dev = dispositivi[d]!;
       canone += dev.prezzo + dev.servizi;
       const riga: unknown[] = new Array(50).fill(null);
-      riga[0] = 'Smartcom';
+      // Colonne A e B: rete commerciale, per esercitare l'import
+      riga[0] = origine === 'IOL' ? 'Italiaonline' : 'Agenzia Torino Centro';
+      riga[1] = AGENTI_TEST[i % AGENTI_TEST.length]!;
       riga[4] = 'GRENKE';
       riga[5] = nsmId;
       riga[6] = grenkeId;

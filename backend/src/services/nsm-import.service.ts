@@ -24,6 +24,8 @@ import { PrismaClient } from '@prisma/client';
 
 // Indici colonna (0-based) del tracciato export NSM
 const COL = {
+  agenzia: 0,            // A
+  agente: 1,             // B
   finanziaria: 4,        // E
   contratto_nsm: 5,      // F
   contratto_grenke: 6,   // G
@@ -80,6 +82,10 @@ export interface NsmContractPreview {
   numero_mesi: number;
   canone_mensile: number;
   dispositivi: DispositivoNsm[];
+  // Rete commerciale dalle colonne A e B, presa dalla prima riga del gruppo:
+  // le righe dello stesso contratto riportano lo stesso venditore.
+  agenzia: string | null;
+  agente: string | null;
   azione: 'CREA' | 'AGGIORNA';
   errors: string[];
 }
@@ -132,6 +138,8 @@ export function parseNsmExport(buffer: Buffer): {
     if (!gruppi.has(key)) gruppi.set(key, []);
     gruppi.get(key)!.push({
       _rowIndex: i + 1,
+      agenzia: str(row[COL.agenzia]),
+      agente: str(row[COL.agente]),
       finanziaria,
       contratto_nsm: nsmId,
       contratto_grenke: grenkeIdRiga,
@@ -250,6 +258,8 @@ export async function previewNsmImport(buffer: Buffer, prisma: PrismaClient): Pr
       numero_mesi: mesi,
       canone_mensile: canone,
       dispositivi,
+      agenzia: str(prima.agenzia) || null,
+      agente: str(prima.agente) || null,
       azione,
       errors,
     });

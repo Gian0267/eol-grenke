@@ -421,6 +421,57 @@ router.post('/pratiche-dettaglio/:id/modifica-deadline', async (req: Authenticat
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/rete-commerciale — agenzia e
+// agente come li riporta l'export NSM (colonne A e B), correggibili a mano.
+//
+// Sono etichette descrittive: non spostano task ne' notifiche, che restano
+// legate ad agente_assegnato_id. Campo vuoto = valore cancellato, non "lascia
+// com'era": serve a togliere un dato sbagliato arrivato dal file.
+router.post('/pratiche-dettaglio/:id/rete-commerciale', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { agenzia, agente } = req.body as { agenzia?: unknown; agente?: unknown };
+    const pulisci = (v: unknown): string | null => {
+      if (typeof v !== 'string') return null;
+      const t = v.trim();
+      return t === '' ? null : t.slice(0, 200);
+    };
+
+    const id = req.params.id as string;
+    const c = await prisma.contratto_EOL.findUnique({
+      where: { id },
+      select: { agenzia: true, agente: true },
+    });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+
+    const nuovaAgenzia = pulisci(agenzia);
+    const nuovoAgente = pulisci(agente);
+
+    await prisma.contratto_EOL.update({
+      where: { id },
+      data: { agenzia: nuovaAgenzia, agente: nuovoAgente },
+    });
+
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'RETE_COMMERCIALE',
+      agenzia_precedente: c.agenzia,
+      agente_precedente: c.agente,
+      agenzia: nuovaAgenzia,
+      agente: nuovoAgente,
+    });
+
+    res.json({ success: true, agenzia: nuovaAgenzia, agente: nuovoAgente });
+  } catch (err) {
+    console.error('[rete-commerciale] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/decisione-manuale
 router.post('/pratiche-dettaglio/:id/decisione-manuale', async (req: AuthenticatedRequest, res: Response) => {
   try {

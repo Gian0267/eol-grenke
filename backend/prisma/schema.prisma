@@ -40,6 +40,13 @@ model Contratto_EOL {
   valore_gift_card      Decimal
   stato                 String
   origine               String
+  // Rete commerciale come la riporta l'export NSM: colonna A (agenzia) e
+  // colonna B (agente). Sono etichette descrittive, modificabili dal
+  // backoffice, e NON vanno confuse con agente_assegnato_id qui sotto, che e'
+  // l'utente del sistema a cui la pratica e' affidata e che riceve task e
+  // notifiche.
+  agenzia               String?
+  agente                String?
   agente_originario_id  String?
   agente_originario     Utente_NSM?          @relation("AgenteOriginario", fields: [agente_originario_id], references: [id])
   agente_assegnato_id   String?

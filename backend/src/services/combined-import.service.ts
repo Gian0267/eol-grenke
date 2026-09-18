@@ -42,6 +42,9 @@ export interface CombinedRow {
   canone_mensile?: number;
   numero_mesi?: number;
   dispositivi?: NsmContractPreview['dispositivi'];
+  // Rete commerciale dal file NSM (colonne A e B)
+  agenzia?: string | null;
+  agente?: string | null;
   pricing?: {
     monte_canoni: number;
     pricing_grenke: number;
@@ -148,6 +151,8 @@ export async function previewCombinedImport(
       canone_mensile: match.canone_mensile,
       numero_mesi: match.numero_mesi,
       dispositivi: match.dispositivi,
+      agenzia: match.agenzia,
+      agente: match.agente,
       pricing: { ...pricing, valore_gift_card },
     });
   }
@@ -262,6 +267,8 @@ export async function confirmCombinedImport(
         valore_gift_card: pricing.valore_gift_card,
         stato: 'LISTA_RICEVUTA',
         origine: row.origine || 'Smartcom',
+        agenzia: row.agenzia ?? null,
+        agente: row.agente ?? null,
         data_importazione: new Date(),
         stato_riconciliazione: 'RICONCILIATO_AUTO',
         token_accesso_cliente: null,
