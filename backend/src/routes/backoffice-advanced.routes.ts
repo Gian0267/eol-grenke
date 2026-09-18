@@ -7,7 +7,7 @@ import { registraEvento } from '../services/audit.service.js';
 import { confermaBonificoRicevuto } from '../services/payment.service.js';
 import { generaCodice, getCodicePerContratto } from '../services/codice-sconto.service.js';
 import { parseBeni, parseEsclusi, beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
-import { origineCorrisponde } from '../lib/origine.js';
+import { origineCorrisponde, normalizzaOrigine } from '../lib/origine.js';
 import * as configService from '../services/config.service.js';
 import { calcolaValoreGiftCard } from '../services/pricing.service.js';
 import { prisma } from '../lib/db.js';
@@ -18,6 +18,28 @@ router.use(verifyBackofficeToken as any);
 
 function diffDays(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / 86400000);
+}
+
+/**
+ * Tutte le grafie con cui un'agenzia compare sulle pratiche.
+ *
+ * Il nome arriva dalla colonna A dell'export NSM e non e' una chiave: filtrare
+ * per uguaglianza esatta lascerebbe fuori "Italiaonline" avendo scelto
+ * "ItaliaOnline".
+ */
+async function grafieAgenzia(req: AuthenticatedRequest, scelta: string): Promise<string[]> {
+  const righe = await prisma.contratto_EOL.findMany({
+    where: { ambiente: ambienteVista(req) },
+    select: { agenzia: true },
+    distinct: ['agenzia'],
+  });
+  const k = normalizzaOrigine(scelta);
+  const grafie = righe
+    .map(r => r.agenzia)
+    .filter((a): a is string => Boolean(a) && normalizzaOrigine(a) === k);
+  // Nessuna corrispondenza: si passa comunque la scelta, cosi' il filtro
+  // restituisce zero righe invece di ignorare in silenzio il criterio.
+  return grafie.length > 0 ? grafie : [scelta];
 }
 
 // ─── LISTA PRATICHE AVANZATA ───────────────────────────────────────────────
@@ -33,13 +55,16 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
   try {
     const {
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, decisione, rischio_silenzio,
+      origine, agenzia, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
     if (stato) where.stato = stato;
     if (agente_id) where.agente_assegnato_id = agente_id;
     if (origine) where.origine = origine;
+    // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
+    // tutte le grafie che corrispondono, non sulla sola stringa scelta.
+    if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
@@ -83,7 +108,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
       page = '1', pageSize = '20',
       sortBy = 'updated_at', sortOrder = 'desc',
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, decisione, rischio_silenzio,
+      origine, agenzia, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const skip = (Number(page) - 1) * Number(pageSize);
@@ -94,6 +119,9 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     if (stato) where.stato = stato;
     if (agente_id) where.agente_assegnato_id = agente_id;
     if (origine) where.origine = origine;
+    // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
+    // tutte le grafie che corrispondono, non sulla sola stringa scelta.
+    if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
@@ -157,12 +185,15 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
 // GET /api/backoffice/pratiche-avanzate/export-csv
 router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine } = req.query as Record<string, string>;
+    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine, agenzia } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
     if (stato) where.stato = stato;
     if (agente_id) where.agente_assegnato_id = agente_id;
     if (origine) where.origine = origine;
+    // L'agenzia sulla pratica e' testo libero dell'export NSM: si filtra su
+    // tutte le grafie che corrispondono, non sulla sola stringa scelta.
+    if (agenzia) where.agenzia = { in: await grafieAgenzia(req, agenzia) };
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
       if (data_scadenza_from) where.data_scadenza.gte = new Date(data_scadenza_from);
@@ -615,6 +646,34 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
 // ("Italiaonline S.p.A", "Smartcom Solutions S.r.l."), quindi il filtro non
 // selezionava nulla — senza errori, solo risultati vuoti. Leggendole dal DB
 // il menu resta corretto qualunque dicitura usi Grenke.
+// GET /api/backoffice/agenzie-pratiche — agenzie effettivamente presenti sulle
+// pratiche, per il filtro della lista.
+//
+// Raggruppate per nome normalizzato: "Italiaonline" e "ItaliaOnline" arrivano
+// dallo stesso export in due grafie, e come due voci separate nel menu a
+// tendina sarebbero solo confusione.
+router.get('/agenzie-pratiche', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const righe = await prisma.contratto_EOL.findMany({
+      where: { ambiente: ambienteVista(req) },
+      select: { agenzia: true },
+      distinct: ['agenzia'],
+      orderBy: { agenzia: 'asc' },
+    });
+    const perChiave = new Map<string, string>();
+    for (const r of righe) {
+      const nome = (r.agenzia ?? '').trim();
+      if (!nome) continue;
+      const k = normalizzaOrigine(nome);
+      if (!perChiave.has(k)) perChiave.set(k, nome);
+    }
+    res.json([...perChiave.values()].sort((a, b) => a.localeCompare(b, 'it')));
+  } catch (err) {
+    console.error('[agenzie-pratiche] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 router.get('/origini', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const righe = await prisma.contratto_EOL.findMany({

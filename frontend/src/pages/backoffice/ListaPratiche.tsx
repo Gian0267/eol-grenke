@@ -156,6 +156,7 @@ export default function ListaPratiche() {
   const [dataScadenzaFrom, setDataScadenzaFrom] = useState(searchParams.get('data_scadenza_from') ?? '');
   const [dataScadenzaTo, setDataScadenzaTo] = useState(searchParams.get('data_scadenza_to') ?? '');
   const [origine, setOrigine] = useState(searchParams.get('origine') ?? '');
+  const [agenzia, setAgenzia] = useState(searchParams.get('agenzia') ?? '');
   const [decisione, setDecisione] = useState(searchParams.get('decisione') ?? '');
   const [rischioSilenzio, setRischioSilenzio] = useState(searchParams.get('rischio_silenzio') === 'true');
 
@@ -171,6 +172,7 @@ export default function ListaPratiche() {
   const [data, setData] = useState<PaginatedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [origini, setOrigini] = useState<string[]>([]);
+  const [agenzie, setAgenzie] = useState<string[]>([]);
   const [agenti, setAgenti] = useState<Agente[]>([]);
   const [exporting, setExporting] = useState(false);
   const [sendingBatch, setSendingBatch] = useState(false);
@@ -198,11 +200,12 @@ export default function ListaPratiche() {
       if (dataScadenzaFrom) params.set('data_scadenza_from', dataScadenzaFrom);
       if (dataScadenzaTo) params.set('data_scadenza_to', dataScadenzaTo);
       if (origine) params.set('origine', origine);
+      if (agenzia) params.set('agenzia', agenzia);
       if (decisione) params.set('decisione', decisione);
       if (rischioSilenzio) params.set('rischio_silenzio', 'true');
       return params.toString();
     },
-    [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, decisione, rischioSilenzio, page, sortBy, sortOrder],
+    [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio, page, sortBy, sortOrder],
   );
 
   /* --- Fetch pratiche --- */
@@ -241,6 +244,15 @@ export default function ListaPratiche() {
       } catch {
         /* silent: il filtro resta vuoto, la lista funziona lo stesso */
       }
+      try {
+        const res = await fetch('/api/backoffice/agenzie-pratiche', {
+          credentials: 'include',
+          headers: { 'x-user-id': utente.id },
+        });
+        if (res.ok) setAgenzie(await res.json());
+      } catch {
+        /* idem: meglio un filtro vuoto che una lista che non si carica */
+      }
     })();
   }, [utente]);
 
@@ -275,13 +287,14 @@ export default function ListaPratiche() {
     if (dataScadenzaFrom) params.set('data_scadenza_from', dataScadenzaFrom);
     if (dataScadenzaTo) params.set('data_scadenza_to', dataScadenzaTo);
     if (origine) params.set('origine', origine);
+    if (agenzia) params.set('agenzia', agenzia);
     if (decisione) params.set('decisione', decisione);
     if (rischioSilenzio) params.set('rischio_silenzio', 'true');
     if (page > 1) params.set('page', String(page));
     if (sortBy !== 'updated_at') params.set('sortBy', sortBy);
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder);
     setSearchParams(params, { replace: true });
-  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, decisione, rischioSilenzio, page, sortBy, sortOrder, setSearchParams]);
+  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio, page, sortBy, sortOrder, setSearchParams]);
 
   /* --- Handlers --- */
   function handleFilter() {
@@ -294,6 +307,7 @@ export default function ListaPratiche() {
     setDataScadenzaFrom('');
     setDataScadenzaTo('');
     setOrigine('');
+    setAgenzia('');
     setDecisione('');
     setRischioSilenzio(false);
     setSortBy('updated_at');
@@ -421,7 +435,7 @@ export default function ListaPratiche() {
   // Cambiare filtro cambia l'insieme: una selezione "tutte" non vale piu'.
   useEffect(() => {
     setSelezioneEstesa(false);
-  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, decisione, rischioSilenzio]);
+  }, [stato, agenteId, dataScadenzaFrom, dataScadenzaTo, origine, agenzia, decisione, rischioSilenzio]);
 
   /** Estende la selezione a tutte le pratiche del filtro, non solo alla pagina. */
   async function selezionaTutteDelFiltro() {
@@ -527,6 +541,24 @@ export default function ListaPratiche() {
               onChange={(e) => setDataScadenzaTo(e.target.value)}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
             />
+          </div>
+
+          {/* Agenzia: l'elenco viene dalle pratiche, non dall'anagrafica, cosi'
+              non si puo' scegliere un valore che non seleziona nulla. */}
+          <div>
+            <label className="block text-xs font-medium text-stone mb-1">Agenzia</label>
+            <select
+              value={agenzia}
+              onChange={(e) => setAgenzia(e.target.value)}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 focus:border-flex"
+            >
+              <option value="">Tutte le agenzie</option>
+              {agenzie.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Origine */}
