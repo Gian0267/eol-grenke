@@ -436,12 +436,14 @@ export default function ListaPratiche() {
     }
   }
 
-  // Selezione di default: tutte le pratiche della pagina corrente. Non tocca
-  // una selezione estesa all'intero filtro, che altrimenti si perderebbe al
-  // primo cambio pagina o riordino.
+  // Nessuna pratica selezionata di default: da questa lista partono invii ai
+  // clienti ed eliminazioni, e trovarsi tutto gia' spuntato invita a premere
+  // senza guardare. Si sceglie con le caselle, o con "Seleziona tutte".
+  // Una selezione estesa all'intero filtro non viene toccata, altrimenti si
+  // perderebbe al primo cambio pagina o riordino.
   useEffect(() => {
     if (selezioneEstesa) return;
-    setSelected(new Map((data?.items ?? []).map(p => [p.id, p.stato])));
+    setSelected(new Map());
   }, [data, selezioneEstesa]);
 
   // Cambiare filtro cambia l'insieme: una selezione "tutte" non vale piu'.
