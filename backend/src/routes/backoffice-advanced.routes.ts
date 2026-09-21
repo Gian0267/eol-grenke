@@ -762,13 +762,35 @@ router.post('/pratiche-dettaglio/:id/reinvia-comunicazione', async (req: Authent
 });
 
 // POST /api/backoffice/pratiche-dettaglio/:id/segna-richiamato
+//
+// Usata sia dalle richieste di contatto sia dai riacquisti in attesa di
+// chiamata. Registrare la telefonata non sblocca il pagamento: sono due
+// decisioni distinte, il cliente puo' anche dire "ci penso".
 router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { richiesta_id } = req.body as { richiesta_id: string };
+    const praticaId = req.params.id as string;
+
+    // La richiesta deve essere di QUESTA pratica: senza il controllo si poteva
+    // segnare come richiamato il cliente sbagliato indicando un id qualsiasi.
+    const r = await prisma.richiesta_Contatto.findFirst({
+      where: { id: richiesta_id, contratto_eol_id: praticaId },
+      select: { id: true, stato: true, origine: true },
+    });
+    if (!r) { res.status(404).json({ error: 'Richiesta non trovata per questa pratica' }); return; }
+
     await prisma.richiesta_Contatto.update({
-      where: { id: richiesta_id },
+      where: { id: r.id },
       data: { stato: 'RICHIAMATO', data_richiamato: new Date() },
     });
+
+    await registraEvento(praticaId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'CLIENTE_RICHIAMATO',
+      richiesta_id: r.id,
+      origine_richiesta: r.origine,
+      stato_precedente: r.stato,
+    });
+
     res.json({ success: true });
   } catch (err) {
     console.error('[segna-richiamato] Errore:', err);

@@ -39,6 +39,8 @@ interface PraticaRiacquisto {
     telefono: string | null;
     fascia_oraria: string | null;
     created_at: string;
+    stato: string;
+    data_richiamato: string | null;
   }>;
 }
 
@@ -146,6 +148,23 @@ export default function RiacquistiInAttesa() {
       if (res.ok) {
         setRichiamati(prev => new Set(prev).add(richiesta.id));
       }
+    } catch {}
+    finally { setRichiamando(null); }
+  };
+
+  // Richiamo sulla scheda del riacquisto. E' distinto dallo sblocco: dopo la
+  // telefonata il cliente puo' anche dire "ci penso", e registrare la chiamata
+  // non deve voler dire aprirgli il pagamento.
+  const handleRichiamatoRiacquisto = async (praticaId: string, richiestaId: string) => {
+    setRichiamando(richiestaId);
+    try {
+      const res = await fetch(`${API_BASE}/api/backoffice/pratiche-dettaglio/${praticaId}/segna-richiamato`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
+        body: JSON.stringify({ richiesta_id: richiestaId }),
+      });
+      if (res.ok) setRichiamati(prev => new Set(prev).add(richiestaId));
     } catch {}
     finally { setRichiamando(null); }
   };
@@ -352,6 +371,23 @@ export default function RiacquistiInAttesa() {
                               )}
                               Sblocca pagamento
                             </button>
+                          )}
+                          {richiesta && (
+                            richiesta.stato === 'RICHIAMATO' || richiamati.has(richiesta.id) ? (
+                              <div className="flex items-center justify-center gap-2 text-ok-text text-sm font-medium py-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Richiamato{richiesta.data_richiamato ? ` il ${formatDate(richiesta.data_richiamato)}` : ''}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleRichiamatoRiacquisto(p.id, richiesta.id)}
+                                disabled={richiamando === richiesta.id}
+                                className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-graphite hover:bg-paper transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {richiamando === richiesta.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                                Segna come richiamato
+                              </button>
+                            )
                           )}
                           <Link
                             to={`/backoffice/pratiche/${p.id}`}
