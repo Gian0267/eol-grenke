@@ -233,7 +233,14 @@ router.post('/pratiche/elimina', async (req: AuthenticatedRequest, res: Response
 router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const pratiche = await prisma.contratto_EOL.findMany({
-      where: { stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA', ambiente: ambienteVista(req) },
+      where: {
+        stato: 'RIACQUISTO_IN_ATTESA_CHIAMATA',
+        ambiente: ambienteVista(req),
+        // Tolte dall'elenco quelle che il backoffice ha chiuso a mano dopo la
+        // telefonata. Restano bloccate e restano nella lista pratiche: qui
+        // dentro non servono piu' perche' la chiamata e' stata fatta.
+        NOT: { richieste_contatto: { some: { origine: 'STEP_PRE_PAGAMENTO', stato: 'GESTITA' } } },
+      },
       include: {
         cliente: { select: { ragione_sociale: true, piva: true, email: true, telefono: true } },
         richieste_contatto: {

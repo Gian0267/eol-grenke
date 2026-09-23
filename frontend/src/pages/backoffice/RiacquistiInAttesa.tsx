@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User, FileText } from 'lucide-react';
+import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User, FileText, EyeOff } from 'lucide-react';
 
 const API_BASE = '';
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -165,6 +165,23 @@ export default function RiacquistiInAttesa() {
         body: JSON.stringify({ richiesta_id: richiestaId }),
       });
       if (res.ok) setRichiamati(prev => new Set(prev).add(richiestaId));
+    } catch {}
+    finally { setRichiamando(null); }
+  };
+
+  // Chiude la richiesta e fa sparire la scheda da questa vista. La pratica
+  // resta dov'e': bloccata finche' non la si sblocca, e visibile in lista
+  // pratiche. Qui dentro non serve piu', la telefonata e' stata fatta.
+  const handleChiudiRichiesta = async (praticaId: string, richiestaId: string) => {
+    setRichiamando(richiestaId);
+    try {
+      const res = await fetch(`${API_BASE}/api/backoffice/pratiche-dettaglio/${praticaId}/richiesta-gestita`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
+        body: JSON.stringify({ richiesta_id: richiestaId }),
+      });
+      if (res.ok) setRiacquisti(prev => prev.filter(x => x.id !== praticaId));
     } catch {}
     finally { setRichiamando(null); }
   };
@@ -374,10 +391,21 @@ export default function RiacquistiInAttesa() {
                           )}
                           {richiesta && (
                             richiesta.stato === 'RICHIAMATO' || richiamati.has(richiesta.id) ? (
-                              <div className="flex items-center justify-center gap-2 text-ok-text text-sm font-medium py-2">
-                                <CheckCircle2 className="w-4 h-4" />
-                                Richiamato{richiesta.data_richiamato ? ` il ${formatDate(richiesta.data_richiamato)}` : ''}
-                              </div>
+                              <>
+                                <div className="flex items-center justify-center gap-2 text-ok-text text-sm font-medium py-1">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Richiamato{richiesta.data_richiamato ? ` il ${formatDate(richiesta.data_richiamato)}` : ''}
+                                </div>
+                                <button
+                                  onClick={() => handleChiudiRichiesta(p.id, richiesta.id)}
+                                  disabled={richiamando === richiesta.id}
+                                  className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-stone hover:bg-paper transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                  title="La pratica resta bloccata e visibile in lista pratiche: sparisce solo da questo elenco"
+                                >
+                                  {richiamando === richiesta.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+                                  Togli dall&apos;elenco
+                                </button>
+                              </>
                             ) : (
                               <button
                                 onClick={() => handleRichiamatoRiacquisto(p.id, richiesta.id)}

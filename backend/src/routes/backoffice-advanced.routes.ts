@@ -798,6 +798,42 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/richiesta-gestita — chiude la
+// richiesta e toglie la pratica da "Clienti in attesa".
+//
+// Diverso da "richiamato": li' si registra la telefonata, qui si dichiara che
+// non serve piu' tornarci sopra. La pratica NON viene sbloccata ne' chiusa —
+// resta dov'e' nella lista pratiche, semplicemente esce da questa vista.
+router.post('/pratiche-dettaglio/:id/richiesta-gestita', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { richiesta_id } = req.body as { richiesta_id: string };
+    const praticaId = req.params.id as string;
+
+    const r = await prisma.richiesta_Contatto.findFirst({
+      where: { id: richiesta_id, contratto_eol_id: praticaId },
+      select: { id: true, stato: true, origine: true },
+    });
+    if (!r) { res.status(404).json({ error: 'Richiesta non trovata per questa pratica' }); return; }
+
+    await prisma.richiesta_Contatto.update({
+      where: { id: r.id },
+      data: { stato: 'GESTITA' },
+    });
+
+    await registraEvento(praticaId, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'RICHIESTA_CONTATTO_CHIUSA',
+      richiesta_id: r.id,
+      origine_richiesta: r.origine,
+      stato_precedente: r.stato,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[richiesta-gestita] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // GET /api/backoffice/origini — le origini realmente presenti a DB.
 // Il menu del filtro era cablato su ['Smartcom','IOL'], i codici dei dati di
 // prova: sui dati veri `origine` riporta il "broker name" del file Grenke
