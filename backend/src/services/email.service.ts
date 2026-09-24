@@ -128,8 +128,34 @@ export async function inviaComunicazioneIniziale(
   );
   const pagamentoOnlineAttivo = await configService.getBooleano('flags.abilita_pagamento_online', false);
 
+
+  // Sconto sul riscatto per chi attiva un nuovo noleggio entro la data limite.
+  // Il riquadro compare solo se: il flag e' acceso, il limite non e' passato,
+  // il prezzo non e' concordato a mano, e sappiamo dove mandare il cliente.
+  const { prezzoRiacquisto: __prezzoRic } = await import('./pricing.service.js');
+  const __prezzo = await __prezzoRic(contratto);
+  const __percSconto = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+  const __flagSconto = await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true);
+  const { linkNuovoNoleggioPerPratica: __linkPerPratica } = await import('./onboarding-link.service.js');
+  const __linkSconto = (await __linkPerPratica(contratto)).link;
+  const __limite = __prezzo.data_limite;
+  const __giorniAlLimite = __limite ? Math.ceil((__limite.getTime() - Date.now()) / 86400000) : -1;
+  const __scontoAttivo = __flagSconto && !__prezzo.prezzo_concordato && !!__linkSconto
+    && !!__limite && __giorniAlLimite >= 0 && __percSconto > 0;
+  const __nettoScontato = Math.max(
+    Math.round(__prezzo.listino * (1 - __percSconto / 100) * 100) / 100,
+    Number(contratto.pricing_grenke),
+  );
+
   const templateVars = {
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
+    sconto_attivo: __scontoAttivo,
+    sconto_percentuale: __percSconto,
+    sconto_data_limite: __limite ? formatDate(__limite) : '',
+    giorni_al_limite: __giorniAlLimite,
+    prezzo_riacquisto_scontato: formatEur(__nettoScontato),
+    sconto_euro: formatEur(Math.round((__prezzo.listino - __nettoScontato) * 100) / 100),
+    link_nuovo_noleggio_sconto: __linkSconto ?? '',
     pagamento_online_attivo: pagamentoOnlineAttivo,
     num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
     num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
@@ -307,42 +333,16 @@ export async function inviaPropostaNuovoNoleggio(
     return result;
   }
 
-  // Quale link mettere nella mail. Porta l'identificativo dell'agente, quindi
-  // il contatto che ne nasce viene attribuito a qualcuno: sbagliarlo sposta una
-  // provvigione. Per questo non esiste un link di riserva — se non si sa quale
-  // usare, non si manda.
-  const dicitureIolLink = (await configService.getTesto('iol.diciture_origine', 'Italiaonline\nIOL'))
-    .split(/[\n,;]+/).map(d => d.trim()).filter(Boolean);
-  let linkNuovoNoleggio: string;
-
-  if (origineCorrisponde(contratto.origine, dicitureIolLink)) {
-    // Italiaonline ha un suo link unico, impostato a parte.
-    linkNuovoNoleggio = await configService.getTesto('iol.link_nuovo_noleggio', '');
-    if (!linkNuovoNoleggio) {
-      result.errori.push('Manca il link di registrazione per i clienti Italiaonline (Impostazioni)');
-      return result;
-    }
-  } else {
-    if (!contratto.agenzia) {
-      result.errori.push('La pratica non indica un\'agenzia: impossibile scegliere il link di registrazione');
-      return result;
-    }
-    // Il legame con l'anagrafica e' il nome scritto nell'export NSM, non una
-    // chiave: confronto tollerante, come per le origini.
-    const agenzie = await prisma.agenzia.findMany({ select: { nome: true, link_onboarding: true } });
-    const cercata = normalizzaOrigine(contratto.agenzia);
-    const trovata = agenzie.find(a => normalizzaOrigine(a.nome) === cercata);
-
-    if (!trovata) {
-      result.errori.push(`L'agenzia "${contratto.agenzia}" non e' in anagrafica: aggiungila e indica il suo link`);
-      return result;
-    }
-    if (!trovata.link_onboarding) {
-      result.errori.push(`L'agenzia "${trovata.nome}" non ha ancora un link di registrazione`);
-      return result;
-    }
-    linkNuovoNoleggio = trovata.link_onboarding;
+  // Quale link mettere nella mail: quello dell'agenzia della pratica. Se non
+  // si sa quale usare non si manda niente, invece di attribuire il contatto
+  // alla persona sbagliata.
+  const { linkNuovoNoleggioPerPratica } = await import('./onboarding-link.service.js');
+  const esitoLink = await linkNuovoNoleggioPerPratica(contratto);
+  if (!esitoLink.link) {
+    result.errori.push(`${esitoLink.motivo}: impossibile scegliere il link di registrazione`);
+    return result;
   }
+  const linkNuovoNoleggio = esitoLink.link;
 
   // Il richiamo alla decisione compare solo a chi non ha ancora scelto.
   const decisioneMancante = contratto.decisioni.length === 0;

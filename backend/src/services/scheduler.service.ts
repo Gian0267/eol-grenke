@@ -11,6 +11,7 @@ import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
 import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
 import * as configService from './config.service.js';
+import { importiRiacquisto, prezzoRiacquisto, dataLimiteSconto } from './pricing.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -387,8 +388,34 @@ async function inviaSollecito(
   // Flag "Opzione Rinnovo attiva": quando è OFF i solleciti nascondono la riga rinnovo.
   const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
 
+
+  // Sconto sul riscatto per chi attiva un nuovo noleggio entro la data limite.
+  // Il riquadro compare solo se: il flag e' acceso, il limite non e' passato,
+  // il prezzo non e' concordato a mano, e sappiamo dove mandare il cliente.
+  const { prezzoRiacquisto: __prezzoRic } = await import('./pricing.service.js');
+  const __prezzo = await __prezzoRic(pratica);
+  const __percSconto = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+  const __flagSconto = await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true);
+  const { linkNuovoNoleggioPerPratica: __linkPerPratica } = await import('./onboarding-link.service.js');
+  const __linkSconto = (await __linkPerPratica(pratica)).link;
+  const __limite = __prezzo.data_limite;
+  const __giorniAlLimite = __limite ? Math.ceil((__limite.getTime() - Date.now()) / 86400000) : -1;
+  const __scontoAttivo = __flagSconto && !__prezzo.prezzo_concordato && !!__linkSconto
+    && !!__limite && __giorniAlLimite >= 0 && __percSconto > 0;
+  const __nettoScontato = Math.max(
+    Math.round(__prezzo.listino * (1 - __percSconto / 100) * 100) / 100,
+    Number(pratica.pricing_grenke),
+  );
+
   const templateVars = {
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
+    sconto_attivo: __scontoAttivo,
+    sconto_percentuale: __percSconto,
+    sconto_data_limite: __limite ? formatDate(__limite) : '',
+    giorni_al_limite: __giorniAlLimite,
+    prezzo_riacquisto_scontato: formatEur(__nettoScontato),
+    sconto_euro: formatEur(Math.round((__prezzo.listino - __nettoScontato) * 100) / 100),
+    link_nuovo_noleggio_sconto: __linkSconto ?? '',
     num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
     num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
     num_opzione_restituzione: opzioneRinnovoAttiva ? 4 : 3,
@@ -614,12 +641,13 @@ async function inviaInvitoPagamento(pratica: any, opts?: { promemoria?: boolean 
   const beniRiacquisto = formatBeniInclusi(pratica.beni_json, pratica.beni_esclusi_json);
   const beniDaRestituire = beniEsclusi(pratica.beni_json, pratica.beni_esclusi_json).map(formatBene).join(', ');
 
-  const pricingRules = JSON.parse(readFileSync(resolve(__dirname, '../../../config/pricing_rules.json'), 'utf-8'));
-  const netto = Number(pratica.pricing_riacquisto);
-  const centNetto = Math.round(netto * 100);
-  const centIva = Math.round(centNetto * pricingRules.iva_percentuale);
-  const iva = centIva / 100;
-  const totale = (centNetto + centIva) / 100;
+  // Importi dal punto unico: sono gli stessi che il cliente trova nell'area
+  // riservata e che gli verranno addebitati, sconto compreso. Qui c'era una
+  // copia della moltiplicazione per l'IVA.
+  const importi = await importiRiacquisto(pratica);
+  const netto = importi.importo_netto;
+  const iva = importi.importo_iva;
+  const totale = importi.importo_totale;
 
   const tokenPagamento = await tokenClienteValido(pratica);
   const linkPagamento = tokenPagamento

@@ -9,6 +9,7 @@ import { StripeProvider } from '../providers/payment/stripe.real.provider.js';
 import { generaRicevutaPagamento } from './invoice.service.js';
 import { registraEvento } from './audit.service.js';
 import { loadDocument } from './storage.service.js';
+import { importiRiacquisto } from './pricing.service.js';
 import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { beniInclusi, beniEsclusi, formatBene } from '../lib/beni.js';
 
@@ -29,17 +30,10 @@ export function stripeAttivo(): boolean {
   return stripeProvider instanceof StripeProvider;
 }
 
-// IVA ordinaria sull'intero imponibile (deciso il 04/09/2026, in sostituzione
-// dell'IVA a margine). `margine` resta nella firma per non toccare i chiamanti.
-function calcolaImporti(netto: number, _margine: number) {
-  const centNetto = Math.round(netto * 100);
-  const centIva = Math.round(centNetto * pricingRules.iva_percentuale);
-  return {
-    importo_netto: centNetto / 100,
-    importo_iva: centIva / 100,
-    importo_totale: (centNetto + centIva) / 100,
-  };
-}
+// Il calcolo degli importi vive in pricing.service.ts: e' l'unico posto che
+// sa se al cliente spetta lo sconto per il nuovo noleggio. Qui c'era una copia
+// della moltiplicazione per l'IVA, che con lo sconto sarebbe diventata una
+// seconda verita' sul prezzo.
 
 export async function initiatePayment(
   contrattoEolId: string,
@@ -52,7 +46,7 @@ export async function initiatePayment(
 
   if (!contratto) throw new Error('Contratto non trovato');
 
-  const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
+  const importi = await importiRiacquisto(contratto);
   const provider = metodo === 'FABRICK' ? fabrickProvider : stripeProvider;
 
   const session = await provider.initiatePayment(importi.importo_totale, 'EUR', {
@@ -100,7 +94,7 @@ export async function dichiaraBonifico(contrattoEolId: string): Promise<{
   });
   if (!contratto) throw new Error('Contratto non trovato');
 
-  const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
+  const importi = await importiRiacquisto(contratto);
 
   // Idempotenza: una sola dichiarazione di bonifico attiva per pratica
   const esistente = await prisma.pagamento.findFirst({
@@ -152,7 +146,7 @@ export async function confermaBonificoRicevuto(
     where: { contratto_eol_id: contrattoEolId, metodo: 'BONIFICO', stato: 'DICHIARATO' },
   });
   if (!pagamento) {
-    const importi = calcolaImporti(Number(contratto.pricing_riacquisto), Number(contratto.margine_lordo));
+    const importi = await importiRiacquisto(contratto);
     pagamento = await prisma.pagamento.create({
       data: {
         contratto_eol_id: contrattoEolId,

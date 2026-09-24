@@ -84,6 +84,19 @@
                 </tr>
               </table>
 
+              {{#if sconto_attivo}}
+              <!-- Forma sobria, coerente col resto della PEC: niente colori ne'
+                   pulsanti. Va inclusa perche' per alcuni clienti la PEC e' l'unica
+                   comunicazione che leggono davvero. -->
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
+                <strong>Condizione agevolata.</strong> Qualora entro il {{sconto_data_limite}} venga ordinato
+                un nuovo contratto di noleggio e i relativi beni vengano spediti, il prezzo di acquisto dei beni
+                attualmente in locazione e&rsquo; ridotto del {{sconto_percentuale}}%, da &euro; {{pricing_riacquisto}}
+                a &euro; {{prezzo_riacquisto_scontato}}. Fa fede la data di spedizione.<br>
+                <a href="{{{link_nuovo_noleggio_sconto}}}" target="_blank" style="color:#1a3a52;font-size:14px;word-break:break-all;">{{{link_nuovo_noleggio_sconto}}}</a>
+              </p>
+              {{/if}}
+
               <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
                 La Sua scelta pu&ograve; essere comunicata attraverso l'area riservata al seguente
                 indirizzo:<br>

@@ -29,6 +29,7 @@ import {
   FlaskConical,
   Copy,
   Check,
+  Percent,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -141,6 +142,16 @@ interface Pratica {
   note: string | null;
   ambiente: string;
   invito_pagamento_inviato: string | null;
+  sconto_nuovo_noleggio: {
+    listino: number;
+    netto: number;
+    sconto_euro: number;
+    sconto_percentuale: number;
+    limitato_dal_costo: boolean;
+    prezzo_concordato: boolean;
+    data_limite: string | null;
+    spedito_il: string | null;
+  };
   proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
@@ -374,6 +385,9 @@ export default function PraticaDettaglio() {
 
   // Modifica contatti cliente (email / PEC)
   // Rete commerciale (agenzia e agente dell'export NSM)
+  // Sconto sul riscatto per chi attiva un nuovo noleggio
+  const [dataSpedizione, setDataSpedizione] = useState('');
+
   // Link di pagamento da dare al cliente a voce o per messaggio
   const [linkPagamento, setLinkPagamento] = useState<string | null>(null);
   const [linkErrore, setLinkErrore] = useState<string | null>(null);
@@ -795,6 +809,18 @@ export default function PraticaDettaglio() {
                   label="Modifica deadline"
                   onClick={() => openModal('modifica-deadline')}
                 />
+                {!pratica.sconto_nuovo_noleggio.prezzo_concordato &&
+                  pratica.sconto_nuovo_noleggio.data_limite &&
+                  ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
+                  <ActionBtn
+                    icon={<Percent className="w-4 h-4" />}
+                    label={pratica.sconto_nuovo_noleggio.spedito_il ? 'Sconto nuovo noleggio' : 'Nuovo noleggio spedito'}
+                    onClick={() => {
+                      setDataSpedizione(new Date().toISOString().slice(0, 10));
+                      openModal('nuovo-noleggio-spedito');
+                    }}
+                  />
+                )}
                 {['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'].includes(pratica.stato) &&
                   ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
                   <ActionBtn
@@ -1012,6 +1038,82 @@ export default function PraticaDettaglio() {
         </div>
       </Modal>
 
+      {/* Sconto sul riscatto per chi attiva un nuovo noleggio */}
+      <Modal open={modalOpen === 'nuovo-noleggio-spedito'} title="Sconto per nuovo noleggio" onClose={() => setModalOpen(null)}>
+        {(() => {
+          const sc = pratica.sconto_nuovo_noleggio;
+          const eur = (n: number) => n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+          return (
+            <>
+              {sc.spedito_il ? (
+                <>
+                  <p className="text-sm text-stone mb-4">
+                    Spedizione confermata il <strong>{formatDate(sc.spedito_il)}</strong>: il riscatto costa
+                    <strong> {eur(sc.netto)}</strong> invece di {eur(sc.listino)}, il cliente risparmia{' '}
+                    <strong>{eur(sc.sconto_euro)}</strong>.
+                  </p>
+                  {sc.limitato_dal_costo && (
+                    <div className="mb-4 flex gap-2 items-start rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-900">
+                        Lo sconto e&apos; stato ridotto: al {sc.sconto_percentuale}% pieno il prezzo sarebbe
+                        sceso sotto quanto paghiamo a Grenke.
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-stone mb-4">
+                    Confermi che al cliente e&apos; stato spedito un nuovo noleggio? Da quel momento il riscatto
+                    scende da <strong>{eur(sc.listino)}</strong>, e il prezzo scontato compare subito nella sua
+                    area riservata e nella richiesta di pagamento.
+                  </p>
+                  <div className="mb-5">
+                    <label className="block text-sm font-medium text-graphite mb-1">Data di spedizione</label>
+                    <input
+                      type="date"
+                      value={dataSpedizione}
+                      onChange={(e) => setDataSpedizione(e.target.value)}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+                    />
+                    <p className="text-xs text-stone mt-2">
+                      Il limite per questa pratica e&apos; il{' '}
+                      <strong>{sc.data_limite ? formatDate(sc.data_limite) : '—'}</strong>. Fa fede la
+                      spedizione, non l&apos;ordine.
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setModalOpen(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper">
+                  Chiudi
+                </button>
+                {sc.spedito_il ? (
+                  <button
+                    disabled={actionLoading}
+                    onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/nuovo-noleggio-spedito`, { annulla: true })}
+                    className="px-4 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Revoca lo sconto
+                  </button>
+                ) : (
+                  <button
+                    disabled={actionLoading || !dataSpedizione}
+                    onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/nuovo-noleggio-spedito`, { data: dataSpedizione })}
+                    className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Conferma la spedizione
+                  </button>
+                )}
+              </div>
+            </>
+          );
+        })()}
+      </Modal>
+
       {/* Richiesta di pagamento su iniziativa dell'operatore */}
       <Modal open={modalOpen === 'invito-pagamento'} title="Richiesta di pagamento" onClose={() => setModalOpen(null)}>
         <p className="text-sm text-stone mb-4">
@@ -1122,16 +1224,6 @@ export default function PraticaDettaglio() {
               propone di attivare un nuovo noleggio, indipendentemente da come decider&agrave; per il contratto in
               scadenza. Solo email, niente PEC. Lo stato della pratica non cambia.
             </p>
-            {pratica.cliente_iol && (
-              <div className="mb-4 flex gap-2 items-start rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-900">
-                  Questo cliente arriva da <strong>Italiaonline</strong>. Verifica di avere la loro autorizzazione a
-                  proporre nuovi noleggi ai loro clienti: &egrave; il motivo per cui il riquadro era stato tolto dalla
-                  comunicazione iniziale.
-                </p>
-              </div>
-            )}
             {!pratica.cliente.email && (
               <p className="text-sm text-red-600 mb-4">Il cliente non ha un indirizzo email: l&apos;invio non e&apos; possibile.</p>
             )}

@@ -27,6 +27,12 @@ interface PraticaData {
     pricing_riacquisto: number;
     pricing_riacquisto_iva: number;
     pricing_riacquisto_totale: number;
+    // Listino e sconto per nuovo noleggio: quando lo sconto e' maturato,
+    // pricing_riacquisto E' gia' il prezzo scontato e prezzo_listino serve solo
+    // a mostrare da quanto si parte.
+    prezzo_listino?: number;
+    sconto_euro?: number;
+    sconto_attivo?: boolean;
     valore_gift_card: number;
     abilita_gift_card?: boolean;
   };
@@ -154,9 +160,15 @@ export default function AreaPratica() {
       bgColore: 'bg-blue-50',
       testoColore: 'text-[#2563eb]',
       btnColore: 'bg-[#2563eb] hover:bg-blue-700',
-      badges: [
-        { testo: `€ ${formatEur(data.economica.pricing_riacquisto)} + IVA`, stile: 'bg-blue-100 text-blue-800' },
-      ],
+      badges: data.economica.sconto_attivo
+        ? [
+            { testo: `€ ${formatEur(data.economica.prezzo_listino ?? 0)}`, stile: 'bg-gray-100 text-gray-500 line-through' },
+            { testo: `€ ${formatEur(data.economica.pricing_riacquisto)} + IVA`, stile: 'bg-emerald-100 text-emerald-800 font-semibold' },
+            { testo: `risparmi € ${formatEur(data.economica.sconto_euro ?? 0)}`, stile: 'bg-emerald-50 text-emerald-700' },
+          ]
+        : [
+            { testo: `€ ${formatEur(data.economica.pricing_riacquisto)} + IVA`, stile: 'bg-blue-100 text-blue-800' },
+          ],
     },
     {
       id: 'contatto',

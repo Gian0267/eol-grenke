@@ -31,6 +31,22 @@
                 n. <strong>{{numero_contratto_grenke}}</strong>, in scadenza
                 il <strong>{{data_scadenza}}</strong>.
               </p>
+              {{#if sconto_attivo}}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr>
+                  <td style="border:1px solid #d7dce1;border-radius:6px;padding:14px 18px;">
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+                      Mancano <strong>{{giorni_al_limite}} giorni</strong> al {{sconto_data_limite}}: entro quella data,
+                      ordinando un nuovo noleggio, il riscatto scende a
+                      <strong style="color:#0B7FA6;">&euro; {{prezzo_riacquisto_scontato}}</strong>
+                      invece di &euro; {{pricing_riacquisto}}.
+                      <a href="{{{link_nuovo_noleggio_sconto}}}" target="_blank" style="color:#0B7FA6;font-weight:700;">Configura un nuovo noleggio</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              {{/if}}
+
               {{#if opzione_rinnovo_attiva}}
               <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
                 Non abbiamo ancora ricevuto la Sua preferenza. Desideriamo richiamare

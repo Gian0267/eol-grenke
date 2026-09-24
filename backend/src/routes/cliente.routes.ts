@@ -118,21 +118,11 @@ async function generaCodiceScontoSafe(contrattoEolId: string): Promise<Codice_Sc
   }
 }
 
-// IVA ordinaria sull'intero imponibile (deciso il 04/09/2026, in sostituzione
-// dell'IVA a margine). Il parametro `margine` resta nella firma perche' i
-// chiamanti lo passano, ma non concorre piu' al calcolo.
-function calcolaIvaAMargine(
-  prezzoVendita: Prisma.Decimal,
-  _margine: Prisma.Decimal,
-  ivaPerc: number,
-): { iva: number; totale: number } {
-  const centVendita = Math.round(Number(prezzoVendita) * 100);
-  const ivaCentesimi = Math.round(centVendita * ivaPerc);
-  return {
-    iva: ivaCentesimi / 100,
-    totale: (centVendita + ivaCentesimi) / 100,
-  };
-}
+// Il calcolo degli importi vive in pricing.service.ts (importiRiacquisto): e'
+// l'unico posto che sa se al cliente spetta lo sconto per il nuovo noleggio.
+// Qui c'era una copia della moltiplicazione per l'IVA: con lo sconto sarebbe
+// diventata una seconda verita' sul prezzo, e il cliente avrebbe visto un
+// importo nell'area riservata e un altro nella mail di pagamento.
 
 // GET /api/cliente/pratica
 router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedRequest, res: Response) => {
@@ -155,8 +145,8 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
       user_agent: req.headers['user-agent'] || 'unknown',
     });
 
-    const ivaPerc = pricingRules.iva_percentuale as number;
-    const { iva, totale } = calcolaIvaAMargine(contratto.pricing_riacquisto, contratto.margine_lordo, ivaPerc);
+    const { importiRiacquisto } = await import('../services/pricing.service.js');
+    const importi = await importiRiacquisto(contratto);
 
     const dataScadenza = new Date(contratto.data_scadenza!);
     const deadlineDecisione = calcolaDeadline(dataScadenza);
@@ -191,9 +181,18 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         stato: contratto.stato,
       },
       economica: {
-        pricing_riacquisto: Number(contratto.pricing_riacquisto),
-        pricing_riacquisto_iva: iva,
-        pricing_riacquisto_totale: totale,
+        // Il prezzo che il cliente paga davvero: se ha maturato lo sconto per
+        // il nuovo noleggio e' gia' scontato qui, cosi' l'area riservata, la
+        // mail di pagamento e l'addebito dicono tutti la stessa cifra.
+        pricing_riacquisto: importi.importo_netto,
+        pricing_riacquisto_iva: importi.importo_iva,
+        pricing_riacquisto_totale: importi.importo_totale,
+        // Listino e sconto, per mostrare il confronto "da -> a".
+        prezzo_listino: importi.listino,
+        sconto_euro: importi.sconto_euro,
+        sconto_percentuale: importi.sconto_percentuale,
+        sconto_attivo: importi.sconto_euro > 0,
+        sconto_data_limite: importi.data_limite?.toISOString() ?? null,
         valore_gift_card: Number(contratto.valore_gift_card),
         abilita_gift_card: abilitaGiftCard,
       },
@@ -659,14 +658,16 @@ router.post(
           });
         }
 
-        const ivaPerc = pricingRules.iva_percentuale as number;
-        const { iva, totale } = calcolaIvaAMargine(contratto.pricing_riacquisto, contratto.margine_lordo, ivaPerc);
+        const { importiRiacquisto } = await import('../services/pricing.service.js');
+        const importiRic = await importiRiacquisto(contratto);
+        const iva = importiRic.importo_iva;
+        const totale = importiRic.importo_totale;
 
         res.json({
           success: true,
           choice: 'procedi',
           pricing: {
-            netto: Number(contratto.pricing_riacquisto),
+            netto: importiRic.importo_netto,
             iva,
             totale,
           },
@@ -1432,8 +1433,10 @@ router.post(
             otp_metodo: metodo_otp,
             ip_address: ip,
             user_agent: userAgent,
+            // Si congela il prezzo EFFETTIVO, sconto compreso: e' quello su cui
+            // il cliente ha deciso, non il listino.
             note_cliente: scelta_beni === 'TENGO'
-              ? JSON.stringify({ prezzo_riacquisto: Number(contratto.pricing_riacquisto) })
+              ? JSON.stringify({ prezzo_riacquisto: (await (await import('../services/pricing.service.js')).prezzoRiacquisto(contratto)).netto })
               : null,
           },
         }),

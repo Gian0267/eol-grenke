@@ -91,6 +91,59 @@ router.get('/scadenza-grenke', async (req: AuthenticatedRequest, res: Response) 
 //   `mancate`, perche' e' cio' che si vuole sapere;
 // - la prima comunicazione NON e' schedulata: parte a mano dalla lista
 //   pratiche. La sua data e' quindi un "da qui in avanti", non un impegno.
+// GET /api/backoffice/dashboard/sconto-nuovo-noleggio
+//
+// Promemoria: lo sconto lo concede una persona, spuntando la spedizione. Se
+// nessuno se ne ricorda, al cliente e' stato promesso uno sconto che poi non
+// gli viene applicato — e se ne accorge quando gli chiediamo i soldi.
+router.get('/sconto-nuovo-noleggio', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configService = await import('../services/config.service.js');
+    if (!await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true)) {
+      res.json({ attivo: false });
+      return;
+    }
+
+    const { dataLimiteSconto } = await import('../services/pricing.service.js');
+    const giorniMinimi = await configService.getNumero('sconto_nuovo_noleggio.giorni_minimi', 30);
+    const percentuale = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+
+    const pratiche = await prisma.contratto_EOL.findMany({
+      where: {
+        ambiente: ambienteVista(req),
+        data_scadenza: { not: null },
+        stato: { notIn: ['RIACQUISTO_PAGATO', 'SILENZIO_PERDITA_DEFINITIVA', 'CHIUSA', 'FLEX_ATTIVO'] },
+      },
+      select: {
+        data_scadenza: true, nuovo_noleggio_spedito_il: true,
+        beni_esclusi_json: true, pricing_riacquisto_pieno: true,
+      },
+    });
+
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    let concessi = 0, inScadenza = 0, ancoraInTempo = 0;
+
+    for (const p of pratiche) {
+      if (p.nuovo_noleggio_spedito_il) { concessi++; continue; }
+      // Prezzo concordato a mano: lo sconto non si applica, non ha senso
+      // contarla fra quelle a cui manca la conferma.
+      if (p.beni_esclusi_json || p.pricing_riacquisto_pieno != null) continue;
+
+      const limite = dataLimiteSconto(new Date(p.data_scadenza!), giorniMinimi);
+      const giorni = Math.ceil((limite.getTime() - oggi.getTime()) / 86400000);
+      if (giorni < 0) continue;
+      ancoraInTempo++;
+      if (giorni <= 15) inScadenza++;
+    }
+
+    res.json({ attivo: true, percentuale, concessi, in_scadenza: inScadenza, ancora_in_tempo: ancoraInTempo });
+  } catch (err) {
+    console.error('[sconto-nuovo-noleggio] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 router.get('/prossimi-invii', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const configService = await import('../services/config.service.js');

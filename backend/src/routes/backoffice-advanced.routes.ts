@@ -362,6 +362,22 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
     res.json({
       ...pratica,
       cliente_iol: origineCorrisponde(pratica.origine, dicitureIol),
+      // Sconto per nuovo noleggio: listino, prezzo effettivo e data limite,
+      // cosi' la scheda mostra quello che il cliente paga davvero.
+      sconto_nuovo_noleggio: await (async () => {
+        const { prezzoRiacquisto } = await import('../services/pricing.service.js');
+        const p2 = await prezzoRiacquisto(pratica);
+        return {
+          listino: p2.listino,
+          netto: p2.netto,
+          sconto_euro: p2.sconto_euro,
+          sconto_percentuale: p2.sconto_percentuale,
+          limitato_dal_costo: p2.limitato_dal_costo,
+          prezzo_concordato: p2.prezzo_concordato,
+          data_limite: p2.data_limite?.toISOString() ?? null,
+          spedito_il: pratica.nuovo_noleggio_spedito_il?.toISOString() ?? null,
+        };
+      })(),
       invito_pagamento_inviato: pratica.comunicazioni
         .filter(c => c.tipo === 'INVITO_PAGAMENTO' && c.esito_invio === 'INVIATO')
         .sort((a, b) => b.data_invio.getTime() - a.data_invio.getTime())[0]?.data_invio ?? null,
@@ -593,6 +609,94 @@ router.post('/pratiche-dettaglio/:id/invito-pagamento', async (req: Authenticate
   } catch (err) {
     console.error('[invito-pagamento] Errore:', err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Errore interno' });
+  }
+});
+
+// POST /api/backoffice/pratiche-dettaglio/:id/nuovo-noleggio-spedito
+//
+// Conferma che al cliente e' stato spedito un nuovo noleggio: da quel momento
+// il riscatto e' scontato. L'ordine e la spedizione avvengono sulla piattaforma
+// NSM, che questo sistema non vede, quindi il dato lo mette una persona.
+//
+// Body vuoto o `{ data }` per confermare; `{ annulla: true }` per revocare.
+router.post('/pratiche-dettaglio/:id/nuovo-noleggio-spedito', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN'].includes(ruolo)) {
+      res.status(403).json({ error: 'Operazione riservata a Backoffice interno e Admin' });
+      return;
+    }
+
+    const { data, annulla } = req.body as { data?: unknown; annulla?: unknown };
+    const id = req.params.id as string;
+
+    const c = await prisma.contratto_EOL.findUnique({ where: { id } });
+    if (!c) { res.status(404).json({ error: 'Pratica non trovata' }); return; }
+
+    const { dataLimiteSconto, prezzoRiacquisto } = await import('../services/pricing.service.js');
+
+    if (annulla === true) {
+      await prisma.contratto_EOL.update({
+        where: { id },
+        data: { nuovo_noleggio_spedito_il: null, sconto_riscatto_percentuale: null },
+      });
+      await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+        sotto_azione: 'SCONTO_NUOVO_NOLEGGIO_REVOCATO',
+        data_precedente: c.nuovo_noleggio_spedito_il,
+      });
+      res.json({ success: true, messaggio: 'Sconto revocato: torna il prezzo pieno' });
+      return;
+    }
+
+    if (!c.data_scadenza) { res.status(400).json({ error: 'La pratica non ha una data di scadenza' }); return; }
+    if (c.pricing_riacquisto_pieno != null || c.beni_esclusi_json) {
+      res.status(400).json({
+        error: 'Il prezzo di questa pratica e\' stato concordato a mano: lo sconto non si applica',
+      });
+      return;
+    }
+
+    const quando = typeof data === 'string' && data ? new Date(data) : new Date();
+    if (Number.isNaN(quando.getTime())) { res.status(400).json({ error: 'Data non valida' }); return; }
+    quando.setUTCHours(0, 0, 0, 0);
+
+    const giorniMinimi = await configService.getNumero('sconto_nuovo_noleggio.giorni_minimi', 30);
+    const limite = dataLimiteSconto(new Date(c.data_scadenza), giorniMinimi);
+    if (quando.getTime() > limite.getTime()) {
+      res.status(400).json({
+        error: `Spedizione del ${quando.toLocaleDateString('it-IT')}: oltre il limite del ${limite.toLocaleDateString('it-IT')}, lo sconto non spetta`,
+      });
+      return;
+    }
+
+    // La percentuale si congela: cambiarla domani nelle Impostazioni non deve
+    // modificare uno sconto gia' promesso a un cliente.
+    const perc = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+    await prisma.contratto_EOL.update({
+      where: { id },
+      data: { nuovo_noleggio_spedito_il: quando, sconto_riscatto_percentuale: new Prisma.Decimal(perc) },
+    });
+
+    const prezzo = await prezzoRiacquisto({ ...c, nuovo_noleggio_spedito_il: quando, sconto_riscatto_percentuale: perc });
+    await registraEvento(id, 'BACKOFFICE', (req.user as any)?.id || 'system', 'MODIFICA_BACKOFFICE', {
+      sotto_azione: 'SCONTO_NUOVO_NOLEGGIO_CONCESSO',
+      spedito_il: quando,
+      data_limite: limite,
+      percentuale: perc,
+      prezzo_listino: prezzo.listino,
+      prezzo_scontato: prezzo.netto,
+      limitato_dal_costo: prezzo.limitato_dal_costo,
+    });
+
+    res.json({
+      success: true,
+      messaggio: prezzo.limitato_dal_costo
+        ? `Sconto applicato ma ridotto: il prezzo non scende sotto il costo Grenke (${prezzo.netto.toFixed(2)})`
+        : `Sconto applicato: il riscatto passa da ${prezzo.listino.toFixed(2)} a ${prezzo.netto.toFixed(2)}`,
+    });
+  } catch (err) {
+    console.error('[nuovo-noleggio-spedito] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
   }
 });
 

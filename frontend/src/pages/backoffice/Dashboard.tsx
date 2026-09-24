@@ -28,6 +28,14 @@ interface ProssimoInvio {
   totale_attesa: number
 }
 
+interface ScontoNuovoNoleggio {
+  attivo: boolean
+  percentuale?: number
+  concessi?: number
+  in_scadenza?: number
+  ancora_in_tempo?: number
+}
+
 interface Utente {
   id: string
   nome: string
@@ -89,6 +97,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   // Link di registrazione a un nuovo noleggio, da passare a un cliente
   const [prossimiInvii, setProssimiInvii] = useState<ProssimoInvio[]>([])
+  const [sconto, setSconto] = useState<ScontoNuovoNoleggio | null>(null)
   const [linkOnboarding, setLinkOnboarding] = useState<string | null>(null)
   const [copiato, setCopiato] = useState(false)
 
@@ -148,6 +157,11 @@ export default function Dashboard() {
         fetch('/api/backoffice/dashboard/prossimi-invii', opts)
           .then(r => (r.ok ? r.json() : null))
           .then(d => setProssimiInvii(d?.invii ?? []))
+          .catch(() => {})
+
+        fetch('/api/backoffice/dashboard/sconto-nuovo-noleggio', opts)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => setSconto(d ?? null))
           .catch(() => {})
 
         fetch('/api/backoffice/link-onboarding', opts)
@@ -341,6 +355,36 @@ export default function Dashboard() {
                 </div>
               )
             })}
+          </div>
+        </section>
+      )}
+
+      {/* Sconto per nuovo noleggio: lo concede una persona spuntando la
+          spedizione. Senza questo promemoria si promette uno sconto e poi non
+          lo si applica — e il cliente se ne accorge alla richiesta di pagamento. */}
+      {sconto?.attivo && (sconto.ancora_in_tempo ?? 0) + (sconto.concessi ?? 0) > 0 && (
+        <section>
+          <h2 className="text-xl font-medium text-graphite mb-4">Sconto per nuovo noleggio</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm text-stone">Sconto concesso</p>
+              <p className="text-2xl font-medium text-graphite mt-2">{sconto.concessi ?? 0}</p>
+              <p className="text-xs text-stone mt-1">spedizione confermata, riscatto a −{sconto.percentuale}%</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm text-stone">Ancora in tempo</p>
+              <p className="text-2xl font-medium text-graphite mt-2">{sconto.ancora_in_tempo ?? 0}</p>
+              <p className="text-xs text-stone mt-1">possono ancora ordinare e ricevere</p>
+            </div>
+            <div className={`rounded-xl border p-5 ${(sconto.in_scadenza ?? 0) > 0 ? 'bg-warn border-warn-border/30' : 'border-border bg-card'}`}>
+              <p className={`text-sm ${(sconto.in_scadenza ?? 0) > 0 ? 'text-warn-text' : 'text-stone'}`}>Limite entro 15 giorni</p>
+              <p className={`text-2xl font-medium mt-2 ${(sconto.in_scadenza ?? 0) > 0 ? 'text-warn-text' : 'text-graphite'}`}>
+                {sconto.in_scadenza ?? 0}
+              </p>
+              <p className={`text-xs mt-1 ${(sconto.in_scadenza ?? 0) > 0 ? 'text-warn-text' : 'text-stone'}`}>
+                senza conferma di spedizione
+              </p>
+            </div>
           </div>
         </section>
       )}

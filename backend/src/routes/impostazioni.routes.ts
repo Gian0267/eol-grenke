@@ -59,6 +59,23 @@ router.get('/preview-email/:chiave', async (req: AuthenticatedRequest, res: Resp
       referente_nome: 'Giuseppe Bianchi',
       telefono: '011 1234567',
       email_cliente: 'demo@acme.it',
+      // L'anteprima deve mostrare i blocchi condizionali, altrimenti chi
+      // modifica il template non vede cosa sta modificando.
+      opzione_rinnovo_attiva: false,
+      num_opzione_riacquisto: 1,
+      num_opzione_contatto: 2,
+      num_opzione_restituzione: 3,
+      riacquisto_parziale: false,
+      beni_riacquisto: 'Notebook Lenovo ThinkPad X1 Carbon',
+      beni_da_restituire: 'Monitor LG 27"',
+      pagamento_online_attivo: true,
+      sconto_attivo: true,
+      sconto_percentuale: 15,
+      sconto_data_limite: '30/11/2026',
+      giorni_al_limite: 28,
+      prezzo_riacquisto_scontato: '208,08',
+      sconto_euro: '36,72',
+      link_nuovo_noleggio_sconto: '#anteprima-nuovo-noleggio',
     };
 
     const compiled = Handlebars.compile(imp.valore);

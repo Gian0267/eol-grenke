@@ -102,7 +102,8 @@ export default function PropostaNuovoNoleggio() {
         Comunicazione commerciale ai clienti Italiaonline: propone di attivare un nuovo noleggio,
         indipendentemente da come decideranno per il contratto in scadenza. Parte solo da qui, una
         volta per cliente. A chi non ha ancora deciso sul fine contratto la mail lo ricorda,
-        rimandando all&apos;area riservata.
+        rimandando all&apos;area riservata. Italiaonline ha autorizzato la proposta ai propri clienti
+        il 24/09/2026.
       </p>
 
       {ambiente === 'TEST' && (
