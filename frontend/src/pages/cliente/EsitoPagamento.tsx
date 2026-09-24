@@ -37,7 +37,7 @@ export default function EsitoPagamento() {
           </>
         )}
         <p className="text-sm text-gray-500">
-          Noleggio Su Misura — Integra Solutions Srl<br />
+          Noleggio Su Misura — Integra Systems Srl<br />
           <a href="mailto:info@noleggiosumisura.it" className="text-[#2563eb]">info@noleggiosumisura.it</a> — 011 4557949
         </p>
         <Link to="/" className="hidden">home</Link>

@@ -88,7 +88,7 @@ export async function generaRicevutaPagamento(
   // Prima erano scritti nel codice, e la P.IVA era rimasta un segnaposto
   // ("12345678901") finito su tre ricevute gia' in mano ai clienti.
   const azienda = {
-    ragione_sociale: await configService.getTesto('recapiti.ragione_sociale', 'Integra Solutions Srl'),
+    ragione_sociale: await configService.getTesto('recapiti.ragione_sociale', 'Integra Systems Srl'),
     indirizzo: await configService.getTesto('recapiti.indirizzo', 'Via Tunisia 5, 10093 Collegno (TO)'),
     piva: await configService.getTesto('recapiti.piva', ''),
   };
@@ -107,7 +107,7 @@ export async function generaRicevutaPagamento(
 
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
     Title: `Ricevuta di conferma pagamento ${fatturaNumero}`,
-    Author: 'Noleggio Su Misura - Integra Solutions Srl',
+    Author: 'Noleggio Su Misura - Integra Systems Srl',
   }});
 
   const pdfDone = collectPdf(doc);

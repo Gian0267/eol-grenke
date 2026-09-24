@@ -37,7 +37,7 @@ export async function mensilitaPerAnno(origine?: string | null): Promise<number>
 /**
  * Calcola i valori economici della pratica.
  *
- * - pricing_grenke: importo che Grenke addebita a Integra Solutions — NON è
+ * - pricing_grenke: importo che Grenke addebita a Integra Systems — NON è
  *   calcolato, arriva dal file Excel di Grenke (colonna "Prezzo Riacquisto
  *   Grenke").
  * - pricing_riacquisto (prezzo al cliente): un numero configurabile di

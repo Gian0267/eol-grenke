@@ -248,7 +248,7 @@ export async function inviaRicevutaAlCliente(
           <li>Verifichi funzionamento ed eventuali danni</li>
           <li>Utilizzi l'imballo originale o equivalente</li>
         </ol>
-        <p style="margin:0;">Spedisca a: <strong>Integra Solutions Srl, Via Tunisia 5, 10093 Collegno (TO)</strong>.
+        <p style="margin:0;">Spedisca a: <strong>Integra Systems Srl, Via Tunisia 5, 10093 Collegno (TO)</strong>.
         Le spese di spedizione sono a carico del cliente.</p>
       </div>`;
 
@@ -260,7 +260,7 @@ export async function inviaRicevutaAlCliente(
         <p>In allegato trova la ricevuta n. ${fatturaNumero}.</p>
         ${bloccoReso}
         <p>Cordiali saluti,<br><strong>Il Team Noleggio Su Misura</strong><br>
-        <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Solutions Srl</span></p>
+        <span style="font-size:13px;color:#6b7280;">Divisione Rental di Integra Systems Srl</span></p>
       </div>`;
 
     const oggetto = `Pagamento ricevuto — ricevuta riacquisto contratto n. ${contratto.contratto_grenke_id}`;
