@@ -36,7 +36,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
 
   const impostazioni: ImpostazioneSeed[] = [
     // ─── TIMELINE ─────────────────────────────────────────────────────
-    { chiave: 'timeline.comunicazione_iniziale', valore: String(pre.comunicazione_iniziale ?? 145), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Comunicazione iniziale', descrizione: 'Giorni prima della scadenza per l\'invio della comunicazione iniziale' },
+    { chiave: 'timeline.comunicazione_iniziale', valore: String(pre.comunicazione_iniziale ?? 105), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Comunicazione iniziale', descrizione: 'Giorni prima della scadenza in cui la prima comunicazione va mandata (a mano, dalla lista pratiche). Deve restare PIU\' ALTA del primo sollecito, altrimenti chi viene comunicato in ritardo lo salta' },
     { chiave: 'timeline.sollecito_email_1', valore: String(pre.sollecito_email_1 ?? 90), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Sollecito email 1', descrizione: 'Giorni prima della scadenza per il primo sollecito email' },
     { chiave: 'timeline.sollecito_email_2', valore: String(pre.sollecito_email_2 ?? 60), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Sollecito email 2', descrizione: 'Giorni prima della scadenza per il secondo sollecito email' },
     { chiave: 'timeline.escalation_telefonica_1', valore: String(pre.escalation_telefonica_1 ?? 50), tipo: 'NUMERO', categoria: 'TIMELINE', label: 'Escalation telefonica 1', descrizione: 'Giorni prima della scadenza per la prima chiamata di escalation' },
