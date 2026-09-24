@@ -273,6 +273,9 @@ router.get('/riacquisti-in-attesa', async (req: AuthenticatedRequest, res: Respo
               select: {
                 ragione_sociale: true,
                 piva: true,
+                // Serve alla risposta scritta dalla scheda: senza, il modulo
+                // non sa a chi sta scrivendo.
+                email: true,
                 telefono: true,
                 referente_nome: true,
                 referente_telefono: true,

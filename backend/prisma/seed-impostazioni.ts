@@ -101,6 +101,7 @@ export async function seedImpostazioni(prisma: PrismaClient) {
     { chiave: 'email.sollecito_4', valore: readTemplate('email', 'sollecito_4.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Sollecito 4 (T-35)', descrizione: 'Template quarto e ultimo sollecito email' },
     { chiave: 'email.conferma_restituzione', valore: readTemplate('email', 'conferma_restituzione.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Conferma restituzione', descrizione: 'Template email di conferma scelta restituzione beni' },
     { chiave: 'email.conferma_rinnovo', valore: readTemplate('email', 'conferma_rinnovo.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Conferma rinnovo', descrizione: 'Template email di conferma scelta rinnovo contratto' },
+    { chiave: 'email.risposta_contatto', valore: readTemplate('email', 'risposta_contatto.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Risposta a richiesta di contatto', descrizione: 'Usato quando il backoffice risponde per iscritto a un cliente da "Clienti in attesa". Il testo lo scrive l\'operatore e finisce in {{{messaggio}}}' },
     { chiave: 'email.conferma_contatto', valore: readTemplate('email', 'notifica_richiesta_contatto.html'), tipo: 'HTML', categoria: 'EMAIL', label: 'Conferma contatto', descrizione: 'Template email di conferma richiesta di contatto personalizzato' },
 
     { chiave: 'ricevuta.titolo', valore: 'RICEVUTA DI CONFERMA PAGAMENTO', tipo: 'TESTO', categoria: 'EMAIL', label: 'Ricevuta: titolo', descrizione: 'Titolo in testa al PDF della ricevuta di pagamento' },

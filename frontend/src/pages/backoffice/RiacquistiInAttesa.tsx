@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User, FileText, EyeOff } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
+import { Phone, Unlock, Loader2, CheckCircle2, MessageCircle, User, FileText, EyeOff, Mail, X } from 'lucide-react';
 
 const API_BASE = '';
 const BACKOFFICE_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -68,6 +69,7 @@ interface RichiestaContatto {
     cliente: {
       ragione_sociale: string;
       piva: string;
+      email: string | null;
       telefono: string | null;
       referente_nome: string | null;
       referente_telefono: string | null;
@@ -186,10 +188,47 @@ export default function RiacquistiInAttesa() {
     finally { setRichiamando(null); }
   };
 
+  // Risposta scritta al cliente, dalla casella aziendale
+  const [rispondiA, setRispondiA] = useState<{
+    praticaId: string; richiestaId: string; cliente: string; email: string | null; contratto: string;
+  } | null>(null);
+  const [oggetto, setOggetto] = useState('');
+  const [messaggio, setMessaggio] = useState('');
+  const [inviando, setInviando] = useState(false);
+
+  const apriRisposta = (praticaId: string, richiestaId: string, cliente: string, email: string | null, contratto: string) => {
+    setRispondiA({ praticaId, richiestaId, cliente, email, contratto });
+    setOggetto(`Riscontro alla Sua richiesta — contratto ${contratto}`);
+    setMessaggio('');
+  };
+
+  const inviaRisposta = async () => {
+    if (!rispondiA || !messaggio.trim()) return;
+    setInviando(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/backoffice/pratiche-dettaglio/${rispondiA.praticaId}/rispondi-email`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
+        body: JSON.stringify({ oggetto, messaggio, richiesta_id: rispondiA.richiestaId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Errore');
+      toast.success('Risposta inviata al cliente');
+      setRispondiA(null);
+      fetchDati();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore nell'invio");
+    } finally {
+      setInviando(false);
+    }
+  };
+
   const vuoto = riacquisti.length === 0 && richieste.length === 0;
 
   return (
     <div>
+      <Toaster position="top-right" richColors />
       <h1 className="text-xl font-bold text-graphite mb-1">Clienti in attesa di contatto</h1>
       <p className="text-sm text-stone mb-6">Riacquisti da sbloccare e richieste di informazioni che richiedono una chiamata</p>
 
@@ -290,6 +329,15 @@ export default function RiacquistiInAttesa() {
                                 <Phone className="w-4 h-4" />
                               )}
                               Segna come richiamato
+                            </button>
+                          )}
+                          {c.cliente && (
+                            <button
+                              onClick={() => apriRisposta(c.id, r.id, c.cliente.ragione_sociale, (c.cliente as { email?: string | null }).email ?? null, c.contratto_grenke_id)}
+                              className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-graphite hover:bg-paper transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Mail className="w-4 h-4" />
+                              Rispondi via email
                             </button>
                           )}
                           {/* Prima di telefonare serve il quadro completo:
@@ -432,6 +480,75 @@ export default function RiacquistiInAttesa() {
               </div>
             </section>
           )}
+        </div>
+      )}
+
+      {/* Risposta scritta al cliente. Parte dalla casella aziendale, non da
+          quella di chi scrive: se il cliente replica, la risposta rientra fra
+          le segnalazioni invece di perdersi in una posta personale. */}
+      {rispondiA && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" onClick={() => setRispondiA(null)}>
+          <div className="bg-card rounded-xl border border-border w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-graphite">Rispondi a {rispondiA.cliente}</h3>
+                <p className="text-xs text-stone mt-1 break-all">
+                  Da <strong>info@noleggiosumisura.it</strong> a <strong>{rispondiA.email || 'indirizzo mancante'}</strong>
+                </p>
+              </div>
+              <button onClick={() => setRispondiA(null)} className="text-stone hover:text-graphite shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 overflow-y-auto space-y-3">
+              {!rispondiA.email && (
+                <p className="text-sm text-red-600">
+                  Questo cliente non ha un indirizzo email registrato: l&apos;invio non e&apos; possibile.
+                </p>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-graphite mb-1">Oggetto</label>
+                <input
+                  value={oggetto}
+                  onChange={e => setOggetto(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-graphite mb-1">Messaggio</label>
+                <textarea
+                  value={messaggio}
+                  onChange={e => setMessaggio(e.target.value)}
+                  rows={10}
+                  maxLength={10000}
+                  placeholder="Scrivi qui la risposta. Intestazione, firma e riferimento al contratto li mette il sistema."
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flex/30 resize-y"
+                />
+                <p className="text-xs text-stone mt-1">
+                  Testo semplice: gli a capo vengono mantenuti, il resto no. Il cliente potr&agrave; rispondere
+                  direttamente a questa email e la sua risposta finir&agrave; fra le segnalazioni.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-3 border-t border-border flex items-center justify-between gap-3">
+              <span className="text-xs text-stone">L&apos;invio segna la richiesta come gestita.</span>
+              <div className="flex gap-2">
+                <button onClick={() => setRispondiA(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-paper">
+                  Annulla
+                </button>
+                <button
+                  onClick={inviaRisposta}
+                  disabled={inviando || !messaggio.trim() || !rispondiA.email}
+                  className="px-4 py-2 text-sm rounded-lg bg-flex text-white hover:bg-flex-dark disabled:opacity-50 flex items-center gap-2"
+                >
+                  {inviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  Invia la risposta
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

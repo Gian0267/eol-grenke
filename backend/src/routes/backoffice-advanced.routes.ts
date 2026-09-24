@@ -798,6 +798,41 @@ router.post('/pratiche-dettaglio/:id/segna-richiamato', async (req: Authenticate
   }
 });
 
+// POST /api/backoffice/pratiche-dettaglio/:id/rispondi-email — risposta scritta
+// al cliente che ha chiesto di essere contattato.
+//
+// Parte da info@noleggiosumisura.it, la casella che monitoriamo: se il cliente
+// replica, la sua risposta rientra fra le segnalazioni invece di finire nella
+// posta personale di chi ha scritto.
+router.post('/pratiche-dettaglio/:id/rispondi-email', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ruolo = (req.user as any)?.ruolo;
+    if (!['BACKOFFICE_INTERNO', 'ADMIN', 'AGENTE', 'CAPO_AREA', 'GROUP_MANAGER'].includes(ruolo)) {
+      res.status(403).json({ error: 'Ruolo non abilitato a scrivere ai clienti' });
+      return;
+    }
+
+    const { oggetto, messaggio, richiesta_id } = req.body as Record<string, unknown>;
+    const testo = typeof messaggio === 'string' ? messaggio.trim() : '';
+    if (!testo) { res.status(400).json({ error: 'Il messaggio e\' vuoto' }); return; }
+    if (testo.length > 10000) { res.status(400).json({ error: 'Messaggio troppo lungo (massimo 10000 caratteri)' }); return; }
+
+    const { inviaRispostaContatto } = await import('../services/email.service.js');
+    const r = await inviaRispostaContatto(req.params.id as string, {
+      oggetto: typeof oggetto === 'string' ? oggetto : '',
+      messaggio: testo,
+      richiestaId: typeof richiesta_id === 'string' ? richiesta_id : undefined,
+      operatoreId: (req.user as any)?.id,
+    });
+
+    if (!r.success) { res.status(400).json({ error: r.errori.join('; ') || 'Invio non riuscito' }); return; }
+    res.json({ success: true, messaggio: 'Risposta inviata al cliente' });
+  } catch (err) {
+    console.error('[rispondi-email] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 // POST /api/backoffice/pratiche-dettaglio/:id/richiesta-gestita — chiude la
 // richiesta e toglie la pratica da "Clienti in attesa".
 //

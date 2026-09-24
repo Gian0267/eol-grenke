@@ -420,3 +420,101 @@ export async function inviaPropostaNuovoNoleggio(
 
   return result;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Risposta a una richiesta di contatto                               */
+/* ------------------------------------------------------------------ */
+
+export const TIPO_RISPOSTA_CONTATTO = 'RISPOSTA_CONTATTO';
+
+/**
+ * Risponde via email a un cliente che ha chiesto di essere contattato.
+ *
+ * Parte dalla casella aziendale, che e' anche quella che monitoriamo: se il
+ * cliente risponde, la sua replica rientra fra le segnalazioni invece di
+ * finire nella posta personale di chi ha scritto.
+ *
+ * Il testo lo scrive l'operatore ed e' trattato come TESTO: gli a capo
+ * diventano <br>, tutto il resto viene neutralizzato. Un backoffice che
+ * incolla del contenuto da un'altra mail non deve poter iniettare markup
+ * dentro una comunicazione che esce a nome dell'azienda.
+ */
+export async function inviaRispostaContatto(
+  contratto_eol_id: string,
+  opts: { oggetto: string; messaggio: string; richiestaId?: string; operatoreId?: string },
+): Promise<InvioResult> {
+  const result: InvioResult = { success: false, contrattoId: contratto_eol_id, emailInviate: 0, errori: [] };
+
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contratto_eol_id },
+    include: { cliente: true },
+  });
+  if (!contratto) { result.errori.push('Contratto non trovato'); return result; }
+  if (!contratto.cliente.email) { result.errori.push('Il cliente non ha un indirizzo email'); return result; }
+
+  const testo = (opts.messaggio ?? '').trim();
+  if (!testo) { result.errori.push('Il messaggio e\' vuoto'); return result; }
+
+  const escape = (v: string) => v
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const messaggioHtml = escape(testo).replace(/\r?\n/g, '<br>');
+
+  let templateHtml = await configService.getHtml('email.risposta_contatto');
+  if (!templateHtml) {
+    templateHtml = readFileSync(resolve(__dirname, '../../../templates/email/risposta_contatto.html'), 'utf-8');
+  }
+
+  const html = Handlebars.compile(templateHtml)({
+    ragione_sociale: contratto.cliente.ragione_sociale,
+    messaggio: messaggioHtml,
+    riferimento_contratto: contratto.contratto_grenke_id,
+    data_scadenza: contratto.data_scadenza ? formatDate(new Date(contratto.data_scadenza)) : '',
+    firma: await configService.getTesto('recapiti.nome_mittente', 'Il Team Noleggio Su Misura'),
+  });
+
+  const oggetto = (opts.oggetto ?? '').trim()
+    || `Riscontro alla Sua richiesta — contratto ${contratto.contratto_grenke_id}`;
+
+  const provider = emailProviderPerAmbiente(contratto.ambiente);
+  const esito = await provider.send(contratto.cliente.email, oggetto, html);
+
+  await prisma.comunicazione.create({
+    data: {
+      contratto_eol_id: contratto.id,
+      tipo: TIPO_RISPOSTA_CONTATTO,
+      canale: 'EMAIL',
+      destinatario: contratto.cliente.email,
+      oggetto,
+      corpo_html: html,
+      data_invio: new Date(),
+      esito_invio: esito.success ? 'INVIATO' : 'ERRORE',
+      operatore_id: opts.operatoreId ?? null,
+    },
+  });
+
+  if (!esito.success) {
+    result.errori.push(`Errore invio a ${contratto.cliente.email}: ${esito.error}`);
+    return result;
+  }
+
+  // La risposta E' il contatto: la richiesta si considera evasa. Chi vuole
+  // tenerla aperta puo' riaprirla dalla scheda.
+  if (opts.richiestaId) {
+    await prisma.richiesta_Contatto.updateMany({
+      where: { id: opts.richiestaId, contratto_eol_id: contratto.id },
+      data: { stato: 'RICHIAMATO', data_richiamato: new Date() },
+    });
+  }
+
+  await registraEvento(contratto.id, 'BACKOFFICE', opts.operatoreId ?? 'system', 'COMUNICAZIONE_INVIATA', {
+    tipo: TIPO_RISPOSTA_CONTATTO,
+    destinatario: contratto.cliente.email,
+    oggetto,
+    richiesta_id: opts.richiestaId ?? null,
+  });
+
+  result.success = true;
+  result.emailInviate = 1;
+  return result;
+}
