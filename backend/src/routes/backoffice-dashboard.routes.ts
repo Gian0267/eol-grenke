@@ -77,6 +77,124 @@ router.get('/scadenza-grenke', async (req: AuthenticatedRequest, res: Response) 
 });
 
 // GET /api/backoffice/dashboard/risk-silence-counts
+// GET /api/backoffice/dashboard/prossimi-invii
+//
+// Cosa parte, quando e a quante pratiche. Le soglie sono quelle delle
+// Impostazioni, e le condizioni sono le STESSE che usa lo scheduler: se qui
+// comparisse una pratica che poi non riceve niente, il riquadro servirebbe
+// solo a illudere.
+//
+// Due avvertenze che il calcolo tiene in conto:
+// - i solleciti scattano al giorno ESATTO (giorni == soglia), non "da quel
+//   giorno in poi": una pratica che ha superato la soglia senza che lo
+//   scheduler sia passato non lo ricevera' mai piu'. Quelle finiscono in
+//   `mancate`, perche' e' cio' che si vuole sapere;
+// - la prima comunicazione NON e' schedulata: parte a mano dalla lista
+//   pratiche. La sua data e' quindi un "da qui in avanti", non un impegno.
+router.get('/prossimi-invii', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configService = await import('../services/config.service.js');
+    const ambiente = ambienteVista(req);
+
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const giorniA = (scadenza: Date, soglia: number) => {
+      const d = new Date(scadenza);
+      d.setHours(0, 0, 0, 0);
+      return new Date(d.getTime() - soglia * 86400000);
+    };
+
+    type Voce = {
+      tipo: string; etichetta: string; soglia: number; manuale: boolean;
+      data: string | null; pratiche: number; pronte_ora: number; mancate: number; totale_attesa: number;
+    };
+    const voci: Voce[] = [];
+
+    /** Raggruppa le pratiche per data di invio e restituisce il primo blocco utile. */
+    function prossimoBlocco(
+      candidate: Array<{ data_scadenza: Date | null }>,
+      soglia: number,
+      immediato: boolean,
+    ) {
+      let pronteOra = 0, mancate = 0;
+      const perData = new Map<number, number>();
+      for (const c of candidate) {
+        if (!c.data_scadenza) continue;
+        const quando = giorniA(c.data_scadenza, soglia);
+        if (quando.getTime() < oggi.getTime()) {
+          // Soglia gia' superata: se l'invio e' a soglia "<=" parte al primo
+          // giro utile, altrimenti e' persa.
+          if (immediato) pronteOra++; else mancate++;
+          continue;
+        }
+        perData.set(quando.getTime(), (perData.get(quando.getTime()) ?? 0) + 1);
+      }
+      const prossima = [...perData.keys()].sort((a, b) => a - b)[0];
+      return {
+        data: pronteOra > 0 ? oggi.toISOString() : prossima ? new Date(prossima).toISOString() : null,
+        pratiche: pronteOra > 0 ? pronteOra : prossima ? perData.get(prossima)! : 0,
+        pronte_ora: pronteOra,
+        mancate,
+        totale_attesa: candidate.length,
+      };
+    }
+
+    // --- Prima comunicazione (manuale) ---
+    const sogliaIniziale = await configService.getNumero('timeline.comunicazione_iniziale', 82);
+    const daComunicare = await prisma.contratto_EOL.findMany({
+      where: { stato: 'LISTA_RICEVUTA', ambiente, cliente: { opt_out_comunicazioni: false } },
+      select: { data_scadenza: true },
+    });
+    voci.push({
+      tipo: 'COMUNICAZIONE_INIZIALE', etichetta: 'Prima comunicazione',
+      soglia: sogliaIniziale, manuale: true,
+      ...prossimoBlocco(daComunicare, sogliaIniziale, true),
+    });
+
+    // --- Solleciti (scheduler, giorno esatto) ---
+    const solleciti = [
+      { tipo: 'SOLLECITO_1', etichetta: '1o sollecito', chiave: 'timeline.sollecito_email_1', def: 90 },
+      { tipo: 'SOLLECITO_2', etichetta: '2o sollecito', chiave: 'timeline.sollecito_email_2', def: 60 },
+      { tipo: 'SOLLECITO_3', etichetta: '3o sollecito', chiave: 'timeline.sollecito_email_3', def: 45 },
+      { tipo: 'SOLLECITO_4', etichetta: '4o sollecito', chiave: 'timeline.sollecito_email_4', def: 35 },
+    ];
+    for (const s of solleciti) {
+      const soglia = await configService.getNumero(s.chiave, s.def);
+      const candidate = await prisma.contratto_EOL.findMany({
+        where: {
+          stato: { in: ['COMUNICAZIONE_INVIATA', 'IN_ATTESA_DECISIONE'] },
+          ambiente,
+          cliente: { opt_out_comunicazioni: false },
+          comunicazioni: { none: { tipo: s.tipo } },
+        },
+        select: { data_scadenza: true },
+      });
+      voci.push({ tipo: s.tipo, etichetta: s.etichetta, soglia, manuale: false, ...prossimoBlocco(candidate, soglia, false) });
+    }
+
+    // --- Invito al pagamento (soglia "entro", quindi recupera i ritardi) ---
+    const sogliaPagamento = await configService.getNumero('timeline.pagamento_riacquisto', 26);
+    const daPagare = await prisma.contratto_EOL.findMany({
+      where: {
+        stato: { in: ['DECISIONE_RIACQUISTO', 'DECISIONE_RIACQUISTO_IN_CORSO'] },
+        ambiente,
+        comunicazioni: { none: { tipo: 'INVITO_PAGAMENTO' } },
+      },
+      select: { data_scadenza: true },
+    });
+    voci.push({
+      tipo: 'INVITO_PAGAMENTO', etichetta: 'Richiesta di pagamento',
+      soglia: sogliaPagamento, manuale: false,
+      ...prossimoBlocco(daPagare, sogliaPagamento, true),
+    });
+
+    res.json({ invii: voci.filter(v => v.pratiche > 0 || v.mancate > 0) });
+  } catch (err) {
+    console.error('[prossimi-invii] Errore:', err);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
 router.get('/risk-silence-counts', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const now = new Date();

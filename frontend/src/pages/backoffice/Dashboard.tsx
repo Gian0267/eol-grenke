@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router-dom'
-import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox, CalendarClock, Link2, Copy, Check } from 'lucide-react'
+import { Loader2, AlertTriangle, Phone, PhoneCall, PhoneOff, TrendingUp, Percent, Euro, Clock, UserCheck, FileText, Inbox, CalendarClock, Link2, Copy, Check, Send } from 'lucide-react'
 
 interface ScadenzaGrenke {
   presente: boolean
@@ -14,6 +14,18 @@ interface ScadenzaGrenke {
   da_incassare?: number
   importo_incassato?: number
   importo_da_incassare?: number
+}
+
+interface ProssimoInvio {
+  tipo: string
+  etichetta: string
+  soglia: number
+  manuale: boolean
+  data: string | null
+  pratiche: number
+  pronte_ora: number
+  mancate: number
+  totale_attesa: number
 }
 
 interface Utente {
@@ -76,6 +88,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // Link di registrazione a un nuovo noleggio, da passare a un cliente
+  const [prossimiInvii, setProssimiInvii] = useState<ProssimoInvio[]>([])
   const [linkOnboarding, setLinkOnboarding] = useState<string | null>(null)
   const [copiato, setCopiato] = useState(false)
 
@@ -131,7 +144,12 @@ export default function Dashboard() {
           fetch('/api/backoffice/dashboard/scadenza-grenke', opts),
         ])
 
-        // Non blocca nulla: se fallisce, il riquadro del link non compare
+        // Non bloccano la dashboard: se falliscono, i riquadri non compaiono
+        fetch('/api/backoffice/dashboard/prossimi-invii', opts)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => setProssimiInvii(d?.invii ?? []))
+          .catch(() => {})
+
         fetch('/api/backoffice/link-onboarding', opts)
           .then(r => (r.ok ? r.json() : null))
           .then(d => setLinkOnboarding(d?.link ?? null))
@@ -275,6 +293,57 @@ export default function Dashboard() {
           </section>
         )
       })()}
+
+      {/* Cosa parte, quando e a quante pratiche. Le date sono quelle che usa
+          lo scheduler: se qui comparisse una pratica che poi non riceve
+          niente, il riquadro servirebbe solo a illudere. */}
+      {prossimiInvii.length > 0 && (
+        <section>
+          <h2 className="text-xl font-medium text-graphite mb-4">Prossime comunicazioni</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+            {prossimiInvii.map((v) => {
+              const oggi = v.pronte_ora > 0
+              const data = v.data
+                ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' })
+                : null
+              return (
+                <div
+                  key={v.tipo}
+                  className={`rounded-xl border p-5 ${oggi ? 'bg-warn border-warn-border/30' : 'bg-card border-border'}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Send className={`h-4 w-4 ${oggi ? 'text-warn-border' : 'text-stone'}`} />
+                    <span className={`text-xs font-medium uppercase tracking-wide font-mono ${oggi ? 'text-warn-text' : 'text-stone'}`}>
+                      T-{v.soglia}
+                    </span>
+                  </div>
+                  <p className={`text-lg font-medium ${oggi ? 'text-warn-text' : 'text-graphite'}`}>
+                    {oggi ? 'Da inviare ora' : data ?? '—'}
+                  </p>
+                  <p className={`text-sm mt-1 ${oggi ? 'text-warn-text' : 'text-stone'}`}>{v.etichetta}</p>
+                  <p className={`text-2xl font-medium mt-3 ${oggi ? 'text-warn-text' : 'text-graphite'}`}>
+                    {v.pratiche}
+                    <span className="text-sm font-normal text-stone"> {v.pratiche === 1 ? 'pratica' : 'pratiche'}</span>
+                  </p>
+                  {v.manuale && (
+                    <p className="text-xs text-stone mt-2">Si invia a mano dalla lista pratiche</p>
+                  )}
+                  {/* I solleciti scattano al giorno esatto: una pratica che ha
+                      superato la soglia non lo ricevera' mai piu'. */}
+                  {v.mancate > 0 && (
+                    <p className="text-xs text-danger-text mt-2">
+                      {v.mancate} {v.mancate === 1 ? 'pratica ha' : 'pratiche hanno'} superato la soglia senza riceverlo
+                    </p>
+                  )}
+                  {v.totale_attesa > v.pratiche && v.mancate === 0 && (
+                    <p className="text-xs text-stone mt-2">{v.totale_attesa} in attesa in totale</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Sezione 1: Pratiche a rischio silenzio */}
       <section>
