@@ -203,7 +203,7 @@ export default function AreaPratica() {
     },
   ];
 
-  // Quarta opzione: riscatto a prezzo ridotto per chi attiva un nuovo noleggio.
+  // Quarta opzione: acquisto a prezzo ridotto per chi attiva un nuovo noleggio.
   // Non porta a un flusso di decisione come le altre tre: apre una pagina che
   // registra la dichiarazione e consegna il link. Il link non compare da
   // nessun'altra parte, cosi' ogni registrazione resta attribuibile.
@@ -211,9 +211,9 @@ export default function AreaPratica() {
   if (nn?.disponibile) {
     opzioni.push({
       id: 'nuovo-noleggio',
-      titolo: 'Riscatta a prezzo ridotto e attiva un nuovo noleggio',
+      titolo: 'Acquista a prezzo ridotto e attiva un nuovo noleggio',
       descrizione: nn.data_limite
-        ? `Se ordini un nuovo noleggio e te lo spediamo entro il ${new Date(nn.data_limite).toLocaleDateString('it-IT')}, il riscatto dei beni attuali ti costa € ${formatEur(nn.prezzo_scontato)} invece di € ${formatEur(data.economica.pricing_riacquisto)}. Fa fede la data di spedizione.`
+        ? `Se ordini un nuovo noleggio e te lo spediamo entro il ${new Date(nn.data_limite).toLocaleDateString('it-IT')}, il prezzo di acquisto dei beni attuali è di € ${formatEur(nn.prezzo_scontato)} invece di € ${formatEur(data.economica.pricing_riacquisto)}. Fa fede la data di spedizione.`
         : '',
       icona: <Sparkles className="w-6 h-6" />,
       colore: 'border-[#0B7FA6]',

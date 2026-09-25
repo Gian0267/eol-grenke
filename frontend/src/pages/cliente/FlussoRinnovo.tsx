@@ -273,7 +273,7 @@ export default function FlussoRinnovo() {
                       <span className="text-xs bg-[#16a34a] text-white px-2 py-0.5 rounded-full font-medium">Consigliato</span>
                     </div>
                     <p className="text-sm text-gray-600 mb-3">
-                      Acquista i beni attuali al prezzo di riacquisto e procedi con un nuovo contratto.
+                      Acquista i beni attuali al prezzo di acquisto indicato e procedi con un nuovo contratto.
                     </p>
                     <div className="bg-white rounded-lg border border-green-200 p-3">
                       <div className="grid grid-cols-3 gap-2 text-center">

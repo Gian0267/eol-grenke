@@ -151,7 +151,7 @@ export default function FlussoContatto() {
                 <textarea
                   value={note} onChange={e => setNote(e.target.value)}
                   rows={3}
-                  placeholder="Es. vorrei valutare un mix di rinnovo e riacquisto, oppure ho bisogno di informazioni sui tempi..."
+                  placeholder="Es. vorrei valutare un acquisto parziale dei beni, oppure ho bisogno di informazioni sui tempi..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#ca8a04] focus:outline-none resize-none"
                 />
               </div>

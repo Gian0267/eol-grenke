@@ -1,5 +1,5 @@
 /**
- * Quarta opzione: riscatto a prezzo ridotto attivando un nuovo noleggio.
+ * Quarta opzione: acquisto a prezzo ridotto attivando un nuovo noleggio.
  *
  * A differenza delle altre tre opzioni non c'e' una decisione di fine contratto
  * da registrare qui: il cliente dichiara che attivera' un nuovo noleggio e
@@ -96,7 +96,7 @@ export default function FlussoNuovoNoleggio() {
           <Link to={`/pratica/${token}`} className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm">
             <ArrowLeft className="w-4 h-4" /> Torna alle opzioni
           </Link>
-          <h1 className="text-xl font-semibold mt-3">Riscatta a prezzo ridotto con un nuovo noleggio</h1>
+          <h1 className="text-xl font-semibold mt-3">Acquista a prezzo ridotto con un nuovo noleggio</h1>
         </div>
       </header>
 
@@ -122,7 +122,7 @@ export default function FlussoNuovoNoleggio() {
               <span className="font-medium">Richiesta registrata</span>
             </div>
             <p className="text-gray-700 mb-5">
-              Da qui pu&ograve; configurare il nuovo noleggio. Perch&eacute; il riscatto Le costi
+              Da qui pu&ograve; configurare il nuovo noleggio. Perch&eacute; il prezzo di acquisto sia
               <strong> &euro; {formatEur(dati?.prezzo_scontato ?? 0)}</strong> invece di
               &euro; {formatEur(dati?.prezzo_pieno ?? 0)}, i dispositivi devono esserLe
               <strong> spediti entro il {new Date(esito.data_limite).toLocaleDateString('it-IT')}</strong>:
@@ -153,7 +153,7 @@ export default function FlussoNuovoNoleggio() {
             <ul className="text-gray-700 space-y-2 mb-6 list-disc list-inside">
               <li>Configura un nuovo noleggio di dispositivi.</li>
               <li>
-                Se glieli spediamo entro il <strong>{dataLimite}</strong>, il riscatto dei beni attuali
+                Se glieli spediamo entro il <strong>{dataLimite}</strong>, il prezzo di acquisto dei beni attuali
                 Le costa <strong>&euro; {formatEur(dati?.prezzo_scontato ?? 0)}</strong> invece di
                 &euro; {formatEur(dati?.prezzo_pieno ?? 0)}: risparmia
                 <strong> &euro; {formatEur(dati?.risparmio ?? 0)}</strong>.

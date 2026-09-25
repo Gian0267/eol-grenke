@@ -637,7 +637,7 @@ export default function FlussoRiacquisto() {
               <CalendarClock className="w-16 h-16 text-[#2563eb] mx-auto mb-4" />
               <h2 className="font-semibold text-[#1a3a52] text-xl mb-2">Scelta confermata</h2>
               <p className="text-sm text-gray-600 mt-2">
-                La tua decisione di riacquisto e' stata registrata con successo.
+                La tua decisione di acquisto è stata registrata con successo.
               </p>
               <p className="text-sm text-gray-600 mt-4">
                 Riceverai {(configPagamento?.abilita_pagamento_online ?? false)
