@@ -36,3 +36,6 @@ frontend/.vite/
 # Claude
 .claude/
 HOSTINGER_ENV.txt
+
+# Elenco link pratiche di test (contiene token)
+backoffice-link-test.html
