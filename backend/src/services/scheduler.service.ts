@@ -410,6 +410,7 @@ async function inviaSollecito(
   const templateVars = {
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
     sconto_attivo: __scontoAttivo,
+    num_opzione_nuovo_noleggio: opzioneRinnovoAttiva ? 5 : 4,
     sconto_percentuale: __percSconto,
     sconto_data_limite: __limite ? formatDate(__limite) : '',
     giorni_al_limite: __giorniAlLimite,
@@ -751,7 +752,7 @@ export function startSchedulerCron(): void {
  */
 export async function inviaRichiestaPagamento(
   contrattoId: string,
-  opts?: { promemoria?: boolean; operatoreId?: string },
+  opts?: { promemoria?: boolean; operatoreId?: string; forza?: boolean },
 ): Promise<{ ok: true; ambiente: string } | { ok: false; errore: string }> {
   const pratica = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoId },
@@ -775,6 +776,20 @@ export async function inviaRichiestaPagamento(
       ok: false,
       errore: 'Il contratto e\' troppo vicino alla scadenza (o gia\' scaduto): il link di pagamento non sarebbe piu\' valido',
     };
+  }
+
+  // Chi ha dichiarato che attivera' un nuovo noleggio e ha ancora tempo non va
+  // messo a pagare: pagherebbe il prezzo pieno e poi, a spedizione avvenuta,
+  // avremmo incassato piu' del dovuto. Si puo' forzare, ma consapevolmente.
+  if (pratica.nuovo_noleggio_richiesto_il && !pratica.nuovo_noleggio_spedito_il && !opts?.forza) {
+    const { prezzoRiacquisto: __pr } = await import('./pricing.service.js');
+    const limite = (await __pr(pratica)).data_limite;
+    if (limite && limite.getTime() >= Date.now()) {
+      return {
+        ok: false,
+        errore: `Il cliente ha dichiarato che attivera' un nuovo noleggio e ha tempo fino al ${limite.toLocaleDateString('it-IT')}: chiedendo il pagamento ora pagherebbe il prezzo pieno. Conferma prima la spedizione, oppure forza l'invio.`,
+      };
+    }
   }
 
   // Chiedere il pagamento vuol dire renderlo possibile: senza questo il cliente

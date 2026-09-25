@@ -150,6 +150,7 @@ export async function inviaComunicazioneIniziale(
   const templateVars = {
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
     sconto_attivo: __scontoAttivo,
+    num_opzione_nuovo_noleggio: opzioneRinnovoAttiva ? 5 : 4,
     sconto_percentuale: __percSconto,
     sconto_data_limite: __limite ? formatDate(__limite) : '',
     giorni_al_limite: __giorniAlLimite,
@@ -513,6 +514,84 @@ export async function inviaRispostaContatto(
     oggetto,
     richiesta_id: opts.richiestaId ?? null,
   });
+
+  result.success = true;
+  result.emailInviate = 1;
+  return result;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Conferma dello sconto sul riscatto                                 */
+/* ------------------------------------------------------------------ */
+
+export const TIPO_CONFERMA_SCONTO = 'CONFERMA_SCONTO_RISCATTO';
+
+/**
+ * Avvisa il cliente che lo sconto e' confermato.
+ *
+ * Senza questa mail il prezzo scenderebbe in silenzio e il cliente lo
+ * scoprirebbe solo alla richiesta di pagamento: dopo avergli promesso uno
+ * sconto, dirglielo e' cio' che chiude il cerchio.
+ */
+export async function inviaConfermaScontoRiscatto(
+  contratto_eol_id: string,
+  operatoreId?: string,
+): Promise<InvioResult> {
+  const result: InvioResult = { success: false, contrattoId: contratto_eol_id, emailInviate: 0, errori: [] };
+
+  const contratto = await prisma.contratto_EOL.findUnique({
+    where: { id: contratto_eol_id },
+    include: { cliente: true },
+  });
+  if (!contratto) { result.errori.push('Contratto non trovato'); return result; }
+  if (!contratto.cliente.email) { result.errori.push('Il cliente non ha un indirizzo email'); return result; }
+  if (contratto.cliente.opt_out_comunicazioni) { result.errori.push('Cliente in opt-out'); return result; }
+
+  const { prezzoRiacquisto } = await import('./pricing.service.js');
+  const prezzo = await prezzoRiacquisto(contratto);
+  if (prezzo.sconto_euro <= 0) {
+    result.errori.push('Nessuno sconto attivo su questa pratica: niente da confermare');
+    return result;
+  }
+
+  let templateHtml = await configService.getHtml('email.conferma_sconto_riscatto');
+  if (!templateHtml) {
+    templateHtml = readFileSync(resolve(__dirname, '../../../templates/email/conferma_sconto_riscatto.html'), 'utf-8');
+  }
+
+  const html = Handlebars.compile(templateHtml)({
+    ragione_sociale: contratto.cliente.ragione_sociale,
+    numero_contratto_grenke: contratto.contratto_grenke_id,
+    prezzo_pieno: formatEur(prezzo.listino),
+    prezzo_scontato: formatEur(prezzo.netto),
+    risparmio: formatEur(prezzo.sconto_euro),
+  });
+
+  const oggetto = await configService.getTesto(
+    'email.conferma_sconto_riscatto_oggetto',
+    'Sconto confermato sul riscatto dei Suoi dispositivi',
+  );
+
+  const esito = await emailProviderPerAmbiente(contratto.ambiente).send(contratto.cliente.email, oggetto, html);
+
+  await prisma.comunicazione.create({
+    data: {
+      contratto_eol_id: contratto.id,
+      tipo: TIPO_CONFERMA_SCONTO,
+      canale: 'EMAIL',
+      destinatario: contratto.cliente.email,
+      oggetto,
+      corpo_html: html,
+      data_invio: new Date(),
+      esito_invio: esito.success ? 'INVIATO' : 'ERRORE',
+      operatore_id: operatoreId ?? null,
+    },
+  });
+
+  if (!esito.success) {
+    result.errori.push(`Errore invio a ${contratto.cliente.email}: ${esito.error}`);
+    return result;
+  }
 
   result.success = true;
   result.emailInviate = 1;

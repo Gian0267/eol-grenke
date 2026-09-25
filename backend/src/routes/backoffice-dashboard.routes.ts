@@ -116,13 +116,14 @@ router.get('/sconto-nuovo-noleggio', async (req: AuthenticatedRequest, res: Resp
       },
       select: {
         data_scadenza: true, nuovo_noleggio_spedito_il: true,
+        nuovo_noleggio_richiesto_il: true,
         beni_esclusi_json: true, pricing_riacquisto_pieno: true,
       },
     });
 
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
-    let concessi = 0, inScadenza = 0, ancoraInTempo = 0;
+    let concessi = 0, inScadenza = 0, ancoraInTempo = 0, dichiarati = 0, dichiaratiInScadenza = 0;
 
     for (const p of pratiche) {
       if (p.nuovo_noleggio_spedito_il) { concessi++; continue; }
@@ -135,9 +136,19 @@ router.get('/sconto-nuovo-noleggio', async (req: AuthenticatedRequest, res: Resp
       if (giorni < 0) continue;
       ancoraInTempo++;
       if (giorni <= 15) inScadenza++;
+      // Chi ha dichiarato e non ha ancora la spedizione confermata: sono le
+      // persone da seguire, non dei "forse".
+      if (p.nuovo_noleggio_richiesto_il) {
+        dichiarati++;
+        if (giorni <= 15) dichiaratiInScadenza++;
+      }
     }
 
-    res.json({ attivo: true, percentuale, concessi, in_scadenza: inScadenza, ancora_in_tempo: ancoraInTempo });
+    res.json({
+      attivo: true, percentuale, concessi,
+      in_scadenza: inScadenza, ancora_in_tempo: ancoraInTempo,
+      dichiarati, dichiarati_in_scadenza: dichiaratiInScadenza,
+    });
   } catch (err) {
     console.error('[sconto-nuovo-noleggio] Errore:', err);
     res.status(500).json({ error: 'Errore interno' });

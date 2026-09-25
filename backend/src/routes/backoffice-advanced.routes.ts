@@ -376,6 +376,7 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
           prezzo_concordato: p2.prezzo_concordato,
           data_limite: p2.data_limite?.toISOString() ?? null,
           spedito_il: pratica.nuovo_noleggio_spedito_il?.toISOString() ?? null,
+          richiesto_il: pratica.nuovo_noleggio_richiesto_il?.toISOString() ?? null,
         };
       })(),
       invito_pagamento_inviato: pratica.comunicazioni
@@ -592,10 +593,11 @@ router.post('/pratiche-dettaglio/:id/invito-pagamento', async (req: Authenticate
       return;
     }
 
-    const { promemoria } = req.body as { promemoria?: unknown };
+    const { promemoria, forza } = req.body as { promemoria?: unknown; forza?: unknown };
     const { inviaRichiestaPagamento } = await import('../services/scheduler.service.js');
     const esito = await inviaRichiestaPagamento(req.params.id as string, {
       promemoria: promemoria === true,
+      forza: forza === true,
       operatoreId: (req.user as any)?.id,
     });
 
@@ -688,11 +690,17 @@ router.post('/pratiche-dettaglio/:id/nuovo-noleggio-spedito', async (req: Authen
       limitato_dal_costo: prezzo.limitato_dal_costo,
     });
 
+    // Il cliente va avvisato: senza, il prezzo scenderebbe in silenzio e lo
+    // scoprirebbe solo alla richiesta di pagamento.
+    const { inviaConfermaScontoRiscatto } = await import('../services/email.service.js');
+    const avviso = await inviaConfermaScontoRiscatto(id, (req.user as any)?.id);
+
     res.json({
       success: true,
-      messaggio: prezzo.limitato_dal_costo
+      messaggio: (prezzo.limitato_dal_costo
         ? `Sconto applicato ma ridotto: il prezzo non scende sotto il costo Grenke (${prezzo.netto.toFixed(2)})`
-        : `Sconto applicato: il riscatto passa da ${prezzo.listino.toFixed(2)} a ${prezzo.netto.toFixed(2)}`,
+        : `Sconto applicato: il riscatto passa da ${prezzo.listino.toFixed(2)} a ${prezzo.netto.toFixed(2)}`)
+        + (avviso.success ? ' — cliente avvisato per email' : ` — ATTENZIONE: email al cliente non inviata (${avviso.errori.join('; ')})`),
     });
   } catch (err) {
     console.error('[nuovo-noleggio-spedito] Errore:', err);

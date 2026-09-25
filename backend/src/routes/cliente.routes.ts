@@ -180,6 +180,33 @@ router.get('/pratica', verifyClienteToken, async (req: ClienteAuthenticatedReque
         numero_mesi: contratto.numero_mesi,
         stato: contratto.stato,
       },
+      // Quarta opzione: riscatto + nuovo noleggio. Il link alla piattaforma
+      // NON viaggia qui: si ottiene solo dopo aver dichiarato la scelta, cosi'
+      // ogni registrazione e' attribuibile a questo cliente e al suo agente.
+      nuovo_noleggio: await (async () => {
+        const { prezzoRiacquisto } = await import('../services/pricing.service.js');
+        const { linkNuovoNoleggioPerPratica } = await import('../services/onboarding-link.service.js');
+        const pr = await prezzoRiacquisto(contratto);
+        const attivo = await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true);
+        const link = (await linkNuovoNoleggioPerPratica(contratto)).link;
+        const limite = pr.data_limite;
+        const inTempo = !!limite && limite.getTime() >= Date.now();
+        const perc = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+        const scontato = Math.max(
+          Math.round(pr.listino * (1 - perc / 100) * 100) / 100,
+          Number(contratto.pricing_grenke),
+        );
+        return {
+          disponibile: attivo && !pr.prezzo_concordato && !!link && inTempo,
+          data_limite: limite?.toISOString() ?? null,
+          percentuale: perc,
+          prezzo_scontato: scontato,
+          risparmio: Math.round((pr.listino - scontato) * 100) / 100,
+          richiesto_il: contratto.nuovo_noleggio_richiesto_il?.toISOString() ?? null,
+          // Il link si consegna solo a chi ha gia' dichiarato.
+          link: contratto.nuovo_noleggio_richiesto_il ? link : null,
+        };
+      })(),
       economica: {
         // Il prezzo che il cliente paga davvero: se ha maturato lo sconto per
         // il nuovo noleggio e' gia' scontato qui, cosi' l'area riservata, la
@@ -679,6 +706,64 @@ router.post(
     }
   },
 );
+
+// POST /api/cliente/decisione/nuovo-noleggio — il cliente dichiara che
+// attivera' un nuovo noleggio, e riceve il link.
+//
+// NON e' la condizione dello sconto: quella resta la spedizione, confermata
+// dal backoffice. Qui si registra l'intenzione e si consegna il link, che non
+// viaggia da nessun'altra parte — cosi' ogni registrazione sulla piattaforma
+// e' riconducibile a questo cliente e, tramite la pratica, al suo agente.
+router.post('/decisione/nuovo-noleggio', verifyClienteToken, async (req: ClienteAuthenticatedRequest, res: Response) => {
+  try {
+    const contratto = await prisma.contratto_EOL.findUnique({ where: { id: req.contrattoEolId } });
+    if (!contratto) { res.status(404).json({ errore: 'Contratto non trovato' }); return; }
+
+    const { prezzoRiacquisto } = await import('../services/pricing.service.js');
+    const { linkNuovoNoleggioPerPratica } = await import('../services/onboarding-link.service.js');
+
+    const configService = await import('../services/config.service.js');
+    if (!await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true)) {
+      res.status(400).json({ errore: 'Opzione non disponibile' });
+      return;
+    }
+
+    const pr = await prezzoRiacquisto(contratto);
+    if (pr.prezzo_concordato) { res.status(400).json({ errore: 'Opzione non disponibile per questa pratica' }); return; }
+    if (!pr.data_limite || pr.data_limite.getTime() < Date.now()) {
+      res.status(400).json({ errore: 'Il termine per attivare un nuovo noleggio e\' scaduto' });
+      return;
+    }
+
+    const link = (await linkNuovoNoleggioPerPratica(contratto)).link;
+    if (!link) { res.status(400).json({ errore: 'Opzione non disponibile al momento' }); return; }
+
+    // Si registra solo la prima volta: la data della dichiarazione e' un fatto,
+    // riaprire la pagina non deve riscriverla.
+    if (!contratto.nuovo_noleggio_richiesto_il) {
+      await prisma.contratto_EOL.update({
+        where: { id: contratto.id },
+        data: { nuovo_noleggio_richiesto_il: new Date() },
+      });
+      await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'DECISIONE_PRESA', {
+        opzione: 'NUOVO_NOLEGGIO_DICHIARATO',
+        agenzia: contratto.agenzia,
+        agente: contratto.agente,
+        data_limite: pr.data_limite,
+      });
+    }
+
+    res.json({
+      success: true,
+      link,
+      data_limite: pr.data_limite.toISOString(),
+      richiesto_il: (contratto.nuovo_noleggio_richiesto_il ?? new Date()).toISOString(),
+    });
+  } catch (err) {
+    console.error('[POST /api/cliente/decisione/nuovo-noleggio] Errore:', err);
+    res.status(500).json({ errore: 'Errore interno' });
+  }
+});
 
 // POST /api/cliente/decisione/riacquisto/conferma-tc
 const confermaTcSchema = z.object({

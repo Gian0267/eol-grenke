@@ -51,9 +51,14 @@ model Contratto_EOL {
   // momento il cliente puo' pagare: altrimenti riceverebbe una mail che gli
   // chiede di pagare e una pagina che gli risponde "e' troppo presto".
   pagamento_anticipato_il DateTime?
-  // Sconto sul riscatto per chi attiva un nuovo noleggio in tempo. La data e'
-  // quella in cui il backoffice ha confermato la SPEDIZIONE (l'ordine avviene
-  // sulla piattaforma NSM, che questo sistema non vede): null = non maturato.
+  // Quando il cliente ha DICHIARATO, scegliendo l'opzione nell'area riservata,
+  // che attivera' un nuovo noleggio. E' un'intenzione, non la condizione dello
+  // sconto. Il link alla piattaforma si ottiene SOLO da qui: cosi' ogni clic
+  // e' attribuito a un cliente e, tramite la pratica, al suo agente.
+  nuovo_noleggio_richiesto_il DateTime?
+  // La condizione vera dello sconto: la data in cui il backoffice ha
+  // confermato la SPEDIZIONE. L'ordine avviene sulla piattaforma NSM, che
+  // questo sistema non vede. Null = sconto non maturato.
   nuovo_noleggio_spedito_il DateTime?
   // Percentuale congelata alla concessione: cambiare la percentuale nelle
   // Impostazioni non deve modificare uno sconto gia' promesso a un cliente.

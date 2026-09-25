@@ -34,6 +34,8 @@ interface ScontoNuovoNoleggio {
   concessi?: number
   in_scadenza?: number
   ancora_in_tempo?: number
+  dichiarati?: number
+  dichiarati_in_scadenza?: number
 }
 
 interface Utente {
@@ -371,10 +373,13 @@ export default function Dashboard() {
               <p className="text-2xl font-medium text-graphite mt-2">{sconto.concessi ?? 0}</p>
               <p className="text-xs text-stone mt-1">spedizione confermata, riscatto a −{sconto.percentuale}%</p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm text-stone">Ancora in tempo</p>
-              <p className="text-2xl font-medium text-graphite mt-2">{sconto.ancora_in_tempo ?? 0}</p>
-              <p className="text-xs text-stone mt-1">possono ancora ordinare e ricevere</p>
+            <div className={`rounded-xl border p-5 ${(sconto.dichiarati ?? 0) > 0 ? 'border-flex/30 bg-card' : 'border-border bg-card'}`}>
+              <p className="text-sm text-stone">Hanno dichiarato</p>
+              <p className="text-2xl font-medium text-graphite mt-2">{sconto.dichiarati ?? 0}</p>
+              <p className="text-xs text-stone mt-1">
+                su {sconto.ancora_in_tempo ?? 0} ancora in tempo
+                {(sconto.dichiarati_in_scadenza ?? 0) > 0 && ` — ${sconto.dichiarati_in_scadenza} col limite vicino`}
+              </p>
             </div>
             <div className={`rounded-xl border p-5 ${(sconto.in_scadenza ?? 0) > 0 ? 'bg-warn border-warn-border/30' : 'border-border bg-card'}`}>
               <p className={`text-sm ${(sconto.in_scadenza ?? 0) > 0 ? 'text-warn-text' : 'text-stone'}`}>Limite entro 15 giorni</p>

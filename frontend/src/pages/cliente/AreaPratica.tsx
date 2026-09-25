@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { differenceInCalendarDays, format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { ArrowRight, Gift, ShoppingCart, Phone, RotateCcw, Clock, Building2 } from 'lucide-react';
+import { ArrowRight, Gift, ShoppingCart, Phone, RotateCcw, Clock, Building2, Sparkles } from 'lucide-react';
 
 const API_BASE = '';
 
@@ -22,6 +22,15 @@ interface PraticaData {
     beni_da_restituire: string[];
     numero_mesi: number;
     stato: string;
+  };
+  nuovo_noleggio?: {
+    disponibile: boolean;
+    data_limite: string | null;
+    percentuale: number;
+    prezzo_scontato: number;
+    risparmio: number;
+    richiesto_il: string | null;
+    link: string | null;
   };
   economica: {
     pricing_riacquisto: number;
@@ -193,6 +202,30 @@ export default function AreaPratica() {
       badges: [],
     },
   ];
+
+  // Quarta opzione: riscatto a prezzo ridotto per chi attiva un nuovo noleggio.
+  // Non porta a un flusso di decisione come le altre tre: apre una pagina che
+  // registra la dichiarazione e consegna il link. Il link non compare da
+  // nessun'altra parte, cosi' ogni registrazione resta attribuibile.
+  const nn = data.nuovo_noleggio;
+  if (nn?.disponibile) {
+    opzioni.push({
+      id: 'nuovo-noleggio',
+      titolo: 'Riscatta a prezzo ridotto e attiva un nuovo noleggio',
+      descrizione: nn.data_limite
+        ? `Se ordini un nuovo noleggio e te lo spediamo entro il ${new Date(nn.data_limite).toLocaleDateString('it-IT')}, il riscatto dei beni attuali ti costa € ${formatEur(nn.prezzo_scontato)} invece di € ${formatEur(data.economica.pricing_riacquisto)}. Fa fede la data di spedizione.`
+        : '',
+      icona: <Sparkles className="w-6 h-6" />,
+      colore: 'border-[#0B7FA6]',
+      bgColore: 'bg-cyan-50',
+      testoColore: 'text-[#0B7FA6]',
+      btnColore: 'bg-[#0B7FA6] hover:bg-[#075F7D]',
+      badges: [
+        { testo: `€ ${formatEur(nn.prezzo_scontato)} + IVA`, stile: 'bg-cyan-100 text-cyan-800 font-semibold' },
+        { testo: `risparmi € ${formatEur(nn.risparmio)}`, stile: 'bg-cyan-50 text-cyan-700' },
+      ],
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

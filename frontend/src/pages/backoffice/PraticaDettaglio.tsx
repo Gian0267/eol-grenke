@@ -151,6 +151,7 @@ interface Pratica {
     prezzo_concordato: boolean;
     data_limite: string | null;
     spedito_il: string | null;
+    richiesto_il: string | null;
   };
   proposta_noleggio_inviata: string | null;
   beni_json: string;
@@ -1064,6 +1065,15 @@ export default function PraticaDettaglio() {
                 </>
               ) : (
                 <>
+                  {sc.richiesto_il && (
+                    <div className="mb-4 flex gap-2 items-start rounded-lg border border-flex/30 bg-paper p-3">
+                      <Sparkles className="w-4 h-4 text-flex shrink-0 mt-0.5" />
+                      <p className="text-sm text-graphite">
+                        Il cliente ha dichiarato il <strong>{formatDate(sc.richiesto_il)}</strong> che
+                        attiver&agrave; un nuovo noleggio.
+                      </p>
+                    </div>
+                  )}
                   <p className="text-sm text-stone mb-4">
                     Confermi che al cliente e&apos; stato spedito un nuovo noleggio? Da quel momento il riscatto
                     scende da <strong>{eur(sc.listino)}</strong>, e il prezzo scontato compare subito nella sua

@@ -13,6 +13,7 @@ import Reportistica from './pages/backoffice/Reportistica'
 import EsportaListaGrenke from './pages/backoffice/EsportaListaGrenke'
 import PropostaNuovoNoleggio from './pages/backoffice/PropostaNuovoNoleggio'
 import Agenzie from './pages/backoffice/Agenzie'
+import FlussoNuovoNoleggio from './pages/cliente/FlussoNuovoNoleggio'
 import Impostazioni from './pages/backoffice/Impostazioni'
 import GestioneUtenti from './pages/backoffice/GestioneUtenti'
 import CodiciSconto from './pages/backoffice/CodiciSconto'
@@ -70,6 +71,7 @@ export default function App() {
           <Route index element={<AreaPratica />} />
           <Route path="restituzione" element={<FlussoRestituzione />} />
           <Route path="riacquisto" element={<FlussoRiacquisto />} />
+          <Route path="nuovo-noleggio" element={<FlussoNuovoNoleggio />} />
           <Route path="rinnovo" element={<FlussoRinnovo />} />
           <Route path="contatto" element={<FlussoContatto />} />
           <Route path=":opzione" element={<OpzionePlaceholder />} />
