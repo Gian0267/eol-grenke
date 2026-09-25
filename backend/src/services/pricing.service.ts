@@ -82,7 +82,9 @@ export async function calcolaValoreGiftCard(margine_lordo: number): Promise<numb
 /* ------------------------------------------------------------------ */
 
 /**
- * Entro quando il nuovo noleggio deve essere spedito perche' lo sconto valga.
+ * Entro quando il nuovo contratto deve essere approvato e firmato perche' lo
+ * sconto valga. Il nome del campo dice ancora "spedito": e' rimasto invariato
+ * per non riscrivere colonna, API e storico a ogni cambio di regola.
  *
  * E' l'ultimo giorno del mese che si chiude almeno `giorniMinimi` giorni prima
  * della scadenza: si parte dal mese precedente e si arretra finche' il margine
@@ -136,7 +138,7 @@ type ContrattoPerPrezzo = {
  * che vede un importo nell'area riservata e un altro nella mail di pagamento
  * non perdona.
  *
- * Lo sconto spetta solo se il backoffice ha confermato la spedizione del nuovo
+ * Lo sconto spetta solo se il backoffice ha confermato la firma del nuovo
  * noleggio entro la data limite. Non si applica ai prezzi concordati a mano
  * (riacquisto parziale o prezzo su misura), che sono gia' frutto di una
  * trattativa, e non porta mai il prezzo sotto quello che paghiamo a Grenke.

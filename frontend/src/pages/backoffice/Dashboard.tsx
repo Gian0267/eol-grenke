@@ -361,9 +361,9 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* Sconto per nuovo noleggio: lo concede una persona spuntando la
-          spedizione. Senza questo promemoria si promette uno sconto e poi non
-          lo si applica — e il cliente se ne accorge alla richiesta di pagamento. */}
+      {/* Sconto per nuovo noleggio: lo concede una persona confermando la firma
+          del nuovo contratto. Senza questo promemoria si promette uno sconto e poi
+          non lo si applica — e il cliente se ne accorge alla richiesta di pagamento. */}
       {sconto?.attivo && (sconto.ancora_in_tempo ?? 0) + (sconto.concessi ?? 0) > 0 && (
         <section>
           <h2 className="text-xl font-medium text-graphite mb-4">Sconto per nuovo noleggio</h2>
@@ -371,7 +371,7 @@ export default function Dashboard() {
             <div className="rounded-xl border border-border bg-card p-5">
               <p className="text-sm text-stone">Sconto concesso</p>
               <p className="text-2xl font-medium text-graphite mt-2">{sconto.concessi ?? 0}</p>
-              <p className="text-xs text-stone mt-1">spedizione confermata, riscatto a −{sconto.percentuale}%</p>
+              <p className="text-xs text-stone mt-1">contratto firmato, acquisto a −{sconto.percentuale}%</p>
             </div>
             <div className={`rounded-xl border p-5 ${(sconto.dichiarati ?? 0) > 0 ? 'border-flex/30 bg-card' : 'border-border bg-card'}`}>
               <p className="text-sm text-stone">Hanno dichiarato</p>
@@ -387,7 +387,7 @@ export default function Dashboard() {
                 {sconto.in_scadenza ?? 0}
               </p>
               <p className={`text-xs mt-1 ${(sconto.in_scadenza ?? 0) > 0 ? 'text-warn-text' : 'text-stone'}`}>
-                senza conferma di spedizione
+                senza conferma di firma
               </p>
             </div>
           </div>

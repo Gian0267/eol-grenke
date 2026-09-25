@@ -213,7 +213,7 @@ export default function AreaPratica() {
       id: 'nuovo-noleggio',
       titolo: 'Acquista a prezzo ridotto e attiva un nuovo noleggio',
       descrizione: nn.data_limite
-        ? `Se ordini un nuovo noleggio e te lo spediamo entro il ${new Date(nn.data_limite).toLocaleDateString('it-IT')}, il prezzo di acquisto dei beni attuali è di € ${formatEur(nn.prezzo_scontato)} invece di € ${formatEur(data.economica.pricing_riacquisto)}. Fa fede la data di spedizione.`
+        ? `Se ordini un nuovo noleggio, la finanziaria lo approva e tu lo firmi entro il ${new Date(nn.data_limite).toLocaleDateString('it-IT')}, il prezzo di acquisto dei beni attuali è di € ${formatEur(nn.prezzo_scontato)} invece di € ${formatEur(data.economica.pricing_riacquisto)}. Fa fede la data della firma.`
         : '',
       icona: <Sparkles className="w-6 h-6" />,
       colore: 'border-[#0B7FA6]',

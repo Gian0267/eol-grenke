@@ -666,7 +666,7 @@ router.post('/pratiche-dettaglio/:id/nuovo-noleggio-spedito', async (req: Authen
     const limite = dataLimiteSconto(new Date(c.data_scadenza), giorniMinimi);
     if (quando.getTime() > limite.getTime()) {
       res.status(400).json({
-        error: `Spedizione del ${quando.toLocaleDateString('it-IT')}: oltre il limite del ${limite.toLocaleDateString('it-IT')}, lo sconto non spetta`,
+        error: `Firma del ${quando.toLocaleDateString('it-IT')}: oltre il limite del ${limite.toLocaleDateString('it-IT')}, lo sconto non spetta`,
       });
       return;
     }
@@ -699,7 +699,7 @@ router.post('/pratiche-dettaglio/:id/nuovo-noleggio-spedito', async (req: Authen
       success: true,
       messaggio: (prezzo.limitato_dal_costo
         ? `Sconto applicato ma ridotto: il prezzo non scende sotto il costo Grenke (${prezzo.netto.toFixed(2)})`
-        : `Sconto applicato: il riscatto passa da ${prezzo.listino.toFixed(2)} a ${prezzo.netto.toFixed(2)}`)
+        : `Sconto applicato: l'acquisto passa da ${prezzo.listino.toFixed(2)} a ${prezzo.netto.toFixed(2)}`)
         + (avviso.success ? ' — cliente avvisato per email' : ` — ATTENZIONE: email al cliente non inviata (${avviso.errori.join('; ')})`),
     });
   } catch (err) {

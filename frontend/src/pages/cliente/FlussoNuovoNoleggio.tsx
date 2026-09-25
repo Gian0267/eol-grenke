@@ -7,9 +7,10 @@
  * nell'elenco delle opzioni — cosi' ogni registrazione sulla piattaforma resta
  * riconducibile a questo cliente e, tramite la pratica, al suo agente.
  *
- * Lo sconto NON e' concesso qui: la condizione e' la spedizione, che il
- * backoffice conferma quando avviene. La pagina lo dice senza giri di parole,
- * per non far credere al cliente di avere gia' il prezzo ridotto in tasca.
+ * Lo sconto NON e' concesso qui: la condizione e' che la finanziaria approvi il
+ * nuovo contratto e che il cliente lo firmi entro la data limite, cosa che il
+ * backoffice conferma quando accade. La pagina lo dice senza giri di parole, per
+ * non far credere al cliente di avere gia' il prezzo ridotto in tasca.
  */
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -158,9 +159,10 @@ export default function FlussoNuovoNoleggio() {
             <p className="text-gray-700 mb-5">
               Da qui pu&ograve; configurare il nuovo noleggio. Perch&eacute; il prezzo di acquisto sia
               <strong> &euro; {formatEur(dati?.prezzo_scontato ?? 0)}</strong> invece di
-              &euro; {formatEur(dati?.prezzo_pieno ?? 0)}, i dispositivi devono esserLe
-              <strong> spediti entro il {new Date(esito.data_limite).toLocaleDateString('it-IT')}</strong>:
-              fa fede la spedizione, non l&rsquo;ordine.
+              &euro; {formatEur(dati?.prezzo_pieno ?? 0)}, il nuovo contratto deve essere approvato
+              dalla finanziaria e da Lei firmato
+              <strong> entro il {new Date(esito.data_limite).toLocaleDateString('it-IT')}</strong>:
+              fa fede la data della firma, non quella dell&rsquo;ordine.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -249,7 +251,7 @@ export default function FlussoNuovoNoleggio() {
             )}
 
             <p className="text-sm text-gray-500 mt-5">
-              Le confermeremo il prezzo ridotto per email appena la spedizione risulta effettuata.
+              Le confermeremo il prezzo ridotto per email appena il contratto risulta approvato e firmato.
               Nel frattempo pu&ograve; tornare alle opzioni e completare la scelta sui beni attuali.
             </p>
             <Link to={`/pratica/${token}`} className="inline-block mt-3 text-[#0B7FA6] hover:underline text-sm">
@@ -265,17 +267,18 @@ export default function FlussoNuovoNoleggio() {
             <ul className="text-gray-700 space-y-2 mb-6 list-disc list-inside">
               <li>Configura un nuovo noleggio di dispositivi.</li>
               <li>
-                Se glieli spediamo entro il <strong>{dataLimite}</strong>, il prezzo di acquisto dei beni attuali
+                Se la finanziaria approva il nuovo contratto e Lei lo firma entro il <strong>{dataLimite}</strong>,
+                il prezzo di acquisto dei beni attuali
                 Le costa <strong>&euro; {formatEur(dati?.prezzo_scontato ?? 0)}</strong> invece di
                 &euro; {formatEur(dati?.prezzo_pieno ?? 0)}: risparmia
                 <strong> &euro; {formatEur(dati?.risparmio ?? 0)}</strong>.
               </li>
-              <li>Fa fede la data di spedizione, non quella dell&rsquo;ordine.</li>
+              <li>Fa fede la data della firma del contratto, non quella dell&rsquo;ordine.</li>
             </ul>
             <p className="text-sm text-gray-500 mb-6">
               Proseguendo registriamo la Sua intenzione e Le mostriamo il link per configurare il
-              noleggio. Il prezzo ridotto Le sar&agrave; confermato quando la spedizione risulta
-              effettuata: fino ad allora vale il prezzo pieno.
+              noleggio. Il prezzo ridotto Le sar&agrave; confermato quando il contratto risulta
+              approvato e firmato: fino ad allora vale il prezzo pieno.
             </p>
             {errore && <p className="text-sm text-red-600 mb-4">{errore}</p>}
             <button

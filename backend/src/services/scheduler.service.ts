@@ -779,7 +779,7 @@ export async function inviaRichiestaPagamento(
   }
 
   // Chi ha dichiarato che attivera' un nuovo noleggio e ha ancora tempo non va
-  // messo a pagare: pagherebbe il prezzo pieno e poi, a spedizione avvenuta,
+  // messo a pagare: pagherebbe il prezzo pieno e poi, a contratto firmato,
   // avremmo incassato piu' del dovuto. Si puo' forzare, ma consapevolmente.
   if (pratica.nuovo_noleggio_richiesto_il && !pratica.nuovo_noleggio_spedito_il && !opts?.forza) {
     const { prezzoRiacquisto: __pr } = await import('./pricing.service.js');
@@ -787,7 +787,7 @@ export async function inviaRichiestaPagamento(
     if (limite && limite.getTime() >= Date.now()) {
       return {
         ok: false,
-        errore: `Il cliente ha dichiarato che attivera' un nuovo noleggio e ha tempo fino al ${limite.toLocaleDateString('it-IT')}: chiedendo il pagamento ora pagherebbe il prezzo pieno. Conferma prima la spedizione, oppure forza l'invio.`,
+        errore: `Il cliente ha dichiarato che attivera' un nuovo noleggio e ha tempo fino al ${limite.toLocaleDateString('it-IT')}: chiedendo il pagamento ora pagherebbe il prezzo pieno. Conferma prima la firma del nuovo contratto, oppure forza l'invio.`,
       };
     }
   }

@@ -815,7 +815,7 @@ export default function PraticaDettaglio() {
                   ['BACKOFFICE_INTERNO', 'ADMIN'].includes(utente?.ruolo || '') && (
                   <ActionBtn
                     icon={<Percent className="w-4 h-4" />}
-                    label={pratica.sconto_nuovo_noleggio.spedito_il ? 'Sconto nuovo noleggio' : 'Nuovo noleggio spedito'}
+                    label={pratica.sconto_nuovo_noleggio.spedito_il ? 'Sconto nuovo noleggio' : 'Nuovo noleggio firmato'}
                     onClick={() => {
                       setDataSpedizione(new Date().toISOString().slice(0, 10));
                       openModal('nuovo-noleggio-spedito');
@@ -1049,7 +1049,7 @@ export default function PraticaDettaglio() {
               {sc.spedito_il ? (
                 <>
                   <p className="text-sm text-stone mb-4">
-                    Spedizione confermata il <strong>{formatDate(sc.spedito_il)}</strong>: il riscatto costa
+                    Contratto firmato il <strong>{formatDate(sc.spedito_il)}</strong>: l&apos;acquisto costa
                     <strong> {eur(sc.netto)}</strong> invece di {eur(sc.listino)}, il cliente risparmia{' '}
                     <strong>{eur(sc.sconto_euro)}</strong>.
                   </p>
@@ -1075,12 +1075,12 @@ export default function PraticaDettaglio() {
                     </div>
                   )}
                   <p className="text-sm text-stone mb-4">
-                    Confermi che al cliente e&apos; stato spedito un nuovo noleggio? Da quel momento il riscatto
-                    scende da <strong>{eur(sc.listino)}</strong>, e il prezzo scontato compare subito nella sua
-                    area riservata e nella richiesta di pagamento.
+                    Confermi che la finanziaria ha approvato il nuovo noleggio e che il cliente lo ha firmato?
+                    Da quel momento l&apos;acquisto scende da <strong>{eur(sc.listino)}</strong>, e il prezzo
+                    scontato compare subito nella sua area riservata e nella richiesta di pagamento.
                   </p>
                   <div className="mb-5">
-                    <label className="block text-sm font-medium text-graphite mb-1">Data di spedizione</label>
+                    <label className="block text-sm font-medium text-graphite mb-1">Data della firma</label>
                     <input
                       type="date"
                       value={dataSpedizione}
@@ -1090,7 +1090,7 @@ export default function PraticaDettaglio() {
                     <p className="text-xs text-stone mt-2">
                       Il limite per questa pratica e&apos; il{' '}
                       <strong>{sc.data_limite ? formatDate(sc.data_limite) : '—'}</strong>. Fa fede la
-                      spedizione, non l&apos;ordine.
+                      firma del contratto, non l&apos;ordine.
                     </p>
                   </div>
                 </>
