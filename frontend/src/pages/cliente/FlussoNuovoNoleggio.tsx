@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Sparkles, ArrowLeft, ExternalLink, Loader2, Check } from 'lucide-react';
+import { Sparkles, ArrowLeft, ExternalLink, Loader2, Check, Phone } from 'lucide-react';
 
 interface Esito {
   link: string;
@@ -39,6 +39,16 @@ export default function FlussoNuovoNoleggio() {
   const [caricamento, setCaricamento] = useState(true);
   const [invio, setInvio] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+
+  // Assistenza: chi non vuole configurarsi il noleggio da solo lascia un recapito
+  // e viene richiamato. E' una richiesta di contatto come le altre, con
+  // un'origine sua, cosi' l'agente sa di cosa si parla prima di alzare il telefono.
+  const [assistenza, setAssistenza] = useState<'chiusa' | 'form' | 'inviata'>('chiusa');
+  const [nome, setNome] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [fascia, setFascia] = useState<'MATTINA' | 'POMERIGGIO' | 'INDIFFERENTE'>('INDIFFERENTE');
+  const [invioAssistenza, setInvioAssistenza] = useState(false);
+  const [erroreAssistenza, setErroreAssistenza] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +95,30 @@ export default function FlussoNuovoNoleggio() {
     }
   };
 
+  const chiediAssistenza = async () => {
+    setInvioAssistenza(true);
+    setErroreAssistenza(null);
+    try {
+      const res = await fetch(`/api/cliente/richiesta-contatto?token=${encodeURIComponent(token || '')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome,
+          telefono,
+          fascia_oraria: fascia,
+          origine: 'ASSISTENZA_NUOVO_NOLEGGIO',
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.errore || 'Non riusciamo a registrare la richiesta.');
+      setAssistenza('inviata');
+    } catch (e) {
+      setErroreAssistenza(e instanceof Error ? e.message : 'Non riusciamo a registrare la richiesta.');
+    } finally {
+      setInvioAssistenza(false);
+    }
+  };
+
   const dataLimite = (dati?.data_limite || esito?.data_limite)
     ? new Date((dati?.data_limite || esito?.data_limite)!).toLocaleDateString('it-IT')
     : null;
@@ -128,14 +162,92 @@ export default function FlussoNuovoNoleggio() {
               <strong> spediti entro il {new Date(esito.data_limite).toLocaleDateString('it-IT')}</strong>:
               fa fede la spedizione, non l&rsquo;ordine.
             </p>
-            <a
-              href={esito.link}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-[#0B7FA6] hover:bg-[#075F7D] text-white font-medium py-3 px-6 rounded-lg"
-            >
-              Configura il nuovo noleggio <ExternalLink className="w-4 h-4" />
-            </a>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={esito.link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#0B7FA6] hover:bg-[#075F7D] text-white font-medium py-3 px-6 rounded-lg"
+              >
+                Mi configuro da solo il nuovo noleggio <ExternalLink className="w-4 h-4" />
+              </a>
+              {assistenza === 'chiusa' && (
+                <button
+                  onClick={() => setAssistenza('form')}
+                  className="inline-flex items-center justify-center gap-2 border border-[#0B7FA6] text-[#0B7FA6] hover:bg-cyan-50 font-medium py-3 px-6 rounded-lg"
+                >
+                  <Phone className="w-4 h-4" /> Desidero assistenza per un nuovo noleggio
+                </button>
+              )}
+            </div>
+
+            {assistenza === 'form' && (
+              <div className="mt-5 border border-gray-200 rounded-lg p-5 bg-gray-50">
+                <p className="text-sm text-gray-700 mb-4">
+                  Ci lasci un recapito: un nostro consulente La richiama e configura il noleggio
+                  con Lei.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="text-sm text-gray-600">
+                    Nome e cognome
+                    <input
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                      placeholder="Mario Rossi"
+                    />
+                  </label>
+                  <label className="text-sm text-gray-600">
+                    Telefono
+                    <input
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                      placeholder="333 1234567"
+                    />
+                  </label>
+                  <label className="text-sm text-gray-600 sm:col-span-2">
+                    Quando preferisce essere chiamato
+                    <select
+                      value={fascia}
+                      onChange={(e) => setFascia(e.target.value as typeof fascia)}
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white"
+                    >
+                      <option value="INDIFFERENTE">Indifferente</option>
+                      <option value="MATTINA">Mattina</option>
+                      <option value="POMERIGGIO">Pomeriggio</option>
+                    </select>
+                  </label>
+                </div>
+                {erroreAssistenza && <p className="text-sm text-red-600 mt-3">{erroreAssistenza}</p>}
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={chiediAssistenza}
+                    disabled={invioAssistenza || !nome.trim() || telefono.trim().length < 5}
+                    className="inline-flex items-center gap-2 bg-[#0B7FA6] hover:bg-[#075F7D] text-white font-medium py-2.5 px-5 rounded-lg disabled:opacity-50"
+                  >
+                    {invioAssistenza && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Richiedi assistenza
+                  </button>
+                  <button
+                    onClick={() => setAssistenza('chiusa')}
+                    className="text-sm text-gray-500 hover:text-gray-700 px-2"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {assistenza === 'inviata' && (
+              <div className="mt-5 border border-emerald-200 bg-emerald-50 rounded-lg p-5">
+                <p className="text-sm text-emerald-800 flex items-center gap-2">
+                  <Check className="w-4 h-4" /> Richiesta di assistenza registrata: La
+                  richiamiamo entro 24 ore lavorative.
+                </p>
+              </div>
+            )}
+
             <p className="text-sm text-gray-500 mt-5">
               Le confermeremo il prezzo ridotto per email appena la spedizione risulta effettuata.
               Nel frattempo pu&ograve; tornare alle opzioni e completare la scelta sui beni attuali.

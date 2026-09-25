@@ -80,6 +80,7 @@ interface RichiestaContatto {
 const ORIGINE_LABEL: Record<string, string> = {
   OPZIONE_CONTATTO_PERSONALIZZATO: 'Contatto personalizzato',
   WIDGET_CHIAMAMI: 'Widget "Chiamami"',
+  ASSISTENZA_NUOVO_NOLEGGIO: 'Assistenza nuovo noleggio',
 };
 
 function formatEur(n: number): string {

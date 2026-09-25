@@ -237,6 +237,9 @@ const richiestaContattoSchema = z.object({
   telefono: z.string().regex(/^[\d\s+\-.()]{5,20}$/, 'Formato telefono non valido'),
   giorno_preferito: z.string().optional().default(''),
   fascia_oraria: z.enum(['MATTINA', 'POMERIGGIO', 'INDIFFERENTE']).optional().default('INDIFFERENTE'),
+  // Chi chiede assistenza per il nuovo noleggio arriva sulla stessa rotta ma e'
+  // una telefonata diversa: l'agente deve sapere in partenza di cosa si parla.
+  origine: z.enum(['WIDGET_CHIAMAMI', 'ASSISTENZA_NUOVO_NOLEGGIO']).optional().default('WIDGET_CHIAMAMI'),
 });
 
 router.post(
@@ -251,12 +254,17 @@ router.post(
         return;
       }
 
-      const { nome, telefono, giorno_preferito, fascia_oraria } = parsed.data;
+      const { nome, telefono, giorno_preferito, fascia_oraria, origine } = parsed.data;
+      const perNuovoNoleggio = origine === 'ASSISTENZA_NUOVO_NOLEGGIO';
 
-      // B3 fix: deduplica — max 1 richiesta DA_GESTIRE per contratto nelle ultime 24h
+      // B3 fix: deduplica — max 1 richiesta DA_GESTIRE per contratto nelle ultime 24h.
+      // La deduplica e' per origine: chi ha gia' chiesto di essere richiamato sul
+      // fine contratto deve poter chiedere anche assistenza sul nuovo noleggio,
+      // altrimenti la richiesta piu' interessante delle due va persa.
       const esistente = await prisma.richiesta_Contatto.findFirst({
         where: {
           contratto_eol_id: req.contrattoEolId,
+          origine,
           stato: 'DA_GESTIRE',
           created_at: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         },
@@ -281,12 +289,17 @@ router.post(
         return;
       }
 
-      const { agenteAssegnatoId, motivoAssegnazione } = await assegnaPratica(contratto.id);
+      // L'assistenza per il nuovo noleggio la gestisce il backoffice, non
+      // l'agente: niente assegnazione della pratica (cambierebbe il titolare del
+      // fine contratto per una telefonata commerciale) e niente mail all'agente.
+      const { agenteAssegnatoId, motivoAssegnazione } = perNuovoNoleggio
+        ? { agenteAssegnatoId: null as string | null, motivoAssegnazione: 'Gestita dal backoffice' }
+        : await assegnaPratica(contratto.id);
 
       const richiesta = await prisma.richiesta_Contatto.create({
         data: {
           contratto_eol_id: contratto.id,
-          origine: 'WIDGET_CHIAMAMI',
+          origine,
           nome_referente: nome,
           telefono,
           giorno_preferito,
@@ -296,48 +309,56 @@ router.post(
         },
       });
 
-      // B4 fix: handle email failure, log result, create Comunicazione record
-      if (agenteAssegnatoId) {
-        const agente = await prisma.utente_NSM.findUnique({
-          where: { id: agenteAssegnatoId },
+      // B4 fix: handle email failure, log result, create Comunicazione record.
+      // Destinatario: la casella del backoffice quando si tratta di assistenza
+      // al nuovo noleggio, l'agente assegnato per tutto il resto.
+      const configService = await import('../services/config.service.js');
+      const destinatario = perNuovoNoleggio
+        ? await configService.getTesto('recapiti.email', 'info@noleggiosumisura.it')
+        : agenteAssegnatoId
+          ? (await prisma.utente_NSM.findUnique({ where: { id: agenteAssegnatoId } }))?.email ?? null
+          : null;
+
+      if (destinatario) {
+        const html = notificaTemplate({
+          ragione_sociale: contratto.cliente.ragione_sociale,
+          contratto_nsm: contratto.contratto_nsm_id,
+          nome_referente: nome,
+          telefono,
+          giorno_preferito: giorno_preferito || 'Non specificato',
+          fascia_oraria,
+          monte_canoni: formatEur(Number(contratto.monte_canoni)),
+          motivo_assegnazione: motivoAssegnazione,
+          motivo: perNuovoNoleggio
+            ? 'Il cliente chiede assistenza per configurare un nuovo noleggio. Ha diritto allo sconto sui beni attuali del contratto se la spedizione avviene entro la data limite.'
+            : null,
         });
 
-        if (agente) {
-          const html = notificaTemplate({
-            ragione_sociale: contratto.cliente.ragione_sociale,
-            contratto_nsm: contratto.contratto_nsm_id,
-            nome_referente: nome,
-            telefono,
-            giorno_preferito: giorno_preferito || 'Non specificato',
-            fascia_oraria,
-            monte_canoni: formatEur(Number(contratto.monte_canoni)),
-            motivo_assegnazione: motivoAssegnazione,
-          });
+        const oggetto = perNuovoNoleggio
+          ? `Assistenza nuovo noleggio: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`
+          : `Richiesta contatto: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
+        const sendResult = await emailProviderPerAmbiente(contratto.ambiente).send(destinatario, oggetto, html);
 
-          const oggetto = `Richiesta contatto: ${contratto.cliente.ragione_sociale} — ${contratto.contratto_nsm_id}`;
-          const sendResult = await emailProviderPerAmbiente(contratto.ambiente).send(agente.email, oggetto, html);
+        await prisma.comunicazione.create({
+          data: {
+            contratto_eol_id: contratto.id,
+            tipo: 'NOTIFICA_RICHIESTA_CONTATTO',
+            canale: 'EMAIL',
+            destinatario,
+            oggetto,
+            corpo_html: html,
+            data_invio: new Date(),
+            esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
+          },
+        });
 
-          await prisma.comunicazione.create({
-            data: {
-              contratto_eol_id: contratto.id,
-              tipo: 'NOTIFICA_RICHIESTA_CONTATTO',
-              canale: 'EMAIL',
-              destinatario: agente.email,
-              oggetto,
-              corpo_html: html,
-              data_invio: new Date(),
-              esito_invio: sendResult.success ? 'INVIATO' : 'ERRORE',
-            },
-          });
-
-          if (!sendResult.success) {
-            console.error(`[richiesta-contatto] Email non inviata a ${agente.email}: ${sendResult.error}`);
-          }
+        if (!sendResult.success) {
+          console.error(`[richiesta-contatto] Email non inviata a ${destinatario}: ${sendResult.error}`);
         }
       }
 
       await registraEvento(contratto.id, 'CLIENTE', contratto.cliente_id, 'RICHIESTA_CONTATTO_CREATA', {
-        origine: 'WIDGET_CHIAMAMI',
+        origine,
         richiesta_id: richiesta.id,
       });
 

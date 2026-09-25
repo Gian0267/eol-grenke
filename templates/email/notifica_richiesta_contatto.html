@@ -1,6 +1,10 @@
 <div style="font-family:Arial,sans-serif;max-width:600px;">
-  <h2 style="color:#1a3a52;">Nuova richiesta di contatto</h2>
+  <h2 style="color:#1a3a52;">{{#if motivo}}Assistenza per un nuovo noleggio{{else}}Nuova richiesta di contatto{{/if}}</h2>
+  {{#if motivo}}
+  <p style="background:#ecfeff;border-left:4px solid #0B7FA6;padding:12px;margin:0 0 16px;">{{motivo}}</p>
+  {{else}}
   <p>È stata ricevuta una nuova richiesta dal widget "Chiamami".</p>
+  {{/if}}
   <table style="border-collapse:collapse;width:100%;margin:16px 0;">
     <tr>
       <td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Cliente</td>
