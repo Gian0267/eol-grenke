@@ -6,10 +6,14 @@
  * cieca pero' cancellerebbe le personalizzazioni fatte dal pannello, che nessuno
  * ha tracciato da nessuna parte.
  *
- * Il confronto e' con la versione del file all'ultimo commit: se la riga a
- * database e' identica a quella, nessuno l'ha toccata dal pannello e si puo'
- * riscrivere con la versione nuova. Se e' diversa, lo script si ferma su quella
- * riga e lo dice: va sistemata a mano o con una sostituzione mirata.
+ * Il confronto e' con TUTTE le versioni committate del file: se la riga a
+ * database combacia con una qualsiasi di esse, e' una copia rimasta indietro e
+ * si puo' riscrivere. Se non combacia con nessuna, l'ha riscritta una persona
+ * dal pannello: lo script si ferma su quella riga e lo dice.
+ *
+ * Il confronto col solo HEAD non bastava: dopo aver committato le modifiche ai
+ * template, ogni riga rimasta indietro sembrava personalizzata, e lo script si
+ * rifiutava di fare proprio il lavoro per cui esiste.
  *
  * Quando la differenza e' voluta e si e' guardata, la riga si forza per nome:
  * --forza=email.sollecito_1,email.sollecito_2
@@ -39,13 +43,25 @@ function fileDellaChiave(chiave: string): string {
   return `templates/email/${ECCEZIONI[chiave] ?? chiave.replace(/^email\./, '') + '.html'}`;
 }
 
-/** Versione del file all'ultimo commit, o null se il file e' nuovo. */
-function versioneCommittata(path: string): string | null {
+/** Tutte le versioni committate del file, dalla piu' recente. */
+function versioniCommittate(path: string): string[] {
+  let sha: string[];
   try {
-    return execFileSync('git', ['show', `HEAD:${path}`], { encoding: 'utf-8' });
+    sha = execFileSync('git', ['log', '--format=%H', '--', path], { encoding: 'utf-8' })
+      .split('\n')
+      .filter(Boolean);
   } catch {
-    return null;
+    return [];
   }
+  const versioni: string[] = [];
+  for (const s of sha) {
+    try {
+      versioni.push(execFileSync('git', ['show', `${s}:${path}`], { encoding: 'utf-8' }));
+    } catch {
+      // Il file non esisteva ancora a quel commit: niente da confrontare.
+    }
+  }
+  return versioni;
 }
 
 async function main() {
@@ -70,8 +86,7 @@ async function main() {
       gia++;
       continue;
     }
-    const committata = versioneCommittata(path);
-    const combacia = committata !== null && (r.valore ?? '') === committata;
+    const combacia = versioniCommittate(path).includes(r.valore ?? '');
     if (!combacia && !forzate.has(r.chiave)) {
       personalizzate.push(r.chiave);
       continue;
@@ -85,7 +100,7 @@ async function main() {
 
   console.log(`\n${allineate} da allineare, ${gia} gia' allineate.`);
   if (personalizzate.length) {
-    console.log(`\nNON toccate, il valore a database non corrisponde all'ultimo commit:\n  ${personalizzate.join('\n  ')}`);
+    console.log(`\nNON toccate, il valore a database non corrisponde a nessuna versione committata\n(riscritte dal pannello — vanno aggiornate a mano o forzate):\n  ${personalizzate.join('\n  ')}`);
   }
   if (senzaFile.length) {
     console.log(`\nSenza file corrispondente (nessuna azione):\n  ${senzaFile.join('\n  ')}`);
