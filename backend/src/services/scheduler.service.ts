@@ -10,6 +10,7 @@ import { scadiCodici } from './codice-sconto.service.js';
 import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
 import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
+import { variabiliSconto } from '../lib/sconto-nuovo-noleggio.js';
 import * as configService from './config.service.js';
 import { importiRiacquisto, prezzoRiacquisto, dataLimiteSconto } from './pricing.service.js';
 
@@ -389,34 +390,12 @@ async function inviaSollecito(
   const opzioneRinnovoAttiva = await configService.getBooleano('flags.abilita_opzione_rinnovo', true);
 
 
-  // Sconto sul riscatto per chi attiva un nuovo noleggio entro la data limite.
-  // Il riquadro compare solo se: il flag e' acceso, il limite non e' passato,
-  // il prezzo non e' concordato a mano, e sappiamo dove mandare il cliente.
-  const { prezzoRiacquisto: __prezzoRic } = await import('./pricing.service.js');
-  const __prezzo = await __prezzoRic(pratica);
-  const __percSconto = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
-  const __flagSconto = await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true);
-  const { linkNuovoNoleggioPerPratica: __linkPerPratica } = await import('./onboarding-link.service.js');
-  const __linkSconto = (await __linkPerPratica(pratica)).link;
-  const __limite = __prezzo.data_limite;
-  const __giorniAlLimite = __limite ? Math.ceil((__limite.getTime() - Date.now()) / 86400000) : -1;
-  const __scontoAttivo = __flagSconto && !__prezzo.prezzo_concordato && !!__linkSconto
-    && !!__limite && __giorniAlLimite >= 0 && __percSconto > 0;
-  const __nettoScontato = Math.max(
-    Math.round(__prezzo.listino * (1 - __percSconto / 100) * 100) / 100,
-    Number(pratica.pricing_grenke),
-  );
+  const sconto = await variabiliSconto(pratica);
 
   const templateVars = {
+    ...sconto,
     opzione_rinnovo_attiva: opzioneRinnovoAttiva,
-    sconto_attivo: __scontoAttivo,
     num_opzione_nuovo_noleggio: opzioneRinnovoAttiva ? 5 : 4,
-    sconto_percentuale: __percSconto,
-    sconto_data_limite: __limite ? formatDate(__limite) : '',
-    giorni_al_limite: __giorniAlLimite,
-    prezzo_riacquisto_scontato: formatEur(__nettoScontato),
-    sconto_euro: formatEur(Math.round((__prezzo.listino - __nettoScontato) * 100) / 100),
-    link_nuovo_noleggio_sconto: __linkSconto ?? '',
     num_opzione_riacquisto: opzioneRinnovoAttiva ? 2 : 1,
     num_opzione_contatto: opzioneRinnovoAttiva ? 3 : 2,
     num_opzione_restituzione: opzioneRinnovoAttiva ? 4 : 3,

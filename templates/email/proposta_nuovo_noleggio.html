@@ -46,6 +46,25 @@
                     <p style="margin:0 0 16px;">
                       <a href="{{{link_nuovo_noleggio}}}" target="_blank" style="display:inline-block;background-color:#0B7FA6;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:700;">Configura un nuovo noleggio</a>
                     </p>
+                    {{#if sconto_attivo}}
+                    <!-- L'argomento piu' forte: il nuovo noleggio fa scendere il
+                         prezzo dei beni che il cliente ha gia' in casa. -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+                      <tr>
+                        <td style="border-left:4px solid #0B7FA6;background-color:#ecfeff;padding:14px 18px;border-radius:0 6px 6px 0;">
+                          <p style="margin:0 0 6px;color:#0B7FA6;font-size:13px;font-weight:700;">E c&rsquo;&egrave; un vantaggio in pi&ugrave;</p>
+                          <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+                            Se il nuovo contratto viene approvato dalla finanziaria e da Lei firmato entro il
+                            <strong>{{sconto_data_limite}}</strong>, il prezzo di acquisto dei beni che ha
+                            attualmente in locazione scende del {{sconto_percentuale}}%: da
+                            <strong>&euro; {{pricing_riacquisto}}</strong> a
+                            <strong style="color:#0B7FA6;">&euro; {{prezzo_riacquisto_scontato}}</strong>,
+                            con un risparmio di <strong>&euro; {{sconto_euro}}</strong>.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    {{/if}}
                     <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
                       Preferisce essere seguito da un nostro consulente? Scriva a
                       <a href="mailto:{{email_nuovo_noleggio}}" style="color:#0B7FA6;">{{email_nuovo_noleggio}}</a>
