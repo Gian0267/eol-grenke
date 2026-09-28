@@ -77,6 +77,11 @@ const DATI = {
   link_nuovo_noleggio: '#',
 };
 
+// Quante immagini ha prodotto ogni template: l'appendice del manuale si
+// costruisce da qui, altrimenti a ogni cambio di altezza qualche figura punta
+// a un file che non esiste piu'.
+const manifesto = {};
+
 (async () => {
   const prisma = new PrismaClient();
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
@@ -122,6 +127,7 @@ const DATI = {
     // Su una pagina A4 l'immagine sta in altezza: piu' la mail e' lunga, piu'
     // esce stretta e illeggibile. Sopra una certa altezza la taglio in due, con
     // un filo di sovrapposizione per non spezzare una riga a meta'.
+    manifesto[nome] = h > SOGLIA_TAGLIO ? 2 : 1;
     if (h > SOGLIA_TAGLIO) {
       const meta = Math.ceil(h / 2);
       const pezzi = [
@@ -141,6 +147,7 @@ const DATI = {
     }
   }
 
+  fs.writeFileSync(path.join(DIR, 'manifesto.json'), JSON.stringify(manifesto, null, 2));
   await browser.close();
   await prisma.$disconnect();
 })();
