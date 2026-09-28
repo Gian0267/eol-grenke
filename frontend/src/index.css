@@ -33,6 +33,12 @@
   --color-warn-border: #BA7517;
 
   /* ── Semantic: danger ── */
+  /* Rosso per i numeri che devono farsi notare: il prezzo di acquisto prima e
+     dopo lo sconto, e i messaggi che fermano un'operazione in perdita.
+     Esisteva gia' la classe text-loss in una pagina, ma senza questo token
+     non coloriva niente. */
+  --color-loss: #C0392B;
+
   --color-danger: #FCEBEB;
   --color-danger-text: #791F1F;
   --color-danger-border: #E24B4A;

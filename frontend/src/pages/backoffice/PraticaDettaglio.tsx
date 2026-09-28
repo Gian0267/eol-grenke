@@ -1758,7 +1758,7 @@ function TabPanoramica({
         <h3 className="text-sm font-semibold text-graphite mb-3">Calcolo economico</h3>
         <dl className="space-y-2 text-sm">
           <Row label="Ns. costo (acquisto da Grenke)" value={formatEur(pratica.pricing_grenke)} />
-          <Row label="Prezzo riacquisto cliente" value={formatEur(pratica.pricing_riacquisto)} />
+          <Row label="Prezzo riacquisto cliente" value={formatEur(pratica.pricing_riacquisto)} prezzo />
           <Row label="Margine lordo" value={formatEur(pratica.margine_lordo)} highlight />
           {/* Le tre righe dello sconto per nuovo contratto: sono le cifre da
               dire al cliente al telefono, prima che la firma ci sia. Se lo
@@ -1777,6 +1777,7 @@ function TabPanoramica({
                 <Row
                   label="Prezzo al cliente in caso di sottoscrizione nuovo contratto"
                   value={sc.applicabile ? formatEur(sc.netto_potenziale) : vuoto}
+                  prezzo={sc.applicabile}
                 />
                 <Row
                   label="Margine lordo in caso di sottoscrizione nuovo contratto"
@@ -2228,11 +2229,15 @@ function Row({
   value,
   mono,
   highlight,
+  prezzo,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   highlight?: boolean;
+  // I due prezzi di acquisto, prima e dopo lo sconto: vanno letti insieme e
+  // devono saltare all'occhio fra le altre righe del riquadro.
+  prezzo?: boolean;
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:gap-3">
@@ -2241,7 +2246,9 @@ function Row({
           contenuto (in flex non accade da sola), break-words spezza le stringhe
           senza spazi: PEC ed email lunghe uscivano dal riquadro. */}
       <dd
-        className={`text-graphite min-w-0 break-words ${mono ? 'font-mono text-xs' : ''} ${highlight ? 'font-semibold text-ok-text' : ''}`}
+        className={`min-w-0 break-words ${mono ? 'font-mono text-xs' : ''} ${
+          prezzo ? 'font-bold text-loss' : highlight ? 'font-semibold text-ok-text' : 'text-graphite'
+        }`}
       >
         {value || '—'}
       </dd>
