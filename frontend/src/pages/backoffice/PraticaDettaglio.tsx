@@ -152,6 +152,11 @@ interface Pratica {
     data_limite: string | null;
     spedito_il: string | null;
     richiesto_il: string | null;
+    applicabile: boolean;
+    percentuale_corrente: number;
+    netto_potenziale: number;
+    sconto_euro_potenziale: number;
+    margine_scontato: number;
   };
   proposta_noleggio_inviata: string | null;
   beni_json: string;
@@ -1768,9 +1773,40 @@ function TabPanoramica({
           <Row label="Ns. costo (acquisto da Grenke)" value={formatEur(pratica.pricing_grenke)} />
           <Row label="Prezzo riacquisto cliente" value={formatEur(pratica.pricing_riacquisto)} />
           <Row label="Margine lordo" value={formatEur(pratica.margine_lordo)} highlight />
-          <Row label="Valore Sconto Bronze" value={formatEur(pratica.valore_gift_card)} highlight />
-          <Row label="Valore originario" value={formatEur(pratica.valore_originario)} />
+          {/* Le tre righe dello sconto per nuovo contratto: sono le cifre da
+              dire al cliente al telefono, prima che la firma ci sia. Se lo
+              sconto non e' applicabile restano vuote, invece di far credere a
+              un'offerta che non possiamo fare. */}
+          {(() => {
+            const sc = pratica.sconto_nuovo_noleggio;
+            const vuoto = '\u2014';
+            return (
+              <>
+                <Row
+                  label={`Valore Sconto Nuovo contratto${sc.applicabile ? ` (${sc.percentuale_corrente}%)` : ''}`}
+                  value={sc.applicabile ? formatEur(sc.sconto_euro_potenziale) : vuoto}
+                  highlight={sc.applicabile}
+                />
+                <Row
+                  label="Prezzo scontato al cliente"
+                  value={sc.applicabile ? formatEur(sc.netto_potenziale) : vuoto}
+                />
+                <Row
+                  label="Margine lordo scontato"
+                  value={sc.applicabile ? formatEur(sc.margine_scontato) : vuoto}
+                  highlight={sc.applicabile}
+                />
+              </>
+            );
+          })()}
         </dl>
+        {!pratica.sconto_nuovo_noleggio.applicabile && (
+          <p className="text-xs text-stone mt-3">
+            {pratica.sconto_nuovo_noleggio.prezzo_concordato
+              ? 'Prezzo concordato a mano: lo sconto per nuovo contratto non si applica.'
+              : "Data limite superata: lo sconto per nuovo contratto non \u00e8 pi\u00f9 proponibile."}
+          </p>
+        )}
       </div>
 
       {/* Premio Fedeltà — codice Sconto Copertura Bronze */}

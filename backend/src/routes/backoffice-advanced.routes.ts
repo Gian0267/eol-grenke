@@ -367,6 +367,22 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
       sconto_nuovo_noleggio: await (async () => {
         const { prezzoRiacquisto } = await import('../services/pricing.service.js');
         const p2 = await prezzoRiacquisto(pratica);
+
+        // Quanto costerebbe al cliente se lo sconto venisse concesso: serve a
+        // chi sta al telefono, che deve poter dire la cifra prima che la firma
+        // ci sia. `netto` invece e' il prezzo di adesso, scontato solo se il
+        // backoffice ha gia' certificato la firma.
+        const perc = await configService.getNumero('sconto_nuovo_noleggio.percentuale', 15);
+        const flag = await configService.getBooleano('flags.abilita_sconto_nuovo_noleggio', true);
+        const costo = Number(pratica.pricing_grenke);
+        const nettoPotenziale = Math.max(
+          Math.round(p2.listino * (1 - perc / 100) * 100) / 100,
+          costo,
+        );
+        const inTempo = p2.data_limite ? p2.data_limite.getTime() >= Date.now() : false;
+        const applicabile =
+          flag && !p2.prezzo_concordato && (inTempo || pratica.nuovo_noleggio_spedito_il != null);
+
         return {
           listino: p2.listino,
           netto: p2.netto,
@@ -377,6 +393,11 @@ router.get('/pratiche-dettaglio/:id', async (req: AuthenticatedRequest, res: Res
           data_limite: p2.data_limite?.toISOString() ?? null,
           spedito_il: pratica.nuovo_noleggio_spedito_il?.toISOString() ?? null,
           richiesto_il: pratica.nuovo_noleggio_richiesto_il?.toISOString() ?? null,
+          applicabile,
+          percentuale_corrente: perc,
+          netto_potenziale: nettoPotenziale,
+          sconto_euro_potenziale: Math.round((p2.listino - nettoPotenziale) * 100) / 100,
+          margine_scontato: Math.round((nettoPotenziale - costo) * 100) / 100,
         };
       })(),
       invito_pagamento_inviato: pratica.comunicazioni
