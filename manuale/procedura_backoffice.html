@@ -71,6 +71,19 @@
     border: 2px solid #0B7FA6; border-radius: 3px;
   }
   .piccolo { font-size: 9pt; color: #6b7280; }
+  .rimando {
+    font-size: 9.5pt; color: #0B7FA6; border-left: 3px solid #bae6fd;
+    padding: 4px 0 4px 10px; margin: 10px 0 14px;
+  }
+  figure.facsimile { margin: 0; page-break-before: always; page-break-inside: avoid; }
+  figure.facsimile figcaption {
+    font-size: 10.5pt; color: #1a3a52; font-weight: 700; margin: 0 0 3px;
+  }
+  figure.facsimile .contesto { font-size: 9pt; color: #6b7280; margin: 0 0 10px; }
+  figure.facsimile img {
+    display: block; max-width: 100%; max-height: 222mm; margin: 0 auto;
+    border: 1px solid #d7dce1;
+  }
 </style>
 </head>
 <body>
@@ -107,7 +120,8 @@
     <li>Fase 9 — La restituzione</li>
     <li>Fase 10 — Export Grenke e chiusura</li>
     <li>Casi particolari</li>
-    <li>Dieci regole da non violare</li>
+    <li>Undici regole da non violare</li>
+    <li>Appendice — I testi che il cliente riceve</li>
   </ol>
 </div>
 
@@ -317,8 +331,10 @@
 <p>
   Una email con i dati del suo contratto, le quattro opzioni, il termine entro cui decidere
   e un pulsante che porta alla sua area riservata. Il collegamento è personale: vale solo
-  per quel contratto e scade da solo.
+  per quel contratto e scade da solo. Dove abbiamo la PEC parte anche quella, con lo stesso
+  contenuto ma in forma istituzionale: niente colori, niente pulsanti.
 </p>
+<p class="rimando">Il testo completo è in appendice: <strong>A.1</strong> la email, <strong>A.2</strong> la PEC.</p>
 
 <div class="attenzione">
   <p class="etichetta">Prima di premere invia</p>
@@ -343,6 +359,8 @@
   pulsante, dall'azzurro al rosso: è un segnale voluto, non un vezzo grafico. Si fermano
   appena il cliente sceglie.
 </p>
+
+<p class="rimando">I quattro solleciti sono in appendice, da <strong>A.3</strong> ad <strong>A.6</strong>.</p>
 
 <h3>I task di telefonata</h3>
 <p>
@@ -441,6 +459,8 @@
 
 <p class="verifica">al cliente parte una email di conferma con il nuovo prezzo, e il prezzo ridotto compare subito nella sua area riservata e nella richiesta di pagamento.</p>
 
+<p class="rimando">L'email di conferma dello sconto è in appendice: <strong>A.7</strong>.</p>
+
 <div class="regola">
   <p class="etichetta">Il link non si manda mai a mano</p>
   <p>
@@ -528,6 +548,8 @@
 
 <p class="verifica">al cliente parte la ricevuta in PDF e la pratica passa a «pagato».</p>
 
+<p class="rimando">L'invito al pagamento è in appendice, <strong>A.8</strong>; la ricevuta che parte dopo, <strong>A.9</strong>.</p>
+
 <h3>Mandare la richiesta prima del tempo</h3>
 <p>
   Se il cliente chiede di pagare subito, dalla scheda c'è <span class="campo">Richiesta di pagamento</span>:
@@ -566,6 +588,8 @@
   arriva, controlla che ci sia tutto e che i dispositivi siano sbloccati.
 </p>
 
+<p class="rimando">L'email con le istruzioni è in appendice: <strong>A.10</strong>.</p>
+
 <div class="attenzione">
   <p class="etichetta">Il primo passo è quello che salta sempre</p>
   <p>
@@ -595,10 +619,31 @@
 
 <h3>Il cliente vuole comprare solo alcuni dispositivi</h3>
 <p>
-  Si può, ed è una concessione nostra. Dalla scheda, <span class="campo">Beni del riacquisto</span>:
-  scegli quali beni restano al cliente. Gli altri vanno restituiti. Attenzione: noi da Grenke
-  li ricompriamo comunque tutti, quindi il margine si assottiglia e può diventare negativo.
-  È una decisione commerciale, va presa con chi di dovere.
+  <strong>Non è una possibilità che offriamo.</strong> Si fa solo in casi eccezionali, e solo
+  se la direzione lo ha autorizzato. Non proporlo tu al cliente, nemmeno per sbloccare una
+  trattativa che non si muove: se lo chiede lui, prendi nota e porta il caso in direzione.
+</p>
+<p>
+  Con l'autorizzazione in mano, dalla scheda: <span class="campo">Beni del riacquisto</span>,
+  scegli quali beni restano al cliente. Gli altri vanno restituiti.
+</p>
+<p>
+  Il motivo per cui serve un'autorizzazione è semplice: da Grenke noi ricompriamo comunque
+  <strong>tutti</strong> i beni del contratto, anche quelli che il cliente non prende. Il costo
+  per noi resta intero, l'incasso si riduce, e il margine si assottiglia.
+</p>
+
+<div class="regola">
+  <p class="etichetta">Il prezzo minimo non è trattabile</p>
+  <p>
+    Se il cliente compra solo una parte dei dispositivi, <strong>quello che paga deve coprire
+    almeno per intero quello che Grenke fatturerà a noi</strong>. Non è una linea guida: la
+    piattaforma rifiuta il salvataggio e ti dice qual è il minimo.
+  </p>
+</div>
+
+<p>
+  Scrivi nelle note chi ha autorizzato e quando.
 </p>
 
 <h3>Il cliente contratta il prezzo</h3>
@@ -631,7 +676,7 @@
 </p>
 
 <!-- ───────────────────────── 15 ───────────────────────── -->
-<h2 class="sezione">15. Dieci regole da non violare</h2>
+<h2 class="sezione">15. Undici regole da non violare</h2>
 
 <ul class="checklist">
   <li>Guarda in che ambiente sei <strong>prima</strong> di importare o di mandare comunicazioni.</li>
@@ -643,8 +688,110 @@
   <li>Registra il pagamento solo dopo aver visto l'accredito in banca.</li>
   <li>Se la piattaforma ti blocca, leggi il motivo prima di forzare.</li>
   <li>Scrivi nelle note come hai saputo le cose. Fra sei mesi nessuno si ricorda.</li>
+  <li>L'acquisto parziale non si propone: si concede solo se lo autorizza la direzione, e mai sotto il costo Grenke.</li>
   <li>Una decisione presa al telefono va registrata lo stesso giorno.</li>
 </ul>
+
+<h2 class="sezione">16. Appendice — I testi che il cliente riceve</h2>
+
+<p>
+  Queste sono le email come arrivano al cliente, con dati di esempio. Servono per due cose:
+  sapere che cosa ha in mano chi ti telefona, e accorgerti se una comunicazione esce diversa
+  da come dovrebbe.
+</p>
+
+<div class="nota">
+  <p class="etichetta">I testi si possono cambiare</p>
+  <p>
+    Da <strong>Impostazioni &rarr; Email</strong> un amministratore può modificarli. Quello che
+    vedi qui è il testo in vigore quando questo manuale è stato stampato: se sullo schermo trovi
+    parole diverse, comanda lo schermo.
+  </p>
+</div>
+
+<figure class="facsimile">
+  <figcaption>A.1 — Comunicazione iniziale — email (continua)</figcaption>
+  <p class="contesto">Parte a mano dal backoffice, intorno a T-105. Vedi il punto 6.</p>
+  <img src="screenshots/email_comunicazione_iniziale_1.png" alt="Comunicazione iniziale — email">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.1 — Comunicazione iniziale — email (seguito)</figcaption>
+  <p class="contesto">Seconda met&agrave; della stessa email.</p>
+  <img src="screenshots/email_comunicazione_iniziale_2.png" alt="Comunicazione iniziale — email">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.2 — Comunicazione iniziale — PEC (continua)</figcaption>
+  <p class="contesto">Stesso contenuto, forma istituzionale. Parte insieme alla email dove abbiamo l&rsquo;indirizzo PEC. Vedi il punto 6.</p>
+  <img src="screenshots/email_comunicazione_iniziale_pec_1.png" alt="Comunicazione iniziale — PEC">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.2 — Comunicazione iniziale — PEC (seguito)</figcaption>
+  <p class="contesto">Seconda met&agrave; della stessa email.</p>
+  <img src="screenshots/email_comunicazione_iniziale_pec_2.png" alt="Comunicazione iniziale — PEC">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.3 — Primo sollecito — T-90</figcaption>
+  <p class="contesto">Automatico. Vedi il punto 7.</p>
+  <img src="screenshots/email_sollecito_1.png" alt="Primo sollecito — T-90">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.4 — Secondo sollecito — T-60</figcaption>
+  <p class="contesto">Automatico. Vedi il punto 7.</p>
+  <img src="screenshots/email_sollecito_2.png" alt="Secondo sollecito — T-60">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.5 — Terzo sollecito — T-45 (continua)</figcaption>
+  <p class="contesto">Automatico. Vedi il punto 7.</p>
+  <img src="screenshots/email_sollecito_3_1.png" alt="Terzo sollecito — T-45">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.5 — Terzo sollecito — T-45 (seguito)</figcaption>
+  <p class="contesto">Seconda met&agrave; della stessa email.</p>
+  <img src="screenshots/email_sollecito_3_2.png" alt="Terzo sollecito — T-45">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.6 — Quarto e ultimo sollecito — T-35</figcaption>
+  <p class="contesto">Automatico. &Egrave; l&rsquo;unico con l&rsquo;intestazione rossa. Vedi il punto 7.</p>
+  <img src="screenshots/email_sollecito_4.png" alt="Quarto e ultimo sollecito — T-35">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.7 — Conferma dello sconto per nuovo noleggio</figcaption>
+  <p class="contesto">Parte quando il backoffice certifica la firma del nuovo contratto. Vedi il punto 9.</p>
+  <img src="screenshots/email_conferma_sconto_riscatto.png" alt="Conferma dello sconto per nuovo noleggio">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.8 — Invito al pagamento — T-26 (continua)</figcaption>
+  <p class="contesto">Automatico, con le coordinate per il bonifico. Vedi il punto 11.</p>
+  <img src="screenshots/email_invito_pagamento_1.png" alt="Invito al pagamento — T-26">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.8 — Invito al pagamento — T-26 (seguito)</figcaption>
+  <p class="contesto">Seconda met&agrave; della stessa email.</p>
+  <img src="screenshots/email_invito_pagamento_2.png" alt="Invito al pagamento — T-26">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.9 — Ricevuta di pagamento</figcaption>
+  <p class="contesto">Parte quando il backoffice registra l&rsquo;accredito. Vedi il punto 11.</p>
+  <img src="screenshots/email_conferma_riacquisto.png" alt="Ricevuta di pagamento">
+</figure>
+
+<figure class="facsimile">
+  <figcaption>A.10 — Istruzioni per la restituzione</figcaption>
+  <p class="contesto">Parte quando il cliente sceglie di restituire. Vedi il punto 12.</p>
+  <img src="screenshots/email_conferma_restituzione.png" alt="Istruzioni per la restituzione">
+</figure>
 
 <p class="piccolo" style="margin-top:40px;">
   Integra Systems Srl — Via Tunisia 5, 10093 Collegno (TO) — P.IVA 12711040019 —

@@ -1105,6 +1105,18 @@ router.post('/pratiche-dettaglio/:id/beni-riacquisto', async (req: Authenticated
     const pieno = c.pricing_riacquisto_pieno != null ? Number(c.pricing_riacquisto_pieno) : Number(c.pricing_riacquisto);
     const parziale = indici.length > 0;
     const nuovoPrezzo = parziale ? prezzo : pieno;
+
+    // Da Grenke il contratto lo ricompriamo intero anche quando il cliente ne
+    // prende un pezzo: sotto quella cifra non e' uno sconto, e' una perdita.
+    // Il limite e' invalicabile da qui — se un caso lo merita, la deroga la
+    // decide la direzione, non il campo di un modulo.
+    const costoGrenke = Number(c.pricing_grenke);
+    if (parziale && nuovoPrezzo < costoGrenke) {
+      res.status(400).json({
+        error: `Prezzo troppo basso: da Grenke paghiamo ${costoGrenke.toFixed(2)} per l'intero contratto, e l'acquisto parziale non puo' costare meno.`,
+      });
+      return;
+    }
     const margine = Number((nuovoPrezzo - Number(c.pricing_grenke)).toFixed(2));
 
     const aggiornato = await prisma.contratto_EOL.update({

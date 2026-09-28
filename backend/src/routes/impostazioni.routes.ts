@@ -65,6 +65,7 @@ router.get('/preview-email/:chiave', async (req: AuthenticatedRequest, res: Resp
       num_opzione_riacquisto: 1,
       num_opzione_contatto: 2,
       num_opzione_restituzione: 3,
+      num_opzione_nuovo_noleggio: 4,
       riacquisto_parziale: false,
       beni_riacquisto: 'Notebook Lenovo ThinkPad X1 Carbon',
       beni_da_restituire: 'Monitor LG 27"',
@@ -76,6 +77,7 @@ router.get('/preview-email/:chiave', async (req: AuthenticatedRequest, res: Resp
       prezzo_riacquisto_scontato: '208,08',
       sconto_euro: '36,72',
       link_nuovo_noleggio_sconto: '#anteprima-nuovo-noleggio',
+      link_nuovo_noleggio: '#anteprima-nuovo-noleggio',
     };
 
     const compiled = Handlebars.compile(imp.valore);

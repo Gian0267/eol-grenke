@@ -1418,9 +1418,10 @@ export default function PraticaDettaglio() {
           di reso ordinaria.
         </p>
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4 text-sm text-amber-900">
-          Da Grenke acquistiamo comunque <strong>l'intero contratto</strong>
+          Da Grenke acquistiamo comunque <strong>l&apos;intero contratto</strong>
           {pricingGrenke != null && <> (€ {pricingGrenke.toFixed(2)})</>}: la lista trasmessa a Grenke non cambia,
-          cambia solo quanto paga il cliente. Il margine si riduce di conseguenza.
+          cambia solo quanto paga il cliente. Per questo il prezzo al cliente non può scendere sotto
+          quella cifra{pricingGrenke != null && <> — <strong>minimo € {pricingGrenke.toFixed(2)}</strong></>}.
         </div>
 
         {beniRiacquisto === null ? (
@@ -1470,7 +1471,8 @@ export default function PraticaDettaglio() {
               return (
                 <div className={`rounded-lg border p-3 mb-4 text-sm ${margine < 0 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
                   Margine risultante: <strong>€ {margine.toFixed(2)}</strong>
-                  {margine < 0 && <> — la pratica va <strong>in perdita</strong>: da Grenke paghiamo € {pricingGrenke.toFixed(2)} per l'intero contratto.</>}
+                  {margine < 0 && <> — <strong>non salvabile</strong>: da Grenke paghiamo € {pricingGrenke.toFixed(2)} per l&apos;intero contratto,
+                    e l&apos;acquisto parziale non può costare meno. Il prezzo minimo è € {pricingGrenke.toFixed(2)}.</>}
                 </div>
               );
             })()}
@@ -1486,7 +1488,15 @@ export default function PraticaDettaglio() {
                 Annulla
               </button>
               <button
-                disabled={actionLoading || beniRiacquisto.every(b => !b.incluso)}
+                disabled={
+                  actionLoading ||
+                  beniRiacquisto.every(b => !b.incluso) ||
+                  // Sotto il costo Grenke non si salva: lo blocca anche il
+                  // server, ma scoprirlo dopo aver compilato tutto irrita.
+                  (beniRiacquisto.some(b => !b.incluso) &&
+                    pricingGrenke != null &&
+                    Number(prezzoParziale) < pricingGrenke)
+                }
                 onClick={() => doAction(`/api/backoffice/pratiche-dettaglio/${id}/beni-riacquisto`, {
                   esclusi: beniRiacquisto.filter(b => !b.incluso).map(b => b.indice),
                   pricing_riacquisto: Number(prezzoParziale),
