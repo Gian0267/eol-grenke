@@ -71,6 +71,40 @@
     border: 2px solid #0B7FA6; border-radius: 3px;
   }
   .piccolo { font-size: 9pt; color: #6b7280; }
+  /* Schema d'insieme: una pagina sola, subito dopo la copertina. Chi impara
+     deve poter vedere dove si trova prima di leggere i dettagli. */
+  .schema { page-break-after: always; }
+  .schema h2 { margin-top: 0; }
+  .fc-box {
+    border: 1.5px solid #0B7FA6; border-radius: 5px; padding: 7px 10px;
+    background: #f0fafd; text-align: center;
+  }
+  .fc-box .t { font-weight: 700; font-size: 9.5pt; color: #1a3a52; display: block; }
+  .fc-box .s { font-size: 8pt; color: #4b5563; display: block; margin-top: 2px; }
+  .fc-auto { border-color: #9ca3af; background: #f7f8f9; }
+  .fc-auto .t { color: #4b5563; }
+  .fc-freccia { text-align: center; color: #0B7FA6; font-size: 13pt; line-height: 1; margin: 5px 0; }
+  .fc-rami { display: flex; gap: 6px; align-items: stretch; }
+  .fc-ramo { flex: 1; display: flex; flex-direction: column; }
+  .fc-ramo .testa {
+    border-radius: 5px 5px 0 0; padding: 5px 6px; text-align: center;
+    font-weight: 700; font-size: 8.5pt; color: #fff;
+  }
+  .fc-ramo .corpo {
+    border: 1px solid #e5e7eb; border-top: 0; border-radius: 0 0 5px 5px;
+    padding: 7px 8px; font-size: 8pt; color: #374151; flex: 1; line-height: 1.45;
+  }
+  .fc-ramo .corpo p { margin: 0 0 5px; }
+  .fc-ramo .corpo p:last-child { margin: 0; }
+  .fc-ramo .chi { display: block; font-size: 7pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; }
+  .fc-legenda { font-size: 8pt; color: #6b7280; margin-top: 12px; display: flex; gap: 18px; }
+  .fc-legenda span::before {
+    content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px;
+    border-radius: 2px; vertical-align: -1px;
+  }
+  .fc-legenda .auto::before { background: #f7f8f9; border: 1.5px solid #9ca3af; }
+  .fc-legenda .mano::before { background: #f0fafd; border: 1.5px solid #0B7FA6; }
+
   .rimando {
     font-size: 9.5pt; color: #0B7FA6; border-left: 3px solid #bae6fd;
     padding: 4px 0 4px 10px; margin: 10px 0 14px;
@@ -100,6 +134,87 @@
     Piattaforma EOL — eol.noleggiosumisura.it<br>
     Documento di istruzione per gli operatori di backoffice · settembre 2026
   </div>
+</div>
+
+
+<!-- ───────────────────────── SCHEMA D'INSIEME ───────────────────────── -->
+<div class="schema">
+  <h2>Il processo in una pagina</h2>
+
+  <div class="fc-box">
+    <span class="t">1 · Importa i contratti in scadenza</span>
+    <span class="s">File Grenke + esportazione NSM · gli abbinamenti mancati diventano outlier da sistemare</span>
+  </div>
+  <div class="fc-freccia">&#9660;</div>
+
+  <div class="fc-box">
+    <span class="t">2 · Comunicazione iniziale &nbsp;·&nbsp; T‑105</span>
+    <span class="s">Email e PEC con le quattro opzioni e il termine per decidere</span>
+  </div>
+  <div class="fc-freccia">&#9660;</div>
+
+  <div class="fc-box fc-auto">
+    <span class="t">3 · Se il cliente tace: solleciti e telefonate</span>
+    <span class="s">Email a T‑90, T‑60, T‑45, T‑35 &nbsp;·&nbsp; task all'agente a T‑50, T‑40, T‑35 &nbsp;·&nbsp; si fermano appena decide</span>
+  </div>
+  <div class="fc-freccia">&#9660;</div>
+
+  <div class="fc-box">
+    <span class="t">4 · Il cliente sceglie</span>
+    <span class="s">Dall'area riservata, con conferma via codice &nbsp;·&nbsp; oppure lo registri tu, se te lo dice al telefono</span>
+  </div>
+  <div class="fc-freccia">&#9660;</div>
+
+  <div class="fc-rami">
+    <div class="fc-ramo">
+      <div class="testa" style="background:#2563eb;">ACQUISTO</div>
+      <div class="corpo">
+        <p>Il prezzo si congela.</p>
+        <p><span class="chi">automatico · T‑26</span>Parte la richiesta di pagamento, promemoria a T‑23.</p>
+        <p><span class="chi">backoffice</span>Verifichi l'accredito in banca e registri il pagamento.</p>
+        <p>Parte la ricevuta.</p>
+      </div>
+    </div>
+    <div class="fc-ramo">
+      <div class="testa" style="background:#ca8a04;">CONTATTO</div>
+      <div class="corpo">
+        <p>Finisce in <strong>Clienti in attesa</strong>.</p>
+        <p><span class="chi">backoffice</span>Telefoni, registri l'esito nelle note.</p>
+        <p>Il cliente torna a scegliere fra le altre opzioni.</p>
+      </div>
+    </div>
+    <div class="fc-ramo">
+      <div class="testa" style="background:#dc2626;">RESTITUZIONE</div>
+      <div class="corpo">
+        <p>Partono le istruzioni in cinque passi e il verbale.</p>
+        <p><span class="chi">backoffice</span>Controlli che i beni arrivino, sbloccati e imballati.</p>
+      </div>
+    </div>
+    <div class="fc-ramo">
+      <div class="testa" style="background:#0B7FA6;">ACQUISTO SCONTATO</div>
+      <div class="corpo">
+        <p>Dichiara l'intenzione e riceve il link dell'agenzia.</p>
+        <p><span class="chi">backoffice</span>Quando la finanziaria approva e il cliente firma, certifichi la firma.</p>
+        <p>Prezzo ridotto del 15%, poi si paga come nella prima colonna.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="fc-freccia">&#9660;</div>
+  <div class="fc-box">
+    <span class="t">5 · Export verso Grenke e chiusura</span>
+    <span class="s">A Grenke paghiamo sempre l'intero contratto, qualunque cosa abbia scelto il cliente</span>
+  </div>
+
+  <div class="fc-legenda">
+    <span class="mano">Lo fa una persona</span>
+    <span class="auto">Parte da solo</span>
+  </div>
+
+  <p class="piccolo" style="margin-top:14px;">
+    I numeri sono i giorni che mancano alla scadenza del contratto: T‑105 vuol dire
+    centocinque giorni prima. Ogni passaggio è spiegato nel capitolo corrispondente.
+  </p>
 </div>
 
 <!-- ───────────────────────── INDICE ───────────────────────── -->
