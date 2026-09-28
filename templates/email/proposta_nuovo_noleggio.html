@@ -64,11 +64,27 @@
                       </tr>
                     </table>
                     {{/if}}
+                    {{#if link_assistenza}}
+                    <!-- Chi non se la cava da solo lascia un recapito e viene
+                         richiamato: la richiesta finisce in "Clienti in attesa".
+                         Prima c'era solo un indirizzo email da copiare a mano. -->
+                    <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">
+                      Preferisce essere seguito da un nostro consulente?
+                    </p>
+                    <p style="margin:0 0 10px;">
+                      <a href="{{{link_assistenza}}}" target="_blank" style="display:inline-block;border:2px solid #0B7FA6;color:#0B7FA6;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:700;">Clicchi qui e La richiamiamo</a>
+                    </p>
+                    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
+                      Oppure scriva a
+                      <a href="mailto:{{email_nuovo_noleggio}}" style="color:#0B7FA6;">{{email_nuovo_noleggio}}</a>.
+                    </p>
+                    {{else}}
                     <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
                       Preferisce essere seguito da un nostro consulente? Scriva a
                       <a href="mailto:{{email_nuovo_noleggio}}" style="color:#0B7FA6;">{{email_nuovo_noleggio}}</a>
                       indicando i Suoi dati e la ricontatteremo.
                     </p>
+                    {{/if}}
                   </td>
                 </tr>
               </table>

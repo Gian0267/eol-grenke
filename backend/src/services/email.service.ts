@@ -324,10 +324,13 @@ export async function inviaPropostaNuovoNoleggio(
   }
   const linkNuovoNoleggio = esitoLink.link;
 
-  // Il richiamo alla decisione compare solo a chi non ha ancora scelto.
+  // Il richiamo alla decisione compare solo a chi non ha ancora scelto; il
+  // modulo per farsi richiamare invece serve a tutti, quindi il token si
+  // costruisce comunque.
   const decisioneMancante = contratto.decisioni.length === 0;
   let linkAreaCliente = '';
-  if (decisioneMancante && contratto.data_scadenza) {
+  let linkAssistenza = '';
+  if (contratto.data_scadenza) {
     const exp = Math.floor(
       (new Date(contratto.data_scadenza).getTime() - JWT_EXPIRES_OFFSET_DAYS * 86400000) / 1000,
     );
@@ -338,7 +341,8 @@ export async function inviaPropostaNuovoNoleggio(
         { contratto_eol_id: contratto.id, cliente_id: contratto.cliente_id, exp },
         JWT_SECRET,
       );
-      linkAreaCliente = `${FRONTEND_URL}/pratica/${token}`;
+      linkAreaCliente = decisioneMancante ? `${FRONTEND_URL}/pratica/${token}` : '';
+      linkAssistenza = `${FRONTEND_URL}/pratica/${token}/assistenza-noleggio`;
     }
   }
 
@@ -356,6 +360,7 @@ export async function inviaPropostaNuovoNoleggio(
     email_nuovo_noleggio: await configService.getTesto('recapiti.email', 'info@noleggiosumisura.it'),
     decisione_mancante: decisioneMancante && linkAreaCliente !== '',
     link_area_cliente: linkAreaCliente,
+    link_assistenza: linkAssistenza,
   };
 
   let templateHtml = await configService.getHtml('email.proposta_nuovo_noleggio');
