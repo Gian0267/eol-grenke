@@ -96,7 +96,27 @@ const DATI = {
     // Non 'networkidle0': se un template punta a un'immagine remota che non
     // risponde, la generazione resta appesa mezzo minuto e poi fallisce.
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await new Promise((r) => setTimeout(r, 400));
+
+    // Il logo pero' arriva dal web, e senza aspettarlo si fotografa il
+    // riquadro bianco dove dovrebbe stare. Attesa con un tetto: se una
+    // immagine non si carica si va avanti lo stesso, non si resta appesi.
+    await page.evaluate(
+      () =>
+        Promise.race([
+          Promise.all(
+            [...document.images]
+              .filter((i) => !i.complete)
+              .map((i) => new Promise((ok) => { i.onload = i.onerror = ok; })),
+          ),
+          new Promise((ok) => setTimeout(ok, 6000)),
+        ]),
+    );
+    await new Promise((r) => setTimeout(r, 300));
+
+    const mancanti = await page.evaluate(
+      () => [...document.images].filter((i) => !i.complete || i.naturalWidth === 0).length,
+    );
+    if (mancanti) console.warn(`    ! ${mancanti} immagine/i non caricate`);
     const h = await page.evaluate(() => document.body.scrollHeight);
 
     // Su una pagina A4 l'immagine sta in altezza: piu' la mail e' lunga, piu'
