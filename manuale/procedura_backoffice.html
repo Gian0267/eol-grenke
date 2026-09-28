@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Procedura operativa backoffice — Fine noleggio Grenke FLEX</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt; line-height: 1.55; color: #1f2937; margin: 0;
+  }
+  h1, h2, h3 { color: #0B7FA6; font-weight: 700; }
+  h1 { font-size: 26pt; line-height: 1.2; margin: 0 0 6px; }
+  h2 {
+    font-size: 15pt; margin: 26px 0 10px; padding-bottom: 5px;
+    border-bottom: 2px solid #0B7FA6; page-break-after: avoid;
+  }
+  h3 { font-size: 11.5pt; color: #1a3a52; margin: 16px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9.5pt; }
+  th, td { border: 1px solid #d7dce1; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef6f9; color: #1a3a52; font-weight: 700; }
+  td.giorno { white-space: nowrap; font-weight: 700; color: #0B7FA6; }
+  code, .campo {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt;
+    background: #f1f5f9; padding: 1px 5px; border-radius: 3px;
+  }
+  .nota, .attenzione, .regola {
+    padding: 10px 14px; margin: 12px 0; border-radius: 4px; page-break-inside: avoid;
+  }
+  .nota { background: #ecfeff; border-left: 4px solid #0B7FA6; }
+  .attenzione { background: #fff7ed; border-left: 4px solid #c2410c; }
+  .regola { background: #fef2f2; border-left: 4px solid #dc2626; }
+  .nota p:last-child, .attenzione p:last-child, .regola p:last-child { margin-bottom: 0; }
+  .etichetta { font-weight: 700; text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.6px; }
+  .nota .etichetta { color: #0B7FA6; }
+  .attenzione .etichetta { color: #c2410c; }
+  .regola .etichetta { color: #dc2626; }
+  ol.passi { counter-reset: passo; list-style: none; padding-left: 0; }
+  ol.passi > li {
+    counter-increment: passo; position: relative; padding-left: 32px; margin-bottom: 10px;
+    page-break-inside: avoid;
+  }
+  ol.passi > li::before {
+    content: counter(passo); position: absolute; left: 0; top: 1px;
+    width: 21px; height: 21px; border-radius: 50%; background: #0B7FA6; color: #fff;
+    font-size: 9pt; font-weight: 700; text-align: center; line-height: 21px;
+  }
+  .verifica { font-size: 9.5pt; color: #047857; }
+  .verifica::before { content: "Deve succedere: "; font-weight: 700; }
+  .copertina {
+    height: 247mm; display: flex; flex-direction: column; justify-content: center;
+    page-break-after: always; text-align: left;
+  }
+  .copertina .marchio { color: #1a3a52; font-size: 12pt; font-weight: 700; margin-bottom: 40px; }
+  .copertina .marchio span { display: block; font-weight: 400; color: #6b7280; font-size: 10pt; margin-top: 3px; }
+  .copertina .sottotitolo { font-size: 14pt; color: #374151; margin: 10px 0 34px; }
+  .copertina .meta { font-size: 10pt; color: #6b7280; border-top: 1px solid #d7dce1; padding-top: 14px; }
+  .indice { page-break-after: always; }
+  .indice ol { font-size: 11pt; padding-left: 28px; }
+  .indice li { margin-bottom: 6px; }
+  .sezione { page-break-before: always; }
+  .riquadro-ruoli td:first-child { width: 33%; font-weight: 600; color: #1a3a52; }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li { padding-left: 26px; position: relative; margin-bottom: 9px; }
+  .checklist li::before {
+    content: ""; position: absolute; left: 0; top: 3px; width: 13px; height: 13px;
+    border: 2px solid #0B7FA6; border-radius: 3px;
+  }
+  .piccolo { font-size: 9pt; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────── COPERTINA ───────────────────────── -->
+<div class="copertina">
+  <div class="marchio">
+    Integra Systems Srl
+    <span>Noleggio Su Misura — Divisione Rental di Integra Systems Srl</span>
+  </div>
+  <h1>Procedura operativa<br>del backoffice</h1>
+  <p class="sottotitolo">Gestione del fine noleggio — contratti Grenke FLEX</p>
+  <div class="meta">
+    Piattaforma EOL — eol.noleggiosumisura.it<br>
+    Documento di istruzione per gli operatori di backoffice · settembre 2026
+  </div>
+</div>
+
+<!-- ───────────────────────── INDICE ───────────────────────── -->
+<div class="indice">
+  <h2 style="margin-top:0;">Indice</h2>
+  <ol>
+    <li>Che cosa fa la piattaforma</li>
+    <li>Prima di toccare qualsiasi cosa: TEST e LIVE</li>
+    <li>Il calendario di una pratica</li>
+    <li>Fase 1 — Importare i contratti in scadenza</li>
+    <li>Fase 2 — Sistemare gli outlier</li>
+    <li>Fase 3 — Inviare la comunicazione iniziale</li>
+    <li>Fase 4 — Quello che parte da solo</li>
+    <li>Fase 5 — Le quattro scelte del cliente</li>
+    <li>Fase 6 — Lo sconto per chi attiva un nuovo noleggio</li>
+    <li>Fase 7 — Clienti in attesa: il lavoro di ogni giorno</li>
+    <li>Fase 8 — Il pagamento</li>
+    <li>Fase 9 — La restituzione</li>
+    <li>Fase 10 — Export Grenke e chiusura</li>
+    <li>Casi particolari</li>
+    <li>Dieci regole da non violare</li>
+  </ol>
+</div>
+
+<!-- ───────────────────────── 1 ───────────────────────── -->
+<h2 style="margin-top:0;">1. Che cosa fa la piattaforma</h2>
+
+<p>
+  I contratti Grenke FLEX hanno una scadenza. Nei mesi che la precedono il cliente
+  deve dirci che cosa vuole fare dei beni che ha in locazione: comprarli, restituirli,
+  o parlarne con noi. La piattaforma accompagna questo passaggio dall'inizio alla fine.
+</p>
+
+<p>In pratica fa cinque cose:</p>
+<ol>
+  <li>importa l'elenco dei contratti in scadenza e lo incrocia con i nostri dati;</li>
+  <li>scrive al cliente, una prima volta e poi a scadenze fisse se resta in silenzio;</li>
+  <li>raccoglie la sua scelta in un'area riservata, con verifica via codice;</li>
+  <li>gestisce l'incasso e manda la ricevuta;</li>
+  <li>tiene traccia di tutto, in modo che a distanza di mesi si possa ricostruire chi ha fatto cosa.</li>
+</ol>
+
+<div class="nota">
+  <p class="etichetta">Il punto</p>
+  <p>
+    Il nemico non è il cliente che dice di no: è il cliente che non risponde. Buona parte
+    della procedura esiste per ridurre il numero di pratiche che arrivano a scadenza senza
+    una decisione. L'obiettivo è tenere il silenzio sotto il 15%.
+  </p>
+</div>
+
+<h3>Le quattro scelte che diamo al cliente</h3>
+<table>
+  <tr><th style="width:26%;">Opzione</th><th>Che cosa significa</th></tr>
+  <tr><td><strong>1. Acquisto</strong></td><td>Compra i beni che ha in uso, al prezzo che gli indichiamo. Paga più avanti, non subito.</td></tr>
+  <tr><td><strong>2. Contatto</strong></td><td>Non se la sente di decidere da solo: chiede di essere richiamato.</td></tr>
+  <tr><td><strong>3. Restituzione</strong></td><td>Ci rimanda i beni, seguendo cinque passaggi obbligatori.</td></tr>
+  <tr><td><strong>4. Acquisto scontato</strong></td><td>Compra i beni attuali a prezzo ridotto, se attiva anche un nuovo noleggio entro una certa data.</td></tr>
+</table>
+
+<div class="attenzione">
+  <p class="etichetta">Parole da usare</p>
+  <p>
+    Verso il cliente si dice sempre <strong>acquisto</strong>. Mai «riscatto», mai «riacquisto»:
+    sono parole nostre, non sue. Vale nelle email, al telefono e nelle risposte scritte.
+    Dentro la piattaforma alcune etichette dicono ancora «riacquisto»: è il nome tecnico
+    del campo, non cambiarlo e non ripeterlo al cliente.
+  </p>
+</div>
+
+<!-- ───────────────────────── 2 ───────────────────────── -->
+<h2 class="sezione">2. Prima di toccare qualsiasi cosa: TEST e LIVE</h2>
+
+<p>
+  La piattaforma tiene due mondi separati nello stesso posto. In alto si sceglie quale
+  si sta guardando.
+</p>
+
+<table>
+  <tr><th style="width:18%;">Ambiente</th><th>Che cosa contiene</th><th>Le email</th></tr>
+  <tr>
+    <td><strong>LIVE</strong></td>
+    <td>I clienti veri, i contratti veri, i soldi veri.</td>
+    <td>Arrivano davvero al cliente.</td>
+  </tr>
+  <tr>
+    <td><strong>TEST</strong></td>
+    <td>Quindici pratiche finte, con nomi di fantasia.</td>
+    <td>Non escono mai: finiscono tutte nella casella di raccolta interna.</td>
+  </tr>
+</table>
+
+<div class="regola">
+  <p class="etichetta">La regola che costa più cara</p>
+  <p>
+    <strong>L'importazione crea le pratiche nell'ambiente che stai guardando in quel momento.</strong>
+    Se importi mentre sei in vista LIVE, quei contratti sono live: scriveranno a persone vere.
+    Prima di importare, guarda in che ambiente sei. Ogni volta.
+  </p>
+</div>
+
+<h3>Chi può fare cosa</h3>
+<table class="riquadro-ruoli">
+  <tr><td>Agente, junior, capo area</td><td>Vede le proprie pratiche e i propri task. Non importa e non tocca le impostazioni.</td></tr>
+  <tr><td>Backoffice interno</td><td>Tutto il lavoro quotidiano: import, outlier, comunicazioni, pagamenti, clienti in attesa.</td></tr>
+  <tr><td>Amministratore</td><td>Come sopra, più utenti, impostazioni e testi delle email.</td></tr>
+</table>
+
+<!-- ───────────────────────── 3 ───────────────────────── -->
+<h2 class="sezione">3. Il calendario di una pratica</h2>
+
+<p>
+  Tutto si misura in giorni che mancano alla scadenza del contratto. «T-90» vuol dire
+  novanta giorni prima della scadenza. Guarda l'ultima colonna: quasi tutto parte da solo,
+  di notte, senza che nessuno prema niente. L'unica cosa che parte a mano è la prima.
+</p>
+
+<table>
+  <tr><th style="width:13%;">Quando</th><th style="width:34%;">Che cosa succede</th><th>Chi lo fa</th></tr>
+  <tr><td class="giorno">T-105</td><td>Comunicazione iniziale al cliente, email e PEC</td><td><strong>Backoffice</strong>, a mano</td></tr>
+  <tr><td class="giorno">T-90</td><td>Primo sollecito</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-60</td><td>Secondo sollecito</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-50</td><td>Primo task di telefonata all'agente</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-45</td><td>Terzo sollecito</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-40</td><td>Secondo task di telefonata</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-35</td><td>Quarto e ultimo sollecito, più il terzo task di telefonata</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-30</td><td>Termine entro cui il cliente dovrebbe aver scelto</td><td>—</td></tr>
+  <tr><td class="giorno">T-26</td><td>Richiesta di pagamento a chi ha scelto l'acquisto</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-23</td><td>Promemoria a chi non ha ancora pagato</td><td>Automatico</td></tr>
+  <tr><td class="giorno">T-21</td><td>Termine per l'accredito del bonifico</td><td>—</td></tr>
+  <tr><td class="giorno">Scadenza</td><td>Il contratto finisce</td><td>—</td></tr>
+</table>
+
+<div class="nota">
+  <p class="etichetta">Da ricordare</p>
+  <p>
+    I solleciti smettono da soli quando il cliente decide. Un cliente che ha già scelto non
+    riceve altre email di sollecito: se ne riceve una, qualcosa non va e va segnalato.
+  </p>
+</div>
+
+<!-- ───────────────────────── 4 ───────────────────────── -->
+<h2 class="sezione">4. Fase 1 — Importare i contratti in scadenza</h2>
+
+<p>
+  Servono due file Excel, e servono <strong>tutti e due</strong>: l'elenco che manda Grenke
+  e l'esportazione dalla nostra piattaforma di noleggio. Il primo dice quali contratti
+  scadono e quanto ci costa ricomprare i beni; il secondo dice chi è il cliente, quali
+  dispositivi ha e quale agenzia ha fatto il contratto.
+</p>
+
+<ol class="passi">
+  <li>Controlla in alto di essere nell'ambiente giusto.</li>
+  <li>Menu <strong>Importa contratti</strong>.</li>
+  <li>Carica il file <strong>Grenke</strong>. La piattaforma legge le righe e ti dice quante ne ha trovate.</li>
+  <li>Carica l'esportazione <strong>NSM</strong>. I due file vengono incrociati sul numero di contratto Grenke.</li>
+  <li>
+    Guarda l'anteprima prima di confermare. Tre cose meritano attenzione:
+    <ul>
+      <li><strong>righe in rosso</strong>: il margine è zero o negativo, ci rimettiamo;</li>
+      <li><strong>eccezioni</strong>: contratti presenti da Grenke ma non nella nostra esportazione, non importabili;</li>
+      <li><strong>scartati</strong>: contratti nostri che Grenke non ha in scadenza, giustamente lasciati fuori.</li>
+    </ul>
+  </li>
+  <li>Conferma. Le pratiche nascono nello stato «lista ricevuta».</li>
+</ol>
+
+<p class="verifica">il numero di pratiche create corrisponde alle righe valide dell'anteprima, e in elenco compaiono con cliente, dispositivi, canone, scadenza e agenzia.</p>
+
+<div class="attenzione">
+  <p class="etichetta">Se una riga dà errore</p>
+  <p>
+    Quasi sempre manca il prezzo di riacquisto Grenke, oppure è scritto in un formato che
+    non si legge. Quella colonna è obbligatoria: senza, non sappiamo quanto ci costa il bene
+    e non possiamo calcolare il prezzo per il cliente. Va chiesta a Grenke, non inventata.
+  </p>
+</div>
+
+<!-- ───────────────────────── 5 ───────────────────────── -->
+<h2 class="sezione">5. Fase 2 — Sistemare gli outlier</h2>
+
+<p>
+  «Outlier» è un contratto che l'importazione non è riuscita ad abbinare a un cliente
+  esistente. Finché resta lì non riceve comunicazioni: va risolto prima di procedere.
+</p>
+
+<ol class="passi">
+  <li>Menu <strong>Outlier</strong>. Ogni riga mostra i dati arrivati e i clienti simili già in anagrafica.</li>
+  <li>
+    Scegli una delle tre strade:
+    <ul>
+      <li><strong>Associa</strong> — è un cliente che abbiamo già, con la ragione sociale scritta in modo diverso;</li>
+      <li><strong>Crea</strong> — è un cliente nuovo;</li>
+      <li><strong>Scarta</strong> — non ci riguarda. Serve una motivazione scritta: qualcuno la leggerà.</li>
+    </ul>
+  </li>
+</ol>
+
+<div class="nota">
+  <p class="etichetta">Come decidere</p>
+  <p>
+    Guarda la partita IVA prima della ragione sociale. «Rossi Srl» e «Rossi S.r.l.» sono
+    lo stesso cliente; due partite IVA diverse non lo sono mai, per quanto il nome si somigli.
+  </p>
+</div>
+
+<!-- ───────────────────────── 6 ───────────────────────── -->
+<h2 class="sezione">6. Fase 3 — Inviare la comunicazione iniziale</h2>
+
+<p>
+  È l'email che apre tutto. Parte a mano, perché è il momento in cui si decide a chi stiamo
+  scrivendo. Va mandata intorno a T-105, cioè circa tre mesi e mezzo prima della scadenza.
+</p>
+
+<ol class="passi">
+  <li>Menu <strong>Pratiche</strong>.</li>
+  <li>Filtra le pratiche nello stato «lista ricevuta» con scadenza nel periodo che ti interessa.</li>
+  <li>
+    <strong>Seleziona una per una le pratiche da contattare.</strong> Non sono selezionate
+    in partenza, ed è voluto: la selezione è una scelta, non un valore predefinito.
+  </li>
+  <li>Invia la comunicazione. Parte una email e, dove abbiamo l'indirizzo, anche una PEC.</li>
+</ol>
+
+<p class="verifica">le pratiche passano a «comunicazione inviata» e in <strong>Posta inviata</strong> compare una riga per ciascuna, con l'esito.</p>
+
+<h3>Che cosa riceve il cliente</h3>
+<p>
+  Una email con i dati del suo contratto, le quattro opzioni, il termine entro cui decidere
+  e un pulsante che porta alla sua area riservata. Il collegamento è personale: vale solo
+  per quel contratto e scade da solo.
+</p>
+
+<div class="attenzione">
+  <p class="etichetta">Prima di premere invia</p>
+  <p>
+    Controlla l'indirizzo email sulla scheda. Un indirizzo sbagliato non dà errore: la mail
+    parte, non arriva a nessuno, e noi restiamo convinti di aver avvisato il cliente. Quando
+    l'indirizzo è vecchio o generico, sistemalo prima con <span class="campo">Modifica email / PEC</span>.
+  </p>
+</div>
+
+<!-- ───────────────────────── 7 ───────────────────────── -->
+<h2 class="sezione">7. Fase 4 — Quello che parte da solo</h2>
+
+<p>
+  Dopo la comunicazione iniziale, per un paio di mesi la piattaforma lavora da sola.
+  Ogni notte controlla le pratiche e fa partire quello che è in calendario.
+</p>
+
+<h3>I solleciti</h3>
+<p>
+  Quattro email, a T-90, T-60, T-45 e T-35, sempre più dirette. Cambia anche il colore del
+  pulsante, dall'azzurro al rosso: è un segnale voluto, non un vezzo grafico. Si fermano
+  appena il cliente sceglie.
+</p>
+
+<h3>I task di telefonata</h3>
+<p>
+  A T-50, T-40 e T-35 la piattaforma crea un task per l'agente della pratica: significa che
+  le email non stanno funzionando e serve una voce. Li trovi in <strong>Task Escalation</strong>.
+  Come backoffice il tuo compito è accorgerti dei task che restano fermi.
+</p>
+
+<div class="nota">
+  <p class="etichetta">Da guardare ogni mattina</p>
+  <p>
+    In <strong>Dashboard</strong> ci sono i riquadri delle pratiche a rischio silenzio e
+    l'elenco delle comunicazioni in partenza nei prossimi giorni. Due minuti lì evitano
+    la maggior parte delle sorprese.
+  </p>
+</div>
+
+<!-- ───────────────────────── 8 ───────────────────────── -->
+<h2 class="sezione">8. Fase 5 — Le quattro scelte del cliente</h2>
+
+<p>
+  Il cliente entra nella sua area riservata, sceglie, conferma con un codice che gli
+  arriva via email. Da quel momento la pratica cambia stato e tocca a noi.
+</p>
+
+<table>
+  <tr>
+    <th style="width:22%;">Se il cliente sceglie</th>
+    <th style="width:36%;">La piattaforma fa</th>
+    <th>Tu devi</th>
+  </tr>
+  <tr>
+    <td><strong>Acquisto</strong></td>
+    <td>Registra la decisione e congela il prezzo. A T-26 manda la richiesta di pagamento.</td>
+    <td>Niente, finché non arriva il pagamento. Vedi la fase 8.</td>
+  </tr>
+  <tr>
+    <td><strong>Contatto</strong></td>
+    <td>Crea una richiesta e la mette in <strong>Clienti in attesa</strong>.</td>
+    <td>Telefonare, e registrare l'esito. Vedi la fase 7.</td>
+  </tr>
+  <tr>
+    <td><strong>Restituzione</strong></td>
+    <td>Manda le istruzioni e genera il verbale.</td>
+    <td>Controllare che i beni arrivino. Vedi la fase 9.</td>
+  </tr>
+  <tr>
+    <td><strong>Acquisto scontato</strong></td>
+    <td>Registra l'intenzione e consegna il link per configurare il nuovo noleggio.</td>
+    <td>Certificare la firma quando avviene. Vedi la fase 6.</td>
+  </tr>
+</table>
+
+<h3>Quando il cliente non usa l'area riservata</h3>
+<p>
+  Capita: ti dice la sua scelta al telefono o per email. In quel caso la registri tu, dalla
+  scheda della pratica, con <span class="campo">Decisione manuale</span>. Scrivi sempre nelle
+  note come l'hai saputo: fra sei mesi nessuno si ricorderà di quella telefonata.
+</p>
+
+<!-- ───────────────────────── 9 ───────────────────────── -->
+<h2 class="sezione">9. Fase 6 — Lo sconto per chi attiva un nuovo noleggio</h2>
+
+<p>
+  È la quarta opzione, ed è quella che frutta di più: il cliente tiene i beni attuali a
+  prezzo ridotto e in cambio ne prende di nuovi. Lo sconto è del 15% sul prezzo di acquisto.
+</p>
+
+<h3>La condizione, detta bene</h3>
+<p>
+  Lo sconto spetta se, <strong>entro la data limite</strong>, il nuovo contratto di noleggio
+  è stato <strong>approvato dalla finanziaria e firmato dal cliente</strong>. Non basta che
+  l'abbia ordinato. Non conta la consegna dei dispositivi.
+</p>
+<p>
+  La data limite è la fine del mese che si chiude almeno trenta giorni prima della scadenza
+  del contratto. La trovi scritta sulla scheda: non calcolarla a mente.
+</p>
+
+<h3>I tre momenti</h3>
+<ol class="passi">
+  <li>
+    <strong>Il cliente dichiara.</strong> Sceglie l'opzione nell'area riservata. Solo allora
+    riceve il link per configurare il nuovo noleggio. Sulla scheda compare la data della
+    dichiarazione.
+  </li>
+  <li>
+    <strong>Il contratto viene firmato.</strong> Se il cliente ha chiesto assistenza, la
+    richiesta arriva in <strong>Clienti in attesa</strong> e il noleggio lo configurate voi con lui.
+  </li>
+  <li>
+    <strong>Tu certifichi.</strong> Sulla scheda della pratica, <span class="campo">Nuovo noleggio firmato</span>,
+    e inserisci la data della firma. Da quel momento il prezzo scontato è ufficiale.
+  </li>
+</ol>
+
+<p class="verifica">al cliente parte una email di conferma con il nuovo prezzo, e il prezzo ridotto compare subito nella sua area riservata e nella richiesta di pagamento.</p>
+
+<div class="regola">
+  <p class="etichetta">Il link non si manda mai a mano</p>
+  <p>
+    Il collegamento per configurare il nuovo noleggio è quello dell'agenzia che ha fatto il
+    contratto, e serve a riconoscere a quell'agenzia la provvigione. Se lo mandi per email
+    da un'altra parte, o ne usi uno qualsiasi, la registrazione finisce attribuita a
+    qualcun altro. Il cliente lo ottiene dichiarando l'opzione, e basta.
+  </p>
+</div>
+
+<div class="attenzione">
+  <p class="etichetta">Quando lo sconto non si applica</p>
+  <p>
+    Non spetta se il prezzo è già stato concordato a mano (acquisto parziale o prezzo su
+    misura): quello è già frutto di una trattativa. E non scende mai sotto quello che
+    paghiamo noi a Grenke: se il 15% sfonda quella soglia, la piattaforma riduce lo sconto
+    e te lo dice.
+  </p>
+</div>
+
+<div class="nota">
+  <p class="etichetta">Perché la fretta ha senso</p>
+  <p>
+    La data limite cade sempre prima della richiesta di pagamento. Se il cliente ha dichiarato
+    l'intenzione, la piattaforma trattiene la richiesta di pagamento finché la data limite non
+    è passata: pagherebbe il prezzo pieno per poi sentirsi dire che era scontato.
+  </p>
+</div>
+
+<!-- ───────────────────────── 10 ───────────────────────── -->
+<h2 class="sezione">10. Fase 7 — Clienti in attesa: il lavoro di ogni giorno</h2>
+
+<p>
+  È la pagina da aprire ogni mattina. Raccoglie tutti i clienti che aspettano qualcosa da noi.
+</p>
+
+<table>
+  <tr><th style="width:34%;">Che cosa trovi</th><th>Che cosa vuol dire</th></tr>
+  <tr><td>Richiesta di contatto personalizzato</td><td>Il cliente ha scelto l'opzione 2: vuole parlare con qualcuno.</td></tr>
+  <tr><td>Assistenza nuovo noleggio</td><td>Vuole il nuovo noleggio ma preferisce essere seguito. Chiamalo: è una vendita.</td></tr>
+  <tr><td>Acquisto in attesa di chiamata</td><td>Il pagamento è bloccato in attesa di una nostra telefonata.</td></tr>
+</table>
+
+<p>Su ogni riga hai a disposizione:</p>
+<ul>
+  <li><strong>Apri la pratica</strong> — per vedere tutto il resto prima di chiamare;</li>
+  <li><strong>Segna come richiamato</strong> — registra che la telefonata è stata fatta;</li>
+  <li><strong>Togli dall'elenco</strong> — la pratica resta, sparisce solo da questa lista;</li>
+  <li><strong>Rispondi via email</strong> — se preferisce lo scritto, la risposta parte da <span class="campo">info@noleggiosumisura.it</span>;</li>
+  <li><strong>Sblocca pagamento</strong> — solo per gli acquisti in attesa, dopo aver parlato col cliente.</li>
+</ul>
+
+<div class="nota">
+  <p class="etichetta">Segnare la chiamata non sblocca il pagamento</p>
+  <p>
+    Sono due cose distinte, e apposta. Puoi aver chiamato un cliente che ti ha detto
+    «ci penso»: la telefonata è fatta, ma non c'è niente da sbloccare.
+  </p>
+</div>
+
+<h3>Le segnalazioni dalla casella info@</h3>
+<p>
+  Il menu <strong>Segnalazioni info@</strong> raccoglie le email che i clienti mandano alla
+  casella generale rispondendo alle nostre. Aprile, leggile per intero, e se riguardano una
+  pratica rispondi dalla pratica, non dal programma di posta: così la risposta resta nello
+  storico.
+</p>
+
+<!-- ───────────────────────── 11 ───────────────────────── -->
+<h2 class="sezione">11. Fase 8 — Il pagamento</h2>
+
+<p>
+  Chi sceglie l'acquisto non paga subito. La richiesta parte a T-26, cioè meno di un mese
+  prima della scadenza, quando ormai la decisione è consolidata.
+</p>
+
+<h3>Come funziona</h3>
+<ol class="passi">
+  <li>A T-26 parte da sola l'email con l'importo, l'IVA e le coordinate per il bonifico.</li>
+  <li>A T-23 chi non ha ancora pagato riceve un promemoria.</li>
+  <li>Il cliente fa il bonifico e nella sua area riservata preme «Ho effettuato il bonifico».</li>
+  <li>Tu verifichi l'accredito in banca. <strong>Questo passaggio è solo tuo:</strong> la piattaforma non vede il conto corrente.</li>
+  <li>Sulla scheda, <span class="campo">Registra pagamento ricevuto</span>.</li>
+</ol>
+
+<p class="verifica">al cliente parte la ricevuta in PDF e la pratica passa a «pagato».</p>
+
+<h3>Mandare la richiesta prima del tempo</h3>
+<p>
+  Se il cliente chiede di pagare subito, dalla scheda c'è <span class="campo">Richiesta di pagamento</span>:
+  manda l'email in quel momento. Nella stessa schermata trovi anche il link da copiare, se
+  preferisce che glielo si dia al telefono.
+</p>
+
+<div class="attenzione">
+  <p class="etichetta">Se la piattaforma si rifiuta</p>
+  <p>
+    Può capitare che rifiuti di mandare la richiesta: succede quando quel cliente ha dichiarato
+    che attiverà un nuovo noleggio e la data limite non è ancora passata. È una protezione,
+    non un errore: pagherebbe il prezzo pieno quando ha diritto a quello scontato. Si può
+    forzare, ma prima chiediti perché.
+  </p>
+</div>
+
+<!-- ───────────────────────── 12 ───────────────────────── -->
+<h2 class="sezione">12. Fase 9 — La restituzione</h2>
+
+<p>
+  Chi restituisce riceve istruzioni precise, perché un dispositivo che torna bloccato o
+  senza imballo è un dispositivo che non possiamo rivendere.
+</p>
+
+<ol>
+  <li>Disattivare «Dov'è» su Apple, o Knox su Samsung.</li>
+  <li>Riportare il dispositivo alle condizioni di fabbrica.</li>
+  <li>Verificare che funzioni e annotare eventuali danni.</li>
+  <li>Imballare in modo adeguato, possibilmente nella confezione originale.</li>
+  <li>Spedire a Integra Systems Srl, Via Tunisia 5, 10093 Collegno (TO), a proprie spese.</li>
+</ol>
+
+<p>
+  La piattaforma genera il verbale di restituzione e lo manda al cliente. Quando il pacco
+  arriva, controlla che ci sia tutto e che i dispositivi siano sbloccati.
+</p>
+
+<div class="attenzione">
+  <p class="etichetta">Il primo passo è quello che salta sempre</p>
+  <p>
+    Un iPhone che torna con «Dov'è» ancora attivo è inutilizzabile: nessuno può riattivarlo
+    senza le credenziali del cliente. Se te ne accorgi, richiama subito: più passa il tempo,
+    più diventa difficile farsi rispondere da chi ormai ha chiuso il rapporto.
+  </p>
+</div>
+
+<!-- ───────────────────────── 13 ───────────────────────── -->
+<h2 class="sezione">13. Fase 10 — Export Grenke e chiusura</h2>
+
+<p>
+  Quando le decisioni sono raccolte, dal menu <strong>Export Grenke</strong> si genera il file
+  da mandare a Grenke con i beni che riscattiamo. Verso Grenke paghiamo sempre il costo pieno
+  di tutti i beni del contratto, qualunque cosa abbia deciso il cliente: lo sconto che gli
+  abbiamo fatto è una nostra scelta commerciale, non li riguarda.
+</p>
+
+<p>
+  Controlla l'anteprima prima di generare, e conserva il file: l'elenco degli export già
+  fatti resta nella stessa pagina.
+</p>
+
+<!-- ───────────────────────── 14 ───────────────────────── -->
+<h2 class="sezione">14. Casi particolari</h2>
+
+<h3>Il cliente vuole comprare solo alcuni dispositivi</h3>
+<p>
+  Si può, ed è una concessione nostra. Dalla scheda, <span class="campo">Beni del riacquisto</span>:
+  scegli quali beni restano al cliente. Gli altri vanno restituiti. Attenzione: noi da Grenke
+  li ricompriamo comunque tutti, quindi il margine si assottiglia e può diventare negativo.
+  È una decisione commerciale, va presa con chi di dovere.
+</p>
+
+<h3>Il cliente contratta il prezzo</h3>
+<p>
+  Dalla scheda, <span class="campo">Prezzo di riacquisto</span>. Si può fare
+  <strong>solo prima che sia partita la comunicazione iniziale</strong>: dopo, il cliente ha
+  già visto un prezzo e cambiarlo sotto banco non è serio. Se il prezzo è già uscito, l'unica
+  leva rimasta è l'acquisto parziale.
+</p>
+
+<h3>Il cliente non risponde a nessuno</h3>
+<p>
+  Email, solleciti, telefonate: niente. Alla scadenza il contratto prosegue in proroga con i
+  canoni invariati per sei mesi, dopo i quali le opzioni non sono più esercitabili. Prima di
+  arrivarci, prova un indirizzo diverso, un altro referente, la PEC.
+</p>
+
+<h3>Il cliente chiede di non essere più contattato</h3>
+<p>
+  In fondo a ogni email c'è il collegamento per chiederlo. Da quel momento non parte più
+  nessuna comunicazione automatica verso di lui. Non aggirarlo scrivendo a mano: è una
+  richiesta che ha valore legale.
+</p>
+
+<h3>Le note sulla pratica</h3>
+<p>
+  Ogni scheda ha un campo note libero: usalo. Se una pratica ha una nota, nell'elenco
+  l'icona diventa gialla, e chi la apre dopo di te sa che c'è qualcosa da leggere.
+  L'esito di una telefonata scritto lì vale più di dieci ricostruzioni a memoria.
+</p>
+
+<!-- ───────────────────────── 15 ───────────────────────── -->
+<h2 class="sezione">15. Dieci regole da non violare</h2>
+
+<ul class="checklist">
+  <li>Guarda in che ambiente sei <strong>prima</strong> di importare o di mandare comunicazioni.</li>
+  <li>Al cliente si dice «acquisto». Mai «riscatto», mai «riacquisto».</li>
+  <li>Non selezionare le pratiche in blocco per abitudine: la selezione è una scelta.</li>
+  <li>Controlla l'indirizzo email prima di mandare la comunicazione iniziale.</li>
+  <li>Il link del nuovo noleggio non si manda a mano: il cliente lo ottiene dichiarando l'opzione.</li>
+  <li>Lo sconto si certifica sulla <strong>firma</strong> del nuovo contratto, non sulla consegna.</li>
+  <li>Registra il pagamento solo dopo aver visto l'accredito in banca.</li>
+  <li>Se la piattaforma ti blocca, leggi il motivo prima di forzare.</li>
+  <li>Scrivi nelle note come hai saputo le cose. Fra sei mesi nessuno si ricorda.</li>
+  <li>Una decisione presa al telefono va registrata lo stesso giorno.</li>
+</ul>
+
+<p class="piccolo" style="margin-top:40px;">
+  Integra Systems Srl — Via Tunisia 5, 10093 Collegno (TO) — P.IVA 12711040019 —
+  Tel. 011 4557949 — info@noleggiosumisura.it
+</p>
+
+</body>
+</html>
