@@ -2,7 +2,11 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 
 const HTML_PATH = path.join(__dirname, 'procedura_backoffice.html');
-const PDF_PATH = path.join(__dirname, 'Procedura_Backoffice_EOL_Grenke.pdf');
+// Il PDF nasce direttamente dove il frontend lo serve: dalla sidebar del
+// backoffice si scarica da /Procedura_Backoffice_EOL_Grenke.pdf. Tenerne due
+// copie, una qui e una in public, vuol dire scoprire fra un mese che quella
+// scaricata dagli operatori era vecchia.
+const PDF_PATH = path.join(__dirname, '..', 'frontend', 'public', 'Procedura_Backoffice_EOL_Grenke.pdf');
 
 (async () => {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });

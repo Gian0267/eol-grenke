@@ -3,8 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, List, Bell, Phone, AlertTriangle,
   BarChart3, LogOut, Menu, X, Upload, CreditCard, FileSpreadsheet, Settings, Users, Mail, MailCheck, Inbox,
-  FlaskConical, Loader2, Tag, Sparkles, Building2,
-} from 'lucide-react';
+  FlaskConical, Loader2, Sparkles, Building2, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAmbiente, setAmbiente, puoVedereTest } from '../lib/ambiente';
 
@@ -176,6 +175,21 @@ export default function BackofficeSidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Manuale operativo: un PDF servito con il frontend, non una pagina.
+          Sta qui in fondo e non fra le voci di menu perche' non e' una
+          schermata: si scarica e si legge fuori dalla piattaforma. */}
+      <div className="px-2 pb-1">
+        <a
+          href="/Procedura_Backoffice_EOL_Grenke.pdf"
+          download
+          title="Procedura operativa del backoffice (PDF)"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <BookOpen className="w-5 h-5 shrink-0" />
+          {!collapsed && <span className="truncate">Manuale operativo</span>}
+        </a>
+      </div>
 
       {/* Selettore vista Test/Live (solo ADMIN e Backoffice interno) */}
       {isInternoOrAdmin && !collapsed && (
