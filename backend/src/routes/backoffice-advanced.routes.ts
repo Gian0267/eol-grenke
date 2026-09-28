@@ -96,7 +96,7 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
   try {
     const {
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, agenzia, cliente, decisione, rischio_silenzio,
+      origine, agenzia, cliente, contratto_grenke, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
@@ -110,6 +110,11 @@ router.get('/pratiche-avanzate/ids', async (req: AuthenticatedRequest, res: Resp
     // minuscole, perche' nessuno ricorda la ragione sociale per intero.
     if (cliente && cliente.trim()) {
       where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
+    // Numero di contratto Grenke: anche qui parziale, perche' spesso arriva
+    // letto al telefono o copiato a meta' da un'email.
+    if (contratto_grenke && contratto_grenke.trim()) {
+      where.contratto_grenke_id = { contains: contratto_grenke.trim(), mode: 'insensitive' };
     }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
@@ -135,7 +140,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
       page = '1', pageSize = '20',
       sortBy = 'updated_at', sortOrder = 'desc',
       stato, agente_id, data_scadenza_from, data_scadenza_to,
-      origine, agenzia, cliente, decisione, rischio_silenzio,
+      origine, agenzia, cliente, contratto_grenke, decisione, rischio_silenzio,
     } = req.query as Record<string, string>;
 
     const skip = (Number(page) - 1) * Number(pageSize);
@@ -153,6 +158,11 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
     // minuscole, perche' nessuno ricorda la ragione sociale per intero.
     if (cliente && cliente.trim()) {
       where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
+    // Numero di contratto Grenke: anche qui parziale, perche' spesso arriva
+    // letto al telefono o copiato a meta' da un'email.
+    if (contratto_grenke && contratto_grenke.trim()) {
+      where.contratto_grenke_id = { contains: contratto_grenke.trim(), mode: 'insensitive' };
     }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
@@ -216,7 +226,7 @@ router.get('/pratiche-avanzate', async (req: AuthenticatedRequest, res: Response
 // GET /api/backoffice/pratiche-avanzate/export-csv
 router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine, agenzia, cliente } = req.query as Record<string, string>;
+    const { stato, agente_id, data_scadenza_from, data_scadenza_to, origine, agenzia, cliente, contratto_grenke } = req.query as Record<string, string>;
 
     const where: any = { stato: { not: 'FLEX_ATTIVO' }, ambiente: ambienteVista(req) };
     if (stato) where.stato = stato;
@@ -229,6 +239,11 @@ router.get('/pratiche-avanzate/export-csv', async (req: AuthenticatedRequest, re
     // minuscole, perche' nessuno ricorda la ragione sociale per intero.
     if (cliente && cliente.trim()) {
       where.cliente = { ragione_sociale: { contains: cliente.trim(), mode: 'insensitive' } };
+    }
+    // Numero di contratto Grenke: anche qui parziale, perche' spesso arriva
+    // letto al telefono o copiato a meta' da un'email.
+    if (contratto_grenke && contratto_grenke.trim()) {
+      where.contratto_grenke_id = { contains: contratto_grenke.trim(), mode: 'insensitive' };
     }
     if (data_scadenza_from || data_scadenza_to) {
       where.data_scadenza = {};
