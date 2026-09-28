@@ -1770,16 +1770,16 @@ function TabPanoramica({
             return (
               <>
                 <Row
-                  label={`Valore Sconto Nuovo contratto${sc.applicabile ? ` (${sc.percentuale_corrente}%)` : ''}`}
+                  label={`Valore sconto in caso di sottoscrizione nuovo contratto${sc.applicabile ? ` (${sc.percentuale_corrente}%)` : ''}`}
                   value={sc.applicabile ? formatEur(sc.sconto_euro_potenziale) : vuoto}
                   highlight={sc.applicabile}
                 />
                 <Row
-                  label="Prezzo scontato al cliente"
+                  label="Prezzo al cliente in caso di sottoscrizione nuovo contratto"
                   value={sc.applicabile ? formatEur(sc.netto_potenziale) : vuoto}
                 />
                 <Row
-                  label="Margine lordo scontato"
+                  label="Margine lordo in caso di sottoscrizione nuovo contratto"
                   value={sc.applicabile ? formatEur(sc.margine_scontato) : vuoto}
                   highlight={sc.applicabile}
                 />
