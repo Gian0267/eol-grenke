@@ -210,7 +210,6 @@ export async function generaConfermaRinnovo(
   decisioneId: string,
   prequalificazione: PrequalificazioneRinnovo,
   firma: FirmaInfo,
-  codiceSconto?: { codice: string; data_scadenza: Date } | null,
 ): Promise<{ pdfPath: string; hash: string; buffer: Buffer }> {
   const contratto = await prisma.contratto_EOL.findUnique({
     where: { id: contrattoEolId },
@@ -287,24 +286,6 @@ export async function generaConfermaRinnovo(
   }
   doc.moveDown(1);
 
-  // Premio Fedeltà: Sconto Copertura Bronze
-  const boxAltezza = codiceSconto ? 80 : 45;
-  doc.rect(50, doc.y, 495, boxAltezza).fill('#dcfce7');
-  const gcY = doc.y + 12;
-  doc.fontSize(11).font('Helvetica-Bold').fillColor('#166534')
-    .text(
-      `Premio Fedelta: alla firma del nuovo contratto FLEX ricevi uno sconto di EUR ${formatEur(Number(contratto.valore_gift_card))} sulla copertura danni accidentali BRONZE`,
-      60, gcY, { width: 475, align: 'center' },
-    );
-  if (codiceSconto) {
-    doc.fontSize(13).font('Courier-Bold').fillColor('#166534')
-      .text(`Codice sconto: ${codiceSconto.codice}`, 60, doc.y + 6, { width: 475, align: 'center' });
-    doc.fontSize(9).font('Helvetica').fillColor('#166534')
-      .text(`Valido fino al ${formatDate(codiceSconto.data_scadenza)} — comunicalo al tuo agente alla firma del nuovo contratto`, 60, doc.y + 2, { width: 475, align: 'center' });
-  }
-  doc.y = gcY + boxAltezza - 10;
-  doc.moveDown(1);
-
   // Prossimi passi
   doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000')
     .text('Prossimi passi');
@@ -312,7 +293,7 @@ export async function generaConfermaRinnovo(
   doc.fontSize(10).font('Helvetica');
   doc.text('1. Un agente NSM ti contattera entro 5 giorni lavorativi per definire i dettagli del nuovo contratto FLEX.');
   doc.text('2. Riceverai una proposta personalizzata in base alle tue esigenze.');
-  doc.text('3. Alla firma del nuovo contratto comunica il codice sconto al tuo agente per ottenere lo sconto sulla copertura BRONZE.');
+  doc.text('3. Alla firma del nuovo contratto sarai subito operativo.');
   doc.moveDown(1.5);
 
   // Sezione firma

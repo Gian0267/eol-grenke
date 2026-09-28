@@ -20,7 +20,6 @@ import { handlePaymentCallback } from './services/payment.service.js';
 import { startSchedulerCron, runScheduler } from './services/scheduler.service.js';
 import adminRoutes from './routes/admin.routes.js';
 import impostazioniRoutes from './routes/impostazioni.routes.js';
-import codiciScontoRoutes from './routes/codici-sconto.routes.js';
 import agenzieRoutes from './routes/agenzie.routes.js';
 
 const app = express();
@@ -115,7 +114,6 @@ app.use('/api/backoffice/auth', authRoutes);
 app.use('/api/backoffice', backofficeRoutes);
 app.use('/api/backoffice/dashboard', backofficeDashboardRoutes);
 app.use('/api/backoffice', backofficeAdvancedRoutes);
-app.use('/api/backoffice', codiciScontoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/backoffice/agenzie', agenzieRoutes);
 app.use('/api/backoffice/impostazioni', impostazioniRoutes);

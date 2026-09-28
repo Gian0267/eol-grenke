@@ -122,7 +122,6 @@ export default function BackofficeSidebar() {
     { to: '/backoffice/posta-inviata', label: 'Posta inviata', icon: Mail, visible: true },
     { to: '/backoffice/pec-inviata', label: 'PEC inviate', icon: MailCheck, visible: true },
     { to: '/backoffice/segnalazioni-casella', label: 'Segnalazioni info@', icon: Inbox, visible: isInternoOrAdmin },
-    { to: '/backoffice/codici-sconto', label: 'Codici Sconto', icon: Tag, visible: isInternoOrAdmin },
     { to: '/backoffice/proposta-noleggio', label: 'Proposta noleggio', icon: Sparkles, visible: isInternoOrAdmin },
     { to: '/backoffice/agenzie', label: 'Agenzie', icon: Building2, visible: isInternoOrAdmin },
     { to: '/backoffice/import', label: 'Importa contratti', icon: Upload, visible: isInternoOrAdmin },

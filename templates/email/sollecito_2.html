@@ -6,17 +6,22 @@
   <title>Promemoria contratto in scadenza</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <!-- Fascia di testata a tutta larghezza: dentro la scheda da 600px il fondo
+       scuro finiva dove finiva l'immagine, e nei client con la finestra larga
+       si vedeva il bianco di fianco. Qui la fascia e' una riga della tabella
+       esterna, quindi arriva ai bordi qualunque sia la larghezza. -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#14233c;">
+    <tr>
+      <td align="center" style="padding:0;font-size:0;line-height:0;">
+        <img src="https://eol.noleggiosumisura.it/header-email.png" alt="Noleggio Su Misura &mdash; a brand of Integra Systems" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0 auto;">
+      </td>
+    </tr>
+  </table>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
     <tr>
       <td align="center" style="padding:24px 16px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
 
-          <!-- Header -->
-          <tr>
-            <td style="padding:0;font-size:0;line-height:0;">
-              <img src="https://eol.noleggiosumisura.it/header-email.png" alt="Noleggio Su Misura &mdash; a brand of Integra Systems" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
-            </td>
-          </tr>
 
           <!-- Body -->
           <tr>
@@ -50,19 +55,17 @@
               <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
                 Non abbiamo ancora ricevuto la Sua preferenza. Desideriamo richiamare
                 la Sua attenzione in particolare sull&rsquo;opzione di <strong>rinnovo</strong>,
-                che Le consente di passare a dispositivi di ultima generazione ricevendo
-                un premio fedelt&agrave;.
+                che Le consente di passare a dispositivi di ultima generazione.
               </p>
 
               <!-- Evidenzia rinnovo -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
                 <tr>
                   <td style="background-color:#f0fdf4;padding:20px;border-radius:6px;border:2px solid #16a34a;">
-                    <p style="margin:0 0 8px;color:#16a34a;font-size:16px;font-weight:700;">&#x2B50; Rinnova e ricevi il Premio Fedelt&agrave;</p>
+                    <p style="margin:0 0 8px;color:#16a34a;font-size:16px;font-weight:700;">&#x2B50; Rinnova su dispositivi aggiornati</p>
                     <p style="margin:0 0 8px;color:#374151;font-size:14px;line-height:1.5;">
-                      Scegliendo il rinnovo, ricever&agrave; uno
-                      <strong>sconto di {{valore_gift_card}}&euro; sulla copertura danni accidentali BRONZE</strong>
-                      del nuovo contratto FLEX su dispositivi aggiornati.
+                      Scegliendo il rinnovo passa a un nuovo contratto FLEX con dispositivi di
+                      ultima generazione, scegliendo modelli, quantit&agrave; e durata.
                     </p>
                     <p style="margin:0;color:#16a34a;font-size:13px;font-weight:600;">
                       Nessun costo aggiuntivo &mdash; solo il vantaggio di tecnologia sempre nuova.

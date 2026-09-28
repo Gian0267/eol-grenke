@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { Settings, Clock, DollarSign, Mail, Users, Building2, ToggleLeft, Phone, Save, RotateCcw, Eye, X, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Settings, Clock, DollarSign, Mail, Users, Building2, ToggleLeft, Phone, Save, RotateCcw, Eye, X, AlertTriangle } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -315,7 +315,6 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
   const mensStd = parseFloat(localValues['pricing.mensilita_per_anno'] || '1');
   const mensIol = parseFloat(localValues['pricing.mensilita_per_anno_iol'] || '1.5');
   const ivaPerc = parseFloat(localValues['pricing.iva_percentuale'] || '22');
-  const tagli = (() => { try { return JSON.parse(localValues['pricing.gift_card_tagli'] || '[]'); } catch { return []; } })() as number[];
 
   // Esempio con un contratto tipico. Il costo Grenke non compare: non lo
   // calcoliamo noi, arriva dal file Grenke pratica per pratica.
@@ -327,21 +326,7 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
 
   const fmt = (n: number) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const [newTaglio, setNewTaglio] = useState('');
-  const addTaglio = () => {
-    const n = parseInt(newTaglio);
-    if (isNaN(n) || n <= 0) return;
-    const updated = [...tagli, n].sort((a, b) => a - b);
-    updateLocal('pricing.gift_card_tagli', JSON.stringify(updated));
-    setNewTaglio('');
-  };
-  const removeTaglio = (idx: number) => {
-    const updated = tagli.filter((_: number, i: number) => i !== idx);
-    updateLocal('pricing.gift_card_tagli', JSON.stringify(updated));
-  };
-
   const numericItems = items.filter(i => i.tipo === 'NUMERO');
-  const jsonItem = items.find(i => i.chiave === 'pricing.gift_card_tagli');
 
   return (
     <div>
@@ -383,44 +368,6 @@ function TabPricing({ items, localValues, updateLocal, onSave, onReset }: TabPro
         </FieldRow>
       ))}
 
-      {/* Tagli Sconto Bronze editor (chiave interna: pricing.gift_card_tagli) */}
-      {jsonItem && (
-        <div className="py-3 border-b border-slate-100">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <label className="text-sm font-medium text-slate-700">{jsonItem.label}</label>
-              <p className="text-xs text-slate-400">{jsonItem.descrizione}</p>
-            </div>
-            <div className="flex gap-1.5">
-              {localValues[jsonItem.chiave] !== jsonItem.valore && (
-                <button onClick={() => onSave(jsonItem.chiave)} className="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
-                  <Save size={12} /> Salva
-                </button>
-              )}
-              {localValues[jsonItem.chiave] !== jsonItem.valore_default && (
-                <button onClick={() => onReset(jsonItem.chiave)} className="flex items-center gap-1 px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200">
-                  <RotateCcw size={12} /> Default
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tagli.map((t: number, i: number) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded text-sm">
-                {t}
-                <button onClick={() => removeTaglio(i)} className="text-slate-400 hover:text-red-500"><Trash2 size={12} /></button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input type="number" placeholder="Nuovo taglio" value={newTaglio} onChange={e => setNewTaglio(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTaglio()}
-              className="w-32 px-3 py-1.5 text-sm border border-slate-200 rounded-md" />
-            <button onClick={addTaglio} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-700 text-white rounded hover:bg-slate-800">
-              <Plus size={12} /> Aggiungi
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -447,7 +394,7 @@ function TabEmail({ items, localValues, updateLocal, onSave, onReset }: TabProps
 
   const VARIABILI = [
     '{{ragione_sociale}}', '{{data_scadenza}}', '{{beni}}',
-    '{{pricing_riacquisto}}', '{{valore_gift_card}}', '{{valore_sconto_bronze}}',
+    '{{pricing_riacquisto}}',
     '{{codice_sconto}}', '{{scadenza_codice}}',
     '{{link_area_cliente}}', '{{deadline_decisione}}',
   ];

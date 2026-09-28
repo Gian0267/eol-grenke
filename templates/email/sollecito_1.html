@@ -6,17 +6,22 @@
   <title>Promemoria contratto in scadenza</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <!-- Fascia di testata a tutta larghezza: dentro la scheda da 600px il fondo
+       scuro finiva dove finiva l'immagine, e nei client con la finestra larga
+       si vedeva il bianco di fianco. Qui la fascia e' una riga della tabella
+       esterna, quindi arriva ai bordi qualunque sia la larghezza. -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#14233c;">
+    <tr>
+      <td align="center" style="padding:0;font-size:0;line-height:0;">
+        <img src="https://eol.noleggiosumisura.it/header-email.png" alt="Noleggio Su Misura &mdash; a brand of Integra Systems" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0 auto;">
+      </td>
+    </tr>
+  </table>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
     <tr>
       <td align="center" style="padding:24px 16px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
 
-          <!-- Header -->
-          <tr>
-            <td style="padding:0;font-size:0;line-height:0;">
-              <img src="https://eol.noleggiosumisura.it/header-email.png" alt="Noleggio Su Misura &mdash; a brand of Integra Systems" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
-            </td>
-          </tr>
 
           <!-- Body -->
           <tr>
@@ -58,7 +63,7 @@
                   <td style="background-color:#f0f4f8;padding:16px 20px;border-radius:6px;">
                     <p style="margin:0 0 12px;color:#1a3a52;font-size:15px;font-weight:700;">Le ricordiamo le opzioni disponibili:</p>
                     {{#if opzione_rinnovo_attiva}}
-                    <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.5;"><strong>Rinnovo</strong> &mdash; Nuovo contratto FLEX + sconto di {{valore_gift_card}}&euro; sulla copertura Bronze (Premio Fedelt&agrave;)</p>
+                    <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.5;"><strong>Rinnovo</strong> &mdash; Nuovo contratto FLEX su dispositivi aggiornati</p>
                     {{/if}}
                     <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.5;"><strong>Acquisto</strong> &mdash; Acquista il bene a &euro;{{pricing_riacquisto}} + IVA <span style="color:#6b7280;">({{#if riacquisto_parziale}}solo: {{beni_riacquisto}}{{else}}tutti i beni del contratto, non &egrave; possibile acquistarne solo una parte{{/if}})</span></p>
                     <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.5;"><strong>Contatto</strong> &mdash; Richiedi una consulenza personalizzata</p>

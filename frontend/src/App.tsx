@@ -17,7 +17,6 @@ import FlussoNuovoNoleggio from './pages/cliente/FlussoNuovoNoleggio'
 import RichiestaAssistenza from './pages/cliente/RichiestaAssistenza'
 import Impostazioni from './pages/backoffice/Impostazioni'
 import GestioneUtenti from './pages/backoffice/GestioneUtenti'
-import CodiciSconto from './pages/backoffice/CodiciSconto'
 import ComunicazioniInviate from './pages/backoffice/ComunicazioniInviate'
 import SegnalazioniCasella from './pages/backoffice/SegnalazioniCasella'
 import AreaPratica from './pages/cliente/AreaPratica'
@@ -53,7 +52,6 @@ export default function App() {
           <Route path="miei-task" element={<MieiTask />} />
           <Route path="task-escalation" element={<TaskEscalation />} />
           <Route path="riacquisti-in-attesa" element={<RiacquistiInAttesa />} />
-          <Route path="codici-sconto" element={<CodiciSconto />} />
           <Route path="posta-inviata" element={<ComunicazioniInviate canale="EMAIL" />} />
           <Route path="pec-inviata" element={<ComunicazioniInviate canale="PEC" />} />
           <Route path="segnalazioni-casella" element={<SegnalazioniCasella />} />

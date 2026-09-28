@@ -130,25 +130,21 @@ export default function AreaPratica() {
     giorniMancanti > 15 ? 'text-yellow-600 bg-yellow-50' :
     'text-red-600 bg-red-50';
 
-  // Determina se mostrare il badge Premio Fedeltà (Sconto Copertura Bronze):
-  // priorità: config.abilita_gift_card (dal nuovo endpoint), fallback su data.economica.abilita_gift_card
-  const giftCardAbilitata = config?.abilita_gift_card ?? data.economica.abilita_gift_card ?? true;
+
 
   // Flag "Opzione Rinnovo attiva": se OFF la card rinnovo non viene mostrata
   // (l'opzione resta nel codice per una futura riattivazione da Impostazioni).
   const opzioneRinnovoAttiva = config?.abilita_opzione_rinnovo ?? true;
 
   const rinnovoBadges: { testo: string; stile: string }[] = [];
-  if (giftCardAbilitata && data.economica.valore_gift_card > 0) {
-    rinnovoBadges.push({ testo: `Premio Fedeltà € ${formatEur(data.economica.valore_gift_card)}`, stile: 'bg-green-100 text-green-800' });
-  }
+
   rinnovoBadges.push({ testo: 'Consigliata', stile: 'bg-[#16a34a] text-white' });
 
   const opzioni = [
     ...(opzioneRinnovoAttiva ? [{
       id: 'rinnovo',
       titolo: config?.titolo_opzione_rinnovo || 'Fai un nuovo contratto con noi',
-      descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze: grazie al Premio Fedeltà ricevi uno sconto sulla copertura danni accidentali BRONZE.',
+      descrizione: config?.desc_opzione_rinnovo || 'Prosegui con un nuovo contratto FLEX scegliendo dispositivi, quantità e durata in base alle tue esigenze.',
       icona: <Gift className="w-6 h-6" />,
       colore: 'border-[#16a34a]',
       bgColore: 'bg-green-50',

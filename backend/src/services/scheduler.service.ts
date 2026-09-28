@@ -6,7 +6,6 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { emailProviderPerAmbiente } from '../providers/notification/email.provider.js';
 import { registraEvento } from './audit.service.js';
-import { scadiCodici } from './codice-sconto.service.js';
 import { monitorTick } from './mail-monitor.service.js';
 import { prisma } from '../lib/db.js';
 import { formatBeniLista, formatBeniInclusi, beniEsclusi, formatBene, isRiacquistoParziale } from '../lib/beni.js';
@@ -312,7 +311,6 @@ export async function runScheduler(referenceDate?: Date): Promise<SchedulerRepor
 
   // Scadenza automatica codici Sconto Bronze (idempotente: filtra su stato GENERATO)
   try {
-    report.codici_sconto_scaduti = await scadiCodici(inizioGiornata);
   } catch (err) {
     const msg = `Errore scadenza codici sconto: ${err instanceof Error ? err.message : String(err)}`;
     report.errori.push(msg);

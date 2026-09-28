@@ -132,7 +132,6 @@ interface Pratica {
   pricing_riacquisto: number;
   pricing_grenke: number;
   margine_lordo: number;
-  valore_gift_card: number;
   valore_originario: number;
   stato: string;
   origine: string;
@@ -161,7 +160,6 @@ interface Pratica {
   proposta_noleggio_inviata: string | null;
   beni_json: string;
   giorni_a_scadenza: number;
-  codice_sconto: CodiceScontoInfo | null;
   cliente: Cliente;
   agente_assegnato: Agente | null;
   agente_originario: AgenteOriginario | null;
@@ -169,17 +167,6 @@ interface Pratica {
   richieste_contatto: RichiestaContatto[];
   pagamenti: Pagamento[];
   timeline: TimelineEntry[];
-}
-
-interface CodiceScontoInfo {
-  id: string;
-  codice: string;
-  valore_eur: number;
-  stato: string;
-  data_generazione: string;
-  data_scadenza: string;
-  data_utilizzo: string | null;
-  note: string | null;
 }
 
 interface AgenteOption {
@@ -1809,55 +1796,6 @@ function TabPanoramica({
         )}
       </div>
 
-      {/* Premio Fedeltà — codice Sconto Copertura Bronze */}
-      {pratica.codice_sconto && (
-        <div className="bg-card rounded-xl border border-border p-5 md:col-span-2">
-          <h3 className="text-sm font-semibold text-graphite mb-3">Premio Fedeltà — Codice Sconto Copertura Bronze</h3>
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-            <div>
-              <span className="text-stone text-xs uppercase tracking-wide">Codice</span>
-              <p className="font-mono font-bold text-lg text-graphite mt-0.5 select-all">{pratica.codice_sconto.codice}</p>
-            </div>
-            <div>
-              <span className="text-stone text-xs uppercase tracking-wide">Valore</span>
-              <p className="text-graphite font-medium mt-0.5">{formatEur(pratica.codice_sconto.valore_eur)}</p>
-            </div>
-            <div>
-              <span className="text-stone text-xs uppercase tracking-wide">Stato</span>
-              <div className="mt-0.5">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                  pratica.codice_sconto.stato === 'GENERATO' ? 'bg-flex-light text-flex-dark'
-                    : pratica.codice_sconto.stato === 'UTILIZZATO' ? 'bg-ok text-ok-text'
-                    : pratica.codice_sconto.stato === 'ANNULLATO' ? 'bg-danger text-danger-text'
-                    : 'bg-paper text-stone'
-                }`}>
-                  {pratica.codice_sconto.stato}
-                </span>
-              </div>
-            </div>
-            <div>
-              <span className="text-stone text-xs uppercase tracking-wide">Generato</span>
-              <p className="text-graphite mt-0.5">{formatDate(pratica.codice_sconto.data_generazione)}</p>
-            </div>
-            <div>
-              <span className="text-stone text-xs uppercase tracking-wide">Scadenza</span>
-              <p className="text-graphite mt-0.5">{formatDate(pratica.codice_sconto.data_scadenza)}</p>
-            </div>
-            {pratica.codice_sconto.data_utilizzo && (
-              <div>
-                <span className="text-stone text-xs uppercase tracking-wide">Utilizzato il</span>
-                <p className="text-graphite mt-0.5">{formatDate(pratica.codice_sconto.data_utilizzo)}</p>
-              </div>
-            )}
-            {pratica.codice_sconto.stato === 'ANNULLATO' && pratica.codice_sconto.note && (
-              <div>
-                <span className="text-stone text-xs uppercase tracking-wide">Motivo annullo</span>
-                <p className="text-graphite mt-0.5">{pratica.codice_sconto.note}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Appunti: esito di una telefonata, un accordo preso, un promemoria.
           In cima perche' e' cio' che serve sapere prima di richiamare. */}
